@@ -1,20 +1,18 @@
 import express from "express";
+import {
+  signup,
+  login,
+  getCurrentUser
+} from "../controllers/authController.js";
+import { requireAuth } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/register", (req, res) => {
-  res.status(501).json({
-    success: false,
-    message: "Registration API is not connected to a database yet."
-  });
-});
+router.post("/register", signup);
 
-router.post("/login", (req, res) => {
-  res.status(501).json({
-    success: false,
-    message: "Login API is not connected to a database yet."
-  });
-});
+router.post("/login", login);
+
+router.get("/me", requireAuth, getCurrentUser);
 
 router.get("/status", (req, res) => {
   res.json({
