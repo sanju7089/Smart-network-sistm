@@ -20,8 +20,7 @@ export async function createJob(req, res) {
     if (!title || !description || !customerId) {
       return res.status(400).json({
         success: false,
-        message:
-          "Title, description and customer ID are required."
+        message: "Title, description and customer ID are required."
       });
     }
 
@@ -241,4 +240,4 @@ export async function deleteJob(req, res) {
       message: "Unable to delete job."
     });
   }
-        
+      }
