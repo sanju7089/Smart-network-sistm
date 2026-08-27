@@ -1,1 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
 
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <title>Signup | Smart Work Network</title>
+
+  <link
+    rel="stylesheet"
+    href="css/main.css"
+  >
+</head>
+
+<body>
+
+  <header class="header">
+    <div class="container nav">
+
+      <a
+        class="brand"
+        href="index.html"
+      >
+        Smart Work Network
+      </a>
+
+      <nav class="navlinks">
+        <a href="services.html">Services</a>
+        <a href="find-help.html">Find Help</a>
+        <a href="workers.html">Workers</a>
+
+        <span data-auth></span>
+      </nav>
+
+    </div>
+  </header>
+
+
+  <main>
+
+    <section class="section">
+
+      <div
+        class="container"
+        style="max-width: 560px"
+      >
+
+        <div class="card">
+
+          <h1>Create Account</h1>
+
+          <form
+            class="form"
+            id="signupForm"
+            onsubmit="event.preventDefault(); signup()"
+          >
+
+            <label>
+              Name
+
+              <input
+                name="name"
+                required
+              >
+            </label>
+
+
+            <label>
+              Email
+
+              <input
+                name="email"
+                type="email"
+                required
+              >
+            </label>
+
+
+            <label>
+              Password
+
+              <input
+                name="password"
+                type="password"
+                required
+              >
+            </label>
+
+
+            <label>
+              Role
+
+              <select name="role">
+
+                <option value="customer">
+                  Customer
+                </option>
+
+                <option value="worker">
+                  Worker
+                </option>
+
+              </select>
+            </label>
+
+
+            <button
+              type="submit"
+              class="btn btn-primary"
+            >
+              Create Account
+            </button>
+
+          </form>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <footer class="footer">
+
+    <div class="container">
+
+      <b>Smart Work Network</b>
+
+      <p>
+        Services • Workers • Work opportunities
+      </p>
+
+      <div class="row">
+        <a href="support.html">Support</a>
+        <a href="profile.html">Profile</a>
+        <a href="urgent-help.html">Urgent Help</a>
+      </div>
+
+    </div>
+
+  </footer>
+
+
+  <script src="js/app.js"></script>
+  <script src="js/auth.js"></script>
+
+</body>
+  </html>
