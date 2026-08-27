@@ -5,6 +5,10 @@ function isValidId(id) {
   return mongoose.Types.ObjectId.isValid(id);
 }
 
+function isOwner(job, userId) {
+  return String(job.customerId) === String(userId);
+}
+
 export async function createJob(req, res) {
   try {
     const {
@@ -13,21 +17,32 @@ export async function createJob(req, res) {
       category,
       service,
       location,
-      budget,
-      customerId
+      budget
     } = req.body;
 
-    if (!title || !description || !customerId) {
-      return res.status(400).json({
+    if (req.user.role !== "customer" && req.user.role !== "admin") {
+      return res.status(403).json({
         success: false,
-        message: "Title, description and customer ID are required."
+        message: "Only customers can create jobs."
       });
     }
 
-    if (!isValidId(customerId)) {
+    if (!title || !description) {
       return res.status(400).json({
         success: false,
-        message: "Invalid customer ID."
+        message: "Title and description are required."
+      });
+    }
+
+    if (
+      budget !== undefined &&
+      budget !== null &&
+      budget !== "" &&
+      (!Number.isFinite(Number(budget)) || Number(budget) < 0)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Budget must be a valid positive number."
       });
     }
 
@@ -41,7 +56,7 @@ export async function createJob(req, res) {
         budget === "" || budget === undefined || budget === null
           ? null
           : Number(budget),
-      customerId
+      customerId: req.user.id
     });
 
     return res.status(201).json({
@@ -152,6 +167,22 @@ export async function updateJob(req, res) {
       });
     }
 
+    const job = await Job.findById(id);
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: "Job not found."
+      });
+    }
+
+    if (req.user.role !== "admin" && !isOwner(job, req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have permission to update this job."
+      });
+    }
+
     const allowedFields = [
       "title",
       "description",
@@ -177,7 +208,29 @@ export async function updateJob(req, res) {
       });
     }
 
-    const job = await Job.findByIdAndUpdate(
+    if (
+      updates.budget !== undefined &&
+      updates.budget !== null &&
+      updates.budget !== "" &&
+      (!Number.isFinite(Number(updates.budget)) ||
+        Number(updates.budget) < 0)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Budget must be a valid positive number."
+      });
+    }
+
+    if (updates.budget === "") {
+      updates.budget = null;
+    } else if (
+      updates.budget !== undefined &&
+      updates.budget !== null
+    ) {
+      updates.budget = Number(updates.budget);
+    }
+
+    const updatedJob = await Job.findByIdAndUpdate(
       id,
       updates,
       {
@@ -186,17 +239,10 @@ export async function updateJob(req, res) {
       }
     );
 
-    if (!job) {
-      return res.status(404).json({
-        success: false,
-        message: "Job not found."
-      });
-    }
-
     return res.json({
       success: true,
       message: "Job updated successfully.",
-      data: job
+      data: updatedJob
     });
   } catch (error) {
     console.error("UPDATE JOB ERROR:", error);
@@ -219,7 +265,7 @@ export async function deleteJob(req, res) {
       });
     }
 
-    const job = await Job.findByIdAndDelete(id);
+    const job = await Job.findById(id);
 
     if (!job) {
       return res.status(404).json({
@@ -227,6 +273,15 @@ export async function deleteJob(req, res) {
         message: "Job not found."
       });
     }
+
+    if (req.user.role !== "admin" && !isOwner(job, req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have permission to delete this job."
+      });
+    }
+
+    await Job.findByIdAndDelete(id);
 
     return res.json({
       success: true,
