@@ -1,95 +1,279 @@
-function signup() {
-  let d = Object.fromEntries(
-    new FormData(
-      document.querySelector('#signupForm')
-    )
-  );
+const API_BASE_URL =
+  window.SWN_API_BASE_URL ||
+  "http://localhost:3000/api";
 
-  let a = SWN.get(
-    'swn_users',
-    []
-  );
-
-  if (
-    a.some(
-      x => x.email === d.email
-    )
-  )
-    return SWN.flash(
-      'Email already exists'
-    );
-
-  let u = {
-    id: Date.now(),
-    ...d,
-    verified: false
-  };
-
-  a.push(u);
-
-  SWN.set(
-    'swn_users',
-    a
-  );
-
-  SWN.set(
-    'swn_user',
-    u
-  );
-
-  location.href =
-    u.role === 'worker'
-      ? 'worker-dashboard.html'
-      : 'customer-dashboard.html';
+function showMessage(message) {
+  if (window.SWN && typeof SWN.flash === "function") {
+    SWN.flash(message);
+  } else {
+    alert(message);
+  }
 }
 
+function getApiUrl(path) {
+  return `${API_BASE_URL}${path}`;
+}
 
-function login() {
-  let d = Object.fromEntries(
-    new FormData(
-      document.querySelector('#loginForm')
-    )
+function saveAuth(token, user) {
+  localStorage.setItem("swn_token", token);
+
+  // केवल safe user data store करें, password कभी नहीं
+  localStorage.setItem(
+    "swn_user",
+    JSON.stringify(user)
   );
+}
 
-  if (
-    d.email === 'admin@smartwork.local' &&
-    d.password === 'admin123'
-  ) {
-
-    SWN.set(
-      'swn_user',
-      {
-        name: 'Admin',
-        role: 'admin'
-      }
-    );
-
-    location.href = 'admin.html';
-
+function redirectByRole(user) {
+  if (user.role === "admin") {
+    window.location.href = "admin.html";
     return;
   }
 
-  let u = SWN.get(
-    'swn_users',
-    []
-  ).find(
-    x =>
-      x.email === d.email &&
-      x.password === d.password
-  );
+  if (user.role === "worker") {
+    window.location.href =
+      "worker-dashboard.html";
+    return;
+  }
 
-  if (!u)
-    return SWN.flash(
-      'Invalid login'
+  window.location.href =
+    "customer-dashboard.html";
+}
+
+async function signup() {
+  try {
+    const form =
+      document.querySelector("#signupForm");
+
+    if (!form) {
+      showMessage("Signup form not found.");
+      return;
+    }
+
+    const data = Object.fromEntries(
+      new FormData(form)
     );
 
-  SWN.set(
-    'swn_user',
-    u
+    if (
+      !data.name ||
+      !data.email ||
+      !data.password
+    ) {
+      showMessage(
+        "Name, email and password are required."
+      );
+      return;
+    }
+
+    const response = await fetch(
+      getApiUrl("/auth/register"),
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name: data.name.trim(),
+          email: data.email.trim(),
+          password: data.password,
+          role: data.role || "customer",
+          phone: data.phone || "",
+          location: data.location || ""
+        })
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      showMessage(
+        result.message ||
+        "Unable to create account."
+      );
+      return;
+    }
+
+    saveAuth(result.token, result.user);
+
+    showMessage(
+      result.message ||
+      "Account created successfully."
+    );
+
+    redirectByRole(result.user);
+  } catch (error) {
+    console.error("SIGNUP ERROR:", error);
+
+    showMessage(
+      "Unable to connect to the server."
+    );
+  }
+}
+
+async function login() {
+  try {
+    const form =
+      document.querySelector("#loginForm");
+
+    if (!form) {
+      showMessage("Login form not found.");
+      return;
+    }
+
+    const data = Object.fromEntries(
+      new FormData(form)
+    );
+
+    if (!data.email || !data.password) {
+      showMessage(
+        "Email and password are required."
+      );
+      return;
+    }
+
+    const response = await fetch(
+      getApiUrl("/auth/login"),
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email: data.email.trim(),
+          password: data.password
+        })
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      showMessage(
+        result.message ||
+        "Invalid email or password."
+      );
+      return;
+    }
+
+    saveAuth(result.token, result.user);
+
+    showMessage(
+      result.message ||
+      "Login successful."
+    );
+
+    redirectByRole(result.user);
+  } catch (error) {
+    console.error("LOGIN ERROR:", error);
+
+    showMessage(
+      "Unable to connect to the server."
+    );
+  }
+}
+
+function logout() {
+  localStorage.removeItem("swn_token");
+  localStorage.removeItem("swn_user");
+
+  window.location.href = "login.html";
+}
+
+function getAuthToken() {
+  return localStorage.getItem("swn_token");
+}
+
+function getCurrentUser() {
+  try {
+    const user = localStorage.getItem("swn_user");
+
+    return user ? JSON.parse(user) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function refreshCurrentUser() {
+  const token = getAuthToken();
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(
+      getApiUrl("/auth/me"),
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      logout();
+      return null;
+    }
+
+    saveAuth(token, result.user);
+
+    return result.user;
+  } catch (error) {
+    console.error(
+      "AUTH REFRESH ERROR:",
+      error
+    );
+
+    return getCurrentUser();
+  }
+}
+
+async function apiFetch(
+  path,
+  options = {}
+) {
+  const token = getAuthToken();
+
+  const headers = {
+    ...(options.headers || {})
+  };
+
+  if (token) {
+    headers.Authorization =
+      `Bearer ${token}`;
+  }
+
+  if (
+    options.body &&
+    !headers["Content-Type"]
+  ) {
+    headers["Content-Type"] =
+      "application/json";
+  }
+
+  const response = await fetch(
+    getApiUrl(path),
+    {
+      ...options,
+      headers
+    }
   );
 
-  location.href =
-    u.role === 'worker'
-      ? 'worker-dashboard.html'
-      : 'customer-dashboard.html';
+  if (response.status === 401) {
+    localStorage.removeItem("swn_token");
+    localStorage.removeItem("swn_user");
+  }
+
+  return response;
 }
+
+window.signup = signup;
+window.login = login;
+window.logout = logout;
+window.getAuthToken = getAuthToken;
+window.getCurrentUser = getCurrentUser;
+window.refreshCurrentUser =
+  refreshCurrentUser;
+window.apiFetch = apiFetch;
