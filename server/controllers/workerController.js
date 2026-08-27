@@ -262,4 +262,4 @@ export async function updateWorkerProfile(req, res) {
       message: "Unable to update worker profile."
     });
   }
-  }
+}
