@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import helmet from "helmet";
 
+import { connectDatabase } from "./config/database.js";
+
 import authRoutes from "./routes/auth.js";
 import adminRoutes from "./routes/admin.js";
 import bookingRoutes from "./routes/bookings.js";
@@ -29,11 +31,7 @@ app.use(helmet());
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin) {
-        return callback(null, true);
-      }
-
-      if (allowedOrigins.length === 0) {
+      if (!origin || allowedOrigins.length === 0) {
         return callback(null, true);
       }
 
@@ -97,17 +95,28 @@ app.use((req, res) => {
 app.use((error, req, res, next) => {
   console.error("SERVER ERROR:", error);
 
-  res.status(
-    error.status || 500
-  ).json({
+  res.status(error.status || 500).json({
     success: false,
-    message:
-      error.message || "Internal server error."
+    message: error.message || "Internal server error."
   });
 });
 
-app.listen(PORT, () => {
-  console.log(
-    `Smart Work Network API running on port ${PORT}`
-  );
-});
+async function startServer() {
+  try {
+    await connectDatabase();
+
+    app.listen(PORT, () => {
+      console.log(
+        `Smart Work Network API running on port ${PORT}`
+      );
+    });
+  } catch (error) {
+    console.error(
+      "Failed to start server:",
+      error.message
+    );
+    process.exit(1);
+  }
+}
+
+startServer();
