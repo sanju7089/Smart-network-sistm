@@ -1,34 +1,29 @@
 import express from "express";
 import { requireAuth } from "../middleware/authMiddleware.js";
 
+import {
+  getWorkers,
+  getWorkerById,
+  getMyWorkerProfile,
+  createWorkerProfile,
+  updateWorkerProfile
+} from "../controllers/workerController.js";
+
 const router = express.Router();
 
-router.get("/", (req, res) => {
-  res.json({
-    success: true,
-    message: "Workers API is working.",
-    data: []
-  });
-});
+// Public: सभी active workers
+router.get("/", getWorkers);
 
-router.use(requireAuth);
+// Protected: अपनी worker profile
+router.get("/me/profile", requireAuth, getMyWorkerProfile);
 
-router.get("/me/profile", (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      id: req.user.id,
-      email: req.user.email,
-      role: req.user.role
-    }
-  });
-});
+// Protected: नई worker profile बनाना
+router.post("/profile", requireAuth, createWorkerProfile);
 
-router.get("/:id", (req, res) => {
-  res.json({
-    success: true,
-    message: `Worker ${req.params.id} endpoint is working.`
-  });
-});
+// Protected: अपनी worker profile update करना
+router.patch("/:id", requireAuth, updateWorkerProfile);
+
+// Public: एक specific worker
+router.get("/:id", getWorkerById);
 
 export default router;
