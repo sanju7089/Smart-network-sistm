@@ -1,60 +1,26 @@
 import express from "express";
+import { requireAuth } from "../middleware/authMiddleware.js";
+import {
+  createJob,
+  getJobs,
+  getJobById,
+  updateJob,
+  deleteJob
+} from "../controllers/jobController.js";
 
 const router = express.Router();
 
-const jobs = [];
+// Public: सभी open jobs देख सकते हैं
+router.get("/", getJobs);
 
-router.get("/", (req, res) => {
-  res.json({
-    success: true,
-    data: jobs
-  });
-});
+// Public: एक specific job देख सकते हैं
+router.get("/:id", getJobById);
 
-router.post("/", (req, res) => {
-  const { title, description, location, budget, service } = req.body;
+// Protected routes
+router.post("/", requireAuth, createJob);
 
-  if (!title || !description) {
-    return res.status(400).json({
-      success: false,
-      message: "Title and description are required."
-    });
-  }
+router.patch("/:id", requireAuth, updateJob);
 
-  const job = {
-    id: Date.now().toString(),
-    title,
-    description,
-    location: location || "",
-    budget: budget || "",
-    service: service || "",
-    status: "open",
-    createdAt: new Date().toISOString()
-  };
-
-  jobs.unshift(job);
-
-  res.status(201).json({
-    success: true,
-    message: "Job created successfully.",
-    data: job
-  });
-});
-
-router.get("/:id", (req, res) => {
-  const job = jobs.find((item) => item.id === req.params.id);
-
-  if (!job) {
-    return res.status(404).json({
-      success: false,
-      message: "Job not found."
-    });
-  }
-
-  res.json({
-    success: true,
-    data: job
-  });
-});
+router.delete("/:id", requireAuth, deleteJob);
 
 export default router;
