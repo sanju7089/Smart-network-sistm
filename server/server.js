@@ -3,6 +3,14 @@ import cors from "cors";
 import dotenv from "dotenv";
 import helmet from "helmet";
 
+import authRoutes from "./routes/auth.js";
+import adminRoutes from "./routes/admin.js";
+import bookingRoutes from "./routes/bookings.js";
+import jobRoutes from "./routes/jobs.js";
+import paymentRoutes from "./routes/payments.js";
+import userRoutes from "./routes/users.js";
+import workerRoutes from "./routes/workers.js";
+
 dotenv.config();
 
 const app = express();
@@ -54,6 +62,15 @@ app.use(
 
 app.use(express.json({ limit: "1mb" }));
 
+// API Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/jobs", jobRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/workers", workerRoutes);
+
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -80,9 +97,12 @@ app.use((req, res) => {
 app.use((error, req, res, next) => {
   console.error("SERVER ERROR:", error);
 
-  res.status(500).json({
+  res.status(
+    error.status || 500
+  ).json({
     success: false,
-    message: "Internal server error."
+    message:
+      error.message || "Internal server error."
   });
 });
 
