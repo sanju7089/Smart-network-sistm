@@ -250,4 +250,4 @@ export async function updatePaymentStatus(req, res) {
       message: "Unable to update payment."
     });
   }
-  }
+}
