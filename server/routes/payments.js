@@ -1,64 +1,28 @@
 import express from "express";
 import { requireAuth } from "../middleware/authMiddleware.js";
 
+import {
+  getPayments,
+  getPaymentById,
+  createPayment,
+  updatePaymentStatus
+} from "../controllers/paymentController.js";
+
 const router = express.Router();
 
+// सभी payment routes के लिए login जरूरी है
 router.use(requireAuth);
 
-const payments = [];
+// अपनी payments / Admin के लिए सभी payments
+router.get("/", getPayments);
 
-router.get("/", (req, res) => {
-  res.json({
-    success: true,
-    data: payments
-  });
-});
+// नया payment record बनाना
+router.post("/", createPayment);
 
-router.post("/", (req, res) => {
-  const { amount, bookingId, method } = req.body;
+// Payment status update (Admin only check controller में है)
+router.patch("/:id/status", updatePaymentStatus);
 
-  if (!amount || Number(amount) <= 0) {
-    return res.status(400).json({
-      success: false,
-      message: "A valid payment amount is required."
-    });
-  }
-
-  const payment = {
-    id: Date.now().toString(),
-    userId: req.user.id,
-    bookingId: bookingId || null,
-    amount: Number(amount),
-    method: method || "pending",
-    status: "pending",
-    createdAt: new Date().toISOString()
-  };
-
-  payments.unshift(payment);
-
-  res.status(201).json({
-    success: true,
-    message: "Payment record created.",
-    data: payment
-  });
-});
-
-router.get("/:id", (req, res) => {
-  const payment = payments.find(
-    (item) => item.id === req.params.id
-  );
-
-  if (!payment) {
-    return res.status(404).json({
-      success: false,
-      message: "Payment not found."
-    });
-  }
-
-  res.json({
-    success: true,
-    data: payment
-  });
-});
+// एक specific payment देखना
+router.get("/:id", getPaymentById);
 
 export default router;
