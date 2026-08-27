@@ -36,7 +36,10 @@ export async function getWorkers(req, res) {
     }
 
     const workers = await Worker.find(filter)
-      .sort({ verified: -1, createdAt: -1 })
+      .sort({
+        verified: -1,
+        createdAt: -1
+      })
       .populate("userId", "email role");
 
     return res.json({
@@ -118,7 +121,10 @@ export async function getMyWorkerProfile(req, res) {
 
 export async function createWorkerProfile(req, res) {
   try {
-    if (req.user.role !== "worker" && req.user.role !== "admin") {
+    if (
+      req.user.role !== "worker" &&
+      req.user.role !== "admin"
+    ) {
       return res.status(403).json({
         success: false,
         message: "Only workers can create a worker profile."
@@ -256,4 +262,4 @@ export async function updateWorkerProfile(req, res) {
       message: "Unable to update worker profile."
     });
   }
-      }
+  }
