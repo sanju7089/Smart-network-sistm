@@ -1,99 +1,237 @@
-const users = [];
+import mongoose from "mongoose";
+import User from "../models/User.js";
 
-export function getUsers(req, res) {
-  res.json({
-    success: true,
-    data: users.map(({ password, ...user }) => user)
-  });
+function isValidId(id) {
+  return mongoose.Types.ObjectId.isValid(id);
 }
 
-export function getUserById(req, res) {
-  const user = users.find(
-    (item) => item.id === req.params.id
-  );
-
-  if (!user) {
-    return res.status(404).json({
-      success: false,
-      message: "User not found."
-    });
-  }
-
-  const { password, ...safeUser } = user;
-
-  res.json({
-    success: true,
-    data: safeUser
-  });
+function isAdmin(user) {
+  return user?.role === "admin";
 }
 
-export function getMyProfile(req, res) {
-  const user = users.find(
-    (item) => item.id === req.user?.id
-  );
+function safeUser(user) {
+  if (!user) return null;
 
-  if (!user) {
+  return {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    phone: user.phone,
+    location: user.location,
+    isActive: user.isActive,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt
+  };
+}
+
+// Admin: सभी users
+export async function getUsers(req, res) {
+  try {
+    if (!isAdmin(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only admins can view all users."
+      });
+    }
+
+    const users = await User.find()
+      .sort({ createdAt: -1 });
+
     return res.json({
       success: true,
-      data: req.user
+      count: users.length,
+      data: users.map(safeUser)
+    });
+  } catch (error) {
+    console.error("GET USERS ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to fetch users."
     });
   }
-
-  const { password, ...safeUser } = user;
-
-  res.json({
-    success: true,
-    data: safeUser
-  });
 }
 
-export function updateMyProfile(req, res) {
-  const user = users.find(
-    (item) => item.id === req.user?.id
-  );
+// अपना profile
+export async function getMyProfile(req, res) {
+  try {
+    const user = await User.findById(req.user.id);
 
-  if (!user) {
-    return res.status(404).json({
-      success: false,
-      message: "User profile not found."
-    });
-  }
-
-  const allowedFields = ["name", "phone", "location", "bio"];
-
-  allowedFields.forEach((field) => {
-    if (req.body[field] !== undefined) {
-      user[field] = req.body[field];
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User profile not found."
+      });
     }
-  });
 
-  user.updatedAt = new Date().toISOString();
+    return res.json({
+      success: true,
+      data: safeUser(user)
+    });
+  } catch (error) {
+    console.error("GET MY PROFILE ERROR:", error);
 
-  const { password, ...safeUser } = user;
-
-  res.json({
-    success: true,
-    message: "Profile updated successfully.",
-    data: safeUser
-  });
-}
-
-export function deleteUser(req, res) {
-  const index = users.findIndex(
-    (item) => item.id === req.params.id
-  );
-
-  if (index === -1) {
-    return res.status(404).json({
+    return res.status(500).json({
       success: false,
-      message: "User not found."
+      message: "Unable to fetch profile."
     });
   }
+}
 
-  users.splice(index, 1);
+// अपना profile update
+export async function updateMyProfile(req, res) {
+  try {
+    const allowedFields = [
+      "name",
+      "phone",
+      "location"
+    ];
 
-  res.json({
-    success: true,
-    message: "User deleted successfully."
-  });
+    const updates = {};
+
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updates[field] =
+          typeof req.body[field] === "string"
+            ? req.body[field].trim()
+            : req.body[field];
+      }
+    });
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid fields provided for update."
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updates },
+      {
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User profile not found."
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Profile updated successfully.",
+      data: safeUser(user)
+    });
+  } catch (error) {
+    console.error("UPDATE PROFILE ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to update profile."
+    });
   }
+}
+
+// Admin: एक specific user
+export async function getUserById(req, res) {
+  try {
+    const { id } = req.params;
+
+    if (!isValidId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID."
+      });
+    }
+
+    const isOwnProfile =
+      String(req.user.id) === String(id);
+
+    if (!isAdmin(req.user) && !isOwnProfile) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have permission to view this user."
+      });
+    }
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found."
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: safeUser(user)
+    });
+  } catch (error) {
+    console.error("GET USER ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to fetch user."
+    });
+  }
+}
+
+// Admin: user को deactivate करना
+export async function deleteUser(req, res) {
+  try {
+    if (!isAdmin(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only admins can manage users."
+      });
+    }
+
+    const { id } = req.params;
+
+    if (!isValidId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID."
+      });
+    }
+
+    if (String(req.user.id) === String(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot deactivate your own account."
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      { $set: { isActive: false } },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found."
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "User account deactivated successfully.",
+      data: safeUser(user)
+    });
+  } catch (error) {
+    console.error("DEACTIVATE USER ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to deactivate user."
+    });
+  }
+      }
