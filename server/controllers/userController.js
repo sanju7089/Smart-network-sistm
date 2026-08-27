@@ -234,4 +234,4 @@ export async function deleteUser(req, res) {
       message: "Unable to deactivate user."
     });
   }
-      }
+}
