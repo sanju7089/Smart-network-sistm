@@ -1,4 +1,31 @@
+const SWN_CONFIG = {
+  // Live backend deploy होने के बाद केवल यह URL बदलना होगा.
+  // Example: https://your-backend.onrender.com/api
+  API_URL:
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+      ? "http://localhost:3000/api"
+      : ""
+};
+
 const SWN = {
+  apiUrl() {
+    return SWN_CONFIG.API_URL;
+  },
+
+  api(path = "") {
+    const base = SWN_CONFIG.API_URL.replace(/\/$/, "");
+    const endpoint = path.startsWith("/") ? path : `/${path}`;
+
+    if (!base) {
+      throw new Error(
+        "Production API URL is not configured yet."
+      );
+    }
+
+    return `${base}${endpoint}`;
+  },
+
   get(key, defaultValue = null) {
     try {
       const value = localStorage.getItem(key);
@@ -46,6 +73,50 @@ const SWN = {
     return localStorage.getItem("swn_token");
   },
 
+  authHeaders(extraHeaders = {}) {
+    const headers = {
+      "Content-Type": "application/json",
+      ...extraHeaders
+    };
+
+    const token = this.token();
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    return headers;
+  },
+
+  async request(path, options = {}) {
+    const response = await fetch(
+      this.api(path),
+      {
+        ...options,
+        headers: this.authHeaders(
+          options.headers || {}
+        )
+      }
+    );
+
+    let data = null;
+
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        data?.message ||
+        `Request failed with status ${response.status}`
+      );
+    }
+
+    return data;
+  },
+
   logout() {
     if (
       typeof window.logout === "function"
@@ -81,6 +152,15 @@ function dashboardUrl(user) {
   return "customer-dashboard.html";
 }
 
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function authBox() {
   const element =
     document.querySelector("[data-auth]");
@@ -92,7 +172,7 @@ function authBox() {
   element.innerHTML = user
     ? `
       <span class="muted">
-        Hi, ${user.name || "User"}
+        Hi, ${escapeHtml(user.name || "User")}
       </span>
 
       <a href="${dashboardUrl(user)}">
@@ -154,7 +234,16 @@ async function verifyAuth() {
     return SWN.user();
   }
 
-  return await window.refreshCurrentUser();
+  try {
+    return await window.refreshCurrentUser();
+  } catch (error) {
+    console.error("Authentication verification failed:", error);
+
+    localStorage.removeItem("swn_token");
+    localStorage.removeItem("swn_user");
+
+    return null;
+  }
 }
 
 document.addEventListener(
@@ -174,6 +263,8 @@ document.addEventListener(
   }
 );
 
+window.SWN_CONFIG = SWN_CONFIG;
 window.SWN = SWN;
 window.protect = protect;
 window.verifyAuth = verifyAuth;
+window.escapeHtml = escapeHtml;
