@@ -1,7 +1,3 @@
-const API_BASE_URL =
-  window.SWN_API_BASE_URL ||
-  "http://localhost:3000/api";
-
 function showMessage(message) {
   if (window.SWN && typeof SWN.flash === "function") {
     SWN.flash(message);
@@ -11,13 +7,17 @@ function showMessage(message) {
 }
 
 function getApiUrl(path) {
-  return `${API_BASE_URL}${path}`;
+  if (!window.SWN || typeof SWN.api !== "function") {
+    throw new Error("API configuration is not available.");
+  }
+
+  return SWN.api(path);
 }
 
 function saveAuth(token, user) {
   localStorage.setItem("swn_token", token);
 
-  // केवल safe user data store करें, password कभी नहीं
+  // Password कभी localStorage में save नहीं होगा
   localStorage.setItem(
     "swn_user",
     JSON.stringify(user)
@@ -31,34 +31,33 @@ function redirectByRole(user) {
   }
 
   if (user.role === "worker") {
-    window.location.href =
-      "worker-dashboard.html";
+    window.location.href = "worker-dashboard.html";
     return;
   }
 
-  window.location.href =
-    "customer-dashboard.html";
+  window.location.href = "customer-dashboard.html";
+}
+
+async function readJson(response) {
+  try {
+    return await response.json();
+  } catch {
+    return {};
+  }
 }
 
 async function signup() {
   try {
-    const form =
-      document.querySelector("#signupForm");
+    const form = document.querySelector("#signupForm");
 
     if (!form) {
       showMessage("Signup form not found.");
       return;
     }
 
-    const data = Object.fromEntries(
-      new FormData(form)
-    );
+    const data = Object.fromEntries(new FormData(form));
 
-    if (
-      !data.name ||
-      !data.email ||
-      !data.password
-    ) {
+    if (!data.name || !data.email || !data.password) {
       showMessage(
         "Name, email and password are required."
       );
@@ -83,12 +82,19 @@ async function signup() {
       }
     );
 
-    const result = await response.json();
+    const result = await readJson(response);
 
     if (!response.ok || !result.success) {
       showMessage(
         result.message ||
         "Unable to create account."
+      );
+      return;
+    }
+
+    if (!result.token || !result.user) {
+      showMessage(
+        "Account was created, but authentication data is incomplete."
       );
       return;
     }
@@ -105,24 +111,24 @@ async function signup() {
     console.error("SIGNUP ERROR:", error);
 
     showMessage(
-      "Unable to connect to the server."
+      error.message ===
+      "Production API URL is not configured yet."
+        ? "Server configuration is not complete yet."
+        : "Unable to connect to the server."
     );
   }
 }
 
 async function login() {
   try {
-    const form =
-      document.querySelector("#loginForm");
+    const form = document.querySelector("#loginForm");
 
     if (!form) {
       showMessage("Login form not found.");
       return;
     }
 
-    const data = Object.fromEntries(
-      new FormData(form)
-    );
+    const data = Object.fromEntries(new FormData(form));
 
     if (!data.email || !data.password) {
       showMessage(
@@ -145,12 +151,19 @@ async function login() {
       }
     );
 
-    const result = await response.json();
+    const result = await readJson(response);
 
     if (!response.ok || !result.success) {
       showMessage(
         result.message ||
         "Invalid email or password."
+      );
+      return;
+    }
+
+    if (!result.token || !result.user) {
+      showMessage(
+        "Login response is incomplete."
       );
       return;
     }
@@ -167,7 +180,10 @@ async function login() {
     console.error("LOGIN ERROR:", error);
 
     showMessage(
-      "Unable to connect to the server."
+      error.message ===
+      "Production API URL is not configured yet."
+        ? "Server configuration is not complete yet."
+        : "Unable to connect to the server."
     );
   }
 }
@@ -210,9 +226,14 @@ async function refreshCurrentUser() {
       }
     );
 
-    const result = await response.json();
+    const result = await readJson(response);
 
     if (!response.ok || !result.success) {
+      logout();
+      return null;
+    }
+
+    if (!result.user) {
       logout();
       return null;
     }
@@ -230,10 +251,7 @@ async function refreshCurrentUser() {
   }
 }
 
-async function apiFetch(
-  path,
-  options = {}
-) {
+async function apiFetch(path, options = {}) {
   const token = getAuthToken();
 
   const headers = {
@@ -241,16 +259,14 @@ async function apiFetch(
   };
 
   if (token) {
-    headers.Authorization =
-      `Bearer ${token}`;
+    headers.Authorization = `Bearer ${token}`;
   }
 
   if (
     options.body &&
     !headers["Content-Type"]
   ) {
-    headers["Content-Type"] =
-      "application/json";
+    headers["Content-Type"] = "application/json";
   }
 
   const response = await fetch(
@@ -274,6 +290,5 @@ window.login = login;
 window.logout = logout;
 window.getAuthToken = getAuthToken;
 window.getCurrentUser = getCurrentUser;
-window.refreshCurrentUser =
-  refreshCurrentUser;
+window.refreshCurrentUser = refreshCurrentUser;
 window.apiFetch = apiFetch;
