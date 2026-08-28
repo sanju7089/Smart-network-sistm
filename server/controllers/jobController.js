@@ -1,16 +1,36 @@
 import mongoose from "mongoose";
+
 import Job from "../models/Job.js";
+import Booking from "../models/Booking.js";
 
 function isValidId(id) {
   return mongoose.Types.ObjectId.isValid(id);
 }
 
 function isOwner(job, userId) {
-  return String(job.customerId) === String(userId);
+  return (
+    String(job.customerId) ===
+    String(userId)
+  );
+}
+
+function publicJobCustomerFields() {
+  return "name location";
 }
 
 export async function createJob(req, res) {
   try {
+    if (
+      req.user.role !== "customer" &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Only customers can create jobs."
+      });
+    }
+
     const {
       title,
       description,
@@ -20,43 +40,56 @@ export async function createJob(req, res) {
       budget
     } = req.body;
 
-    if (req.user.role !== "customer" && req.user.role !== "admin") {
-      return res.status(403).json({
+    if (
+      !title ||
+      !String(title).trim() ||
+      !description ||
+      !String(description).trim()
+    ) {
+      return res.status(400).json({
         success: false,
-        message: "Only customers can create jobs."
+        message:
+          "Title and description are required."
       });
     }
 
-    if (!title || !description) {
-      return res.status(400).json({
-        success: false,
-        message: "Title and description are required."
-      });
-    }
+    let normalizedBudget = null;
 
     if (
       budget !== undefined &&
       budget !== null &&
-      budget !== "" &&
-      (!Number.isFinite(Number(budget)) || Number(budget) < 0)
+      budget !== ""
     ) {
-      return res.status(400).json({
-        success: false,
-        message: "Budget must be a valid positive number."
-      });
+      normalizedBudget = Number(budget);
+
+      if (
+        !Number.isFinite(normalizedBudget) ||
+        normalizedBudget < 0
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Budget must be a valid number."
+        });
+      }
     }
 
     const job = await Job.create({
       title: String(title).trim(),
-      description: String(description).trim(),
-      category: category ? String(category).trim() : "",
-      service: service ? String(service).trim() : "",
-      location: location ? String(location).trim() : "",
-      budget:
-        budget === "" || budget === undefined || budget === null
-          ? null
-          : Number(budget),
-      customerId: req.user.id
+      description:
+        String(description).trim(),
+      category: category
+        ? String(category).trim()
+        : "",
+      service: service
+        ? String(service).trim()
+        : "",
+      location: location
+        ? String(location).trim()
+        : "",
+      budget: normalizedBudget,
+      customerId: req.user.id,
+      status: "open"
     });
 
     return res.status(201).json({
@@ -65,7 +98,10 @@ export async function createJob(req, res) {
       data: job
     });
   } catch (error) {
-    console.error("CREATE JOB ERROR:", error);
+    console.error(
+      "CREATE JOB ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -80,31 +116,42 @@ export async function getJobs(req, res) {
       status,
       category,
       service,
-      location,
-      customerId
+      location
     } = req.query;
 
     const filter = {};
 
-    if (status) filter.status = status;
-    if (category) filter.category = category;
-    if (service) filter.service = service;
-    if (location) filter.location = location;
+    // Public API default:
+    // केवल open jobs दिखें
+    filter.status = status || "open";
 
-    if (customerId) {
-      if (!isValidId(customerId)) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid customer ID."
-        });
-      }
+    if (category) {
+      filter.category = {
+        $regex: String(category).trim(),
+        $options: "i"
+      };
+    }
 
-      filter.customerId = customerId;
+    if (service) {
+      filter.service = {
+        $regex: String(service).trim(),
+        $options: "i"
+      };
+    }
+
+    if (location) {
+      filter.location = {
+        $regex: String(location).trim(),
+        $options: "i"
+      };
     }
 
     const jobs = await Job.find(filter)
       .sort({ createdAt: -1 })
-      .populate("customerId", "name email phone location");
+      .populate(
+        "customerId",
+        publicJobCustomerFields()
+      );
 
     return res.json({
       success: true,
@@ -112,7 +159,10 @@ export async function getJobs(req, res) {
       data: jobs
     });
   } catch (error) {
-    console.error("GET JOBS ERROR:", error);
+    console.error(
+      "GET JOBS ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -133,7 +183,10 @@ export async function getJobById(req, res) {
     }
 
     const job = await Job.findById(id)
-      .populate("customerId", "name email phone location");
+      .populate(
+        "customerId",
+        publicJobCustomerFields()
+      );
 
     if (!job) {
       return res.status(404).json({
@@ -147,7 +200,10 @@ export async function getJobById(req, res) {
       data: job
     });
   } catch (error) {
-    console.error("GET JOB ERROR:", error);
+    console.error(
+      "GET JOB ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -176,10 +232,14 @@ export async function updateJob(req, res) {
       });
     }
 
-    if (req.user.role !== "admin" && !isOwner(job, req.user.id)) {
+    if (
+      req.user.role !== "admin" &&
+      !isOwner(job, req.user.id)
+    ) {
       return res.status(403).json({
         success: false,
-        message: "You do not have permission to update this job."
+        message:
+          "You do not have permission to update this job."
       });
     }
 
@@ -189,55 +249,71 @@ export async function updateJob(req, res) {
       "category",
       "service",
       "location",
-      "budget",
-      "status"
+      "budget"
     ];
 
     const updates = {};
 
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) {
-        updates[field] = req.body[field];
+        updates[field] =
+          typeof req.body[field] === "string"
+            ? req.body[field].trim()
+            : req.body[field];
       }
     }
 
-    if (Object.keys(updates).length === 0) {
+    // केवल admin status बदल सकता है
+    if (
+      req.user.role === "admin" &&
+      req.body.status !== undefined
+    ) {
+      updates.status = req.body.status;
+    }
+
+    if (
+      Object.keys(updates).length === 0
+    ) {
       return res.status(400).json({
         success: false,
-        message: "No valid fields provided for update."
+        message:
+          "No valid fields provided."
       });
     }
 
     if (
-      updates.budget !== undefined &&
-      updates.budget !== null &&
-      updates.budget !== "" &&
-      (!Number.isFinite(Number(updates.budget)) ||
-        Number(updates.budget) < 0)
+      updates.budget !== undefined
     ) {
-      return res.status(400).json({
-        success: false,
-        message: "Budget must be a valid positive number."
-      });
-    }
+      if (updates.budget === "") {
+        updates.budget = null;
+      } else {
+        const amount =
+          Number(updates.budget);
 
-    if (updates.budget === "") {
-      updates.budget = null;
-    } else if (
-      updates.budget !== undefined &&
-      updates.budget !== null
-    ) {
-      updates.budget = Number(updates.budget);
-    }
+        if (
+          !Number.isFinite(amount) ||
+          amount < 0
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Budget must be a valid number."
+          });
+        }
 
-    const updatedJob = await Job.findByIdAndUpdate(
-      id,
-      updates,
-      {
-        new: true,
-        runValidators: true
+        updates.budget = amount;
       }
-    );
+    }
+
+    const updatedJob =
+      await Job.findByIdAndUpdate(
+        id,
+        { $set: updates },
+        {
+          new: true,
+          runValidators: true
+        }
+      );
 
     return res.json({
       success: true,
@@ -245,7 +321,10 @@ export async function updateJob(req, res) {
       data: updatedJob
     });
   } catch (error) {
-    console.error("UPDATE JOB ERROR:", error);
+    console.error(
+      "UPDATE JOB ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -274,10 +353,35 @@ export async function deleteJob(req, res) {
       });
     }
 
-    if (req.user.role !== "admin" && !isOwner(job, req.user.id)) {
+    if (
+      req.user.role !== "admin" &&
+      !isOwner(job, req.user.id)
+    ) {
       return res.status(403).json({
         success: false,
-        message: "You do not have permission to delete this job."
+        message:
+          "You do not have permission to delete this job."
+      });
+    }
+
+    const activeBooking =
+      await Booking.exists({
+        jobId: id,
+        status: {
+          $in: [
+            "pending",
+            "accepted",
+            "confirmed",
+            "in_progress"
+          ]
+        }
+      });
+
+    if (activeBooking) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Job has an active booking and cannot be deleted."
       });
     }
 
@@ -288,11 +392,14 @@ export async function deleteJob(req, res) {
       message: "Job deleted successfully."
     });
   } catch (error) {
-    console.error("DELETE JOB ERROR:", error);
+    console.error(
+      "DELETE JOB ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
       message: "Unable to delete job."
     });
   }
-}
+        }
