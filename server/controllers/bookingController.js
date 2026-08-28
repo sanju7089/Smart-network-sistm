@@ -582,4 +582,4 @@ export async function cancelBooking(req, res) {
         "Unable to cancel booking."
     });
   }
-        }
+}
