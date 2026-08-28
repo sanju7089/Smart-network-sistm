@@ -36,4 +36,4 @@ export function errorHandler(error, req, res, next) {
         ? "Internal server error."
         : error.message || "Request failed."
   });
-                }
+}
