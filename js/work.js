@@ -1,12 +1,4 @@
-function showWorkMessage(message) {
-  if (window.SWN && typeof SWN.flash === "function") {
-    SWN.flash(message);
-  } else {
-    alert(message);
-  }
-}
-
-function escapeWorkHtml(value = "") {
+function escapeWorkerHtml(value = "") {
   if (typeof window.escapeHtml === "function") {
     return window.escapeHtml(value);
   }
@@ -19,135 +11,130 @@ function escapeWorkHtml(value = "") {
     .replace(/'/g, "&#039;");
 }
 
-function getJobIdFromUrl() {
-  return new URLSearchParams(window.location.search).get("id");
+function getWorkerQuery() {
+  return new URLSearchParams(window.location.search);
 }
 
-async function postWork(event) {
-  if (event) {
-    event.preventDefault();
+function getWorkerServiceFilter() {
+  const params = getWorkerQuery();
+  return String(params.get("service") || "").trim();
+}
+
+function getJobId() {
+  const params = getWorkerQuery();
+  return String(params.get("jobId") || "").trim();
+}
+
+function getWorkerId() {
+  const params = getWorkerQuery();
+  return String(params.get("id") || "").trim();
+}
+
+function workerProfileUrl(workerId) {
+  const jobId = getJobId();
+
+  const params = new URLSearchParams({
+    id: workerId
+  });
+
+  if (jobId) {
+    params.set("jobId", jobId);
   }
 
-  const user = protect("customer");
+  return `worker-profile.html?${params.toString()}`;
+}
 
-  if (!user) return;
+function checkoutUrl(workerId) {
+  const params = new URLSearchParams({
+    worker: workerId
+  });
 
-  const form = document.querySelector("#workForm");
+  const jobId = getJobId();
 
-  if (!form) {
-    showWorkMessage("Work form not found.");
-    return;
+  if (jobId) {
+    params.set("jobId", jobId);
   }
 
-  const formData = new FormData(form);
+  return `checkout.html?${params.toString()}`;
+}
 
-  const jobData = {
-    title: String(formData.get("title") || "").trim(),
-    description: String(
-      formData.get("description") || ""
-    ).trim(),
-    category: String(
-      formData.get("category") || ""
-    ).trim(),
-    service: String(
-      formData.get("service") || ""
-    ).trim(),
-    location: String(
-      formData.get("location") || ""
-    ).trim(),
-    budget: String(formData.get("budget") || "").trim()
-  };
+function renderWorkerCard(worker) {
+  const id = worker._id || worker.id;
 
-  if (!jobData.title || !jobData.description) {
-    showWorkMessage(
-      "Please enter both work title and description."
-    );
-    return;
-  }
-
-  if (
-    jobData.budget !== "" &&
-    (!Number.isFinite(Number(jobData.budget)) ||
-      Number(jobData.budget) < 0)
-  ) {
-    showWorkMessage("Please enter a valid budget.");
-    return;
-  }
-
-  const submitButton = form.querySelector(
-    'button[type="submit"], input[type="submit"]'
+  const name = escapeWorkerHtml(
+    worker.name || "Worker"
   );
 
-  const originalButtonText = submitButton
-    ? submitButton.textContent
-    : "";
+  const service = escapeWorkerHtml(
+    worker.service || "General Service"
+  );
 
-  try {
-    if (submitButton) {
-      submitButton.disabled = true;
-      submitButton.textContent = "Posting...";
-    }
+  const location = escapeWorkerHtml(
+    worker.location || "Location not specified"
+  );
 
-    const response = await apiFetch("/jobs", {
-      method: "POST",
-      body: JSON.stringify({
-        ...jobData,
-        budget:
-          jobData.budget === ""
-            ? ""
-            : Number(jobData.budget)
-      })
-    });
+  const experience = escapeWorkerHtml(
+    worker.experience || "Experience not specified"
+  );
 
-    let result = {};
+  const verifiedBadge = worker.verified
+    ? `<span class="tag">Verified</span>`
+    : `<span class="tag">Profile Pending Verification</span>`;
 
-    try {
-      result = await response.json();
-    } catch {
-      result = {};
-    }
+  return `
+    <div class="card">
+      ${verifiedBadge}
 
-    if (!response.ok || !result.success) {
-      throw new Error(
-        result.message || "Unable to post work."
-      );
-    }
+      <h3>${name}</h3>
 
-    showWorkMessage(
-      result.message || "Work posted successfully."
-    );
+      <p class="muted">
+        ${service} • ${location}
+      </p>
 
-    window.location.href =
-      "customer-dashboard.html";
-  } catch (error) {
-    console.error("POST WORK ERROR:", error);
+      <p>
+        Experience: ${experience}
+      </p>
 
-    showWorkMessage(
-      error.message || "Unable to post work."
-    );
-  } finally {
-    if (submitButton) {
-      submitButton.disabled = false;
-      submitButton.textContent =
-        originalButtonText || "Post Work";
-    }
-  }
+      <a
+        class="btn btn-primary"
+        href="${workerProfileUrl(
+          encodeURIComponent(id)
+        )}"
+      >
+        View Profile
+      </a>
+    </div>
+  `;
 }
 
-async function jobs(id = "jobsList") {
-  const element = document.getElementById(id);
+async function loadWorkers() {
+  const list = document.querySelector(
+    "#workersList"
+  );
 
-  if (!element) return;
+  if (!list) return;
 
-  element.innerHTML = `
+  list.innerHTML = `
     <div class="notice">
-      Loading work requests...
+      Loading workers...
     </div>
   `;
 
   try {
+    const service = getWorkerServiceFilter();
+
+    const params = new URLSearchParams();
+
+    if (service) {
+      params.set("service", service);
+    }
+
+    const query = params.toString();
+
     const response = await fetch(
-      SWN.api("/jobs?status=open")
+      SWN.api(
+        `/workers${query ? `?${query}` : ""}`
+      )
     );
 
     let result = {};
@@ -161,82 +148,69 @@ async function jobs(id = "jobsList") {
     if (!response.ok || !result.success) {
       throw new Error(
         result.message ||
-          "Unable to load work requests."
+        "Unable to load workers."
       );
     }
 
-    const jobList = Array.isArray(result.data)
+    const workers = Array.isArray(result.data)
       ? result.data
       : [];
 
-    element.innerHTML = jobList.length
-      ? jobList
-          .map((job) => {
-            const title = escapeWorkHtml(job.title);
-            const service = escapeWorkHtml(
-              job.service || job.category || "General"
-            );
-            const location = escapeWorkHtml(
-              job.location || "Location not specified"
-            );
+    if (!workers.length) {
+      list.innerHTML = `
+        <div class="notice">
+          No active workers found for this service.
+        </div>
+      `;
+      return;
+    }
 
-            return `
-              <div class="item">
-                <div class="row between">
-                  <div>
-                    <b>${title}</b>
-
-                    <p class="muted">
-                      ${service} • ${location}
-                    </p>
-                  </div>
-
-                  <a
-                    class="btn btn-primary"
-                    href="work-request.html?id=${encodeURIComponent(
-                      job._id
-                    )}"
-                  >
-                    Open
-                  </a>
-                </div>
-              </div>
-            `;
-          })
-          .join("")
-      : `
-          <div class="notice">
-            No work requests available yet.
-          </div>
-        `;
+    list.innerHTML = workers
+      .map(renderWorkerCard)
+      .join("");
   } catch (error) {
-    console.error("LOAD JOBS ERROR:", error);
+    console.error("LOAD WORKERS ERROR:", error);
 
-    element.innerHTML = `
+    list.innerHTML = `
       <div class="notice">
-        Unable to load work requests.
+        ${escapeWorkerHtml(
+          error.message ||
+          "Unable to load workers."
+        )}
       </div>
     `;
   }
 }
 
-async function request() {
-  const element =
-    document.querySelector("#requestDetail");
+async function loadWorkerDetail() {
+  const detail = document.querySelector(
+    "#workerDetail"
+  );
 
-  const id = getJobIdFromUrl();
+  if (!detail) return;
 
-  if (!element || !id) return;
+  const workerId = getWorkerId();
 
-  element.innerHTML = `
+  if (!workerId) {
+    detail.innerHTML = `
+      <div class="notice">
+        Worker ID is missing.
+      </div>
+    `;
+    return;
+  }
+
+  detail.innerHTML = `
     <div class="notice">
-      Loading work details...
+      Loading worker profile...
     </div>
   `;
 
   try {
     const response = await fetch(
-      SWN.api(`/jobs/${encodeURIComponent(id)}`)
+      SWN.api(
+        `/workers/${encodeURIComponent(workerId)}`
+      )
     );
 
     let result = {};
@@ -249,72 +223,106 @@ async function request() {
 
     if (!response.ok || !result.success) {
       throw new Error(
-        result.message || "Job not found."
+        result.message ||
+        "Worker not found."
       );
     }
 
-    const job = result.data;
+    const worker = result.data;
 
-    if (!job) {
-      throw new Error("Job not found.");
+    if (!worker) {
+      throw new Error("Worker not found.");
     }
 
-    const title = escapeWorkHtml(job.title);
-    const description = escapeWorkHtml(
-      job.description || ""
-    );
-    const service = escapeWorkHtml(
-      job.service || job.category || "General"
-    );
-    const location = escapeWorkHtml(
-      job.location || "Location not specified"
+    const id = worker._id || worker.id;
+
+    const name = escapeWorkerHtml(
+      worker.name || "Worker"
     );
 
-    const budget =
-      job.budget === null ||
-      job.budget === undefined ||
-      job.budget === ""
-        ? "Negotiable"
-        : `₹${Number(job.budget).toLocaleString(
-            "en-IN"
-          )}`;
+    const service = escapeWorkerHtml(
+      worker.service || "General Service"
+    );
 
-    element.innerHTML = `
-      <h2>${title}</h2>
+    const location = escapeWorkerHtml(
+      worker.location || "Location not specified"
+    );
 
-      <p class="lead">
-        ${description}
-      </p>
+    const experience = escapeWorkerHtml(
+      worker.experience || "Not specified"
+    );
 
-      <span class="tag">
-        ${service}
-      </span>
+    const bio = escapeWorkerHtml(
+      worker.bio || "No additional information provided."
+    );
 
-      <span class="tag">
-        ${location}
-      </span>
+    const phone = escapeWorkerHtml(
+      worker.phone || "Available after booking"
+    );
 
-      <p>
-        Budget: ${budget}
-      </p>
+    const verifiedBadge = worker.verified
+      ? `
+        <span class="tag">
+          Verified Worker
+        </span>
+      `
+      : `
+        <span class="tag">
+          Verification Pending
+        </span>
+      `;
 
-      <a
-        class="btn btn-primary"
-        href="workers.html?service=${encodeURIComponent(
-          job.service || job.category || ""
-        )}&jobId=${encodeURIComponent(job._id)}"
-      >
-        Find Matched Workers
-      </a>
+    detail.innerHTML = `
+      <div class="card">
+        ${verifiedBadge}
+
+        <h1>${name}</h1>
+
+        <p class="lead">
+          ${service}
+        </p>
+
+        <p>
+          <b>Location:</b>
+          ${location}
+        </p>
+
+        <p>
+          <b>Experience:</b>
+          ${experience}
+        </p>
+
+        <p>
+          <b>About:</b>
+          ${bio}
+        </p>
+
+        <p>
+          <b>Contact:</b>
+          ${phone}
+        </p>
+
+        <a
+          class="btn btn-primary"
+          href="${checkoutUrl(
+            encodeURIComponent(id)
+          )}"
+        >
+          Book This Worker
+        </a>
+      </div>
     `;
   } catch (error) {
-    console.error("LOAD JOB DETAIL ERROR:", error);
+    console.error(
+      "LOAD WORKER DETAIL ERROR:",
+      error
+    );
 
-    element.innerHTML = `
+    detail.innerHTML = `
       <div class="notice">
-        ${escapeWorkHtml(
+        ${escapeWorkerHtml(
           error.message ||
-            "Unable to load work details."
+          "Unable to load worker profile."
         )}
       </div>
     `;
@@ -324,11 +332,10 @@ async function request() {
 document.addEventListener(
   "DOMContentLoaded",
   () => {
-    jobs();
-    request();
+    loadWorkers();
+    loadWorkerDetail();
   }
 );
 
-window.postWork = postWork;
-window.jobs = jobs;
-window.request = request;
+window.loadWorkers = loadWorkers;
+window.loadWorkerDetail = loadWorkerDetail;
