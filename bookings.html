@@ -28,13 +28,11 @@
       </a>
 
       <nav class="navlinks">
-
         <a href="services.html">Services</a>
         <a href="find-help.html">Find Help</a>
         <a href="workers.html">Workers</a>
 
         <span data-auth></span>
-
       </nav>
 
     </div>
@@ -53,7 +51,10 @@
           <div>
             <h1>My Bookings</h1>
 
-            <p class="lead" id="bookingSubtitle">
+            <p
+              class="lead"
+              id="bookingSubtitle"
+            >
               Loading your bookings...
             </p>
           </div>
@@ -101,13 +102,9 @@
       </p>
 
       <div class="row">
-
         <a href="support.html">Support</a>
-
         <a href="profile.html">Profile</a>
-
         <a href="urgent-help.html">Urgent Help</a>
-
       </div>
 
     </div>
@@ -245,9 +242,7 @@
       if (
         typeof booking.jobId === "object"
       ) {
-        return (
-          booking.jobId.title || ""
-        );
+        return booking.jobId.title || "";
       }
 
       return "";
@@ -255,15 +250,104 @@
     }
 
 
-    function allowedWorkerStatuses() {
+    /*
+      Secure worker workflow:
 
-      return [
-        "accepted",
-        "confirmed",
-        "in_progress",
-        "completed",
-        "rejected"
-      ];
+      pending
+      ├─ accepted
+      └─ rejected
+
+      accepted
+      └─ confirmed
+
+      confirmed
+      └─ in_progress
+
+      in_progress
+      └─ completed
+    */
+
+    function getWorkerNextActions(status) {
+
+      const actions = {
+        pending: [
+          {
+            value: "accepted",
+            label: "Accept Booking"
+          },
+          {
+            value: "rejected",
+            label: "Reject Booking"
+          }
+        ],
+
+        accepted: [
+          {
+            value: "confirmed",
+            label: "Confirm Booking"
+          }
+        ],
+
+        confirmed: [
+          {
+            value: "in_progress",
+            label: "Start Work"
+          }
+        ],
+
+        in_progress: [
+          {
+            value: "completed",
+            label: "Complete Work"
+          }
+        ],
+
+        completed: [],
+        cancelled: [],
+        rejected: []
+      };
+
+      return actions[status] || [];
+
+    }
+
+
+    function renderWorkerActions(
+      bookingId,
+      status
+    ) {
+
+      const actions =
+        getWorkerNextActions(status);
+
+      if (!actions.length) {
+
+        return `
+          <p class="muted">
+            No further action is available.
+          </p>
+        `;
+
+      }
+
+      return actions
+        .map(function(action) {
+
+          return `
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="updateBookingStatus(
+                '${bookingId}',
+                '${action.value}'
+              )"
+            >
+              ${action.label}
+            </button>
+          `;
+
+        })
+        .join("");
 
     }
 
@@ -277,7 +361,12 @@
         booking._id || booking.id;
 
       const status =
-        booking.status || "pending";
+        String(
+          booking.status || "pending"
+        ).toLowerCase();
+
+      const role =
+        user?.role || "customer";
 
       const workerName =
         escapeBookingHtml(
@@ -300,8 +389,6 @@
           "No additional notes."
         );
 
-      const role =
-        user?.role || "customer";
 
       let personSection = "";
 
@@ -356,17 +443,27 @@
 
       let actions = "";
 
+
+      /*
+        Customer can cancel only active bookings.
+      */
+
       if (
         role === "customer" &&
-        status !== "completed" &&
-        status !== "cancelled"
+        ![
+          "completed",
+          "cancelled",
+          "rejected"
+        ].includes(status)
       ) {
 
         actions += `
           <button
             type="button"
             class="btn"
-            onclick="cancelBooking('${bookingId}')"
+            onclick="cancelBooking(
+              '${bookingId}'
+            )"
           >
             Cancel Booking
           </button>
@@ -375,34 +472,25 @@
       }
 
 
-      if (
-        role === "worker" ||
-        role === "admin"
-      ) {
+      /*
+        Worker sees only the next valid action.
+      */
 
-        const statuses =
-          allowedWorkerStatuses();
+      if (role === "worker") {
 
-        const options = statuses
-          .map(function(item) {
+        actions += renderWorkerActions(
+          bookingId,
+          status
+        );
 
-            const selected =
-              item === status
-                ? "selected"
-                : "";
+      }
 
-            return `
-              <option
-                value="${item}"
-                ${selected}
-              >
-                ${formatStatus(item)}
-              </option>
-            `;
 
-          })
-          .join("");
+      /*
+        Admin can update status.
+      */
 
+      if (role === "admin") {
 
         actions += `
 
@@ -410,24 +498,42 @@
             id="status-${bookingId}"
           >
 
-            <option
-              value=""
-              ${statuses.includes(status)
-                ? ""
-                : "selected"
-              }
-            >
-              Select status
+            <option value="pending">
+              Pending
             </option>
 
-            ${options}
+            <option value="accepted">
+              Accepted
+            </option>
+
+            <option value="confirmed">
+              Confirmed
+            </option>
+
+            <option value="in_progress">
+              In Progress
+            </option>
+
+            <option value="completed">
+              Completed
+            </option>
+
+            <option value="cancelled">
+              Cancelled
+            </option>
+
+            <option value="rejected">
+              Rejected
+            </option>
 
           </select>
 
           <button
             type="button"
             class="btn btn-primary"
-            onclick="updateBookingStatus('${bookingId}')"
+            onclick="updateAdminBookingStatus(
+              '${bookingId}'
+            )"
           >
             Update Status
           </button>
@@ -480,6 +586,7 @@
           <p class="muted">
 
             Created:
+
             ${escapeBookingHtml(
               formatBookingDate(
                 booking.createdAt
@@ -509,7 +616,9 @@
           ? protect()
           : null;
 
-      if (!user) return;
+      if (!user) {
+        return;
+      }
 
 
       const list =
@@ -519,6 +628,7 @@
         document.querySelector(
           "#bookingSubtitle"
         );
+
 
       list.innerHTML = `
         <div class="notice">
@@ -532,13 +642,18 @@
         const response =
           await apiFetch("/bookings");
 
+
         let result = {};
 
         try {
+
           result =
             await response.json();
+
         } catch {
+
           result = {};
+
         }
 
 
@@ -594,12 +709,14 @@
             })
             .join("");
 
+
       } catch (error) {
 
         console.error(
           "LOAD BOOKINGS ERROR:",
           error
         );
+
 
         if (subtitle) {
 
@@ -611,10 +728,12 @@
 
         list.innerHTML = `
           <div class="notice">
+
             ${escapeBookingHtml(
               error.message ||
               "Unable to load bookings."
             )}
+
           </div>
         `;
 
@@ -632,7 +751,9 @@
           "Are you sure you want to cancel this booking?"
         );
 
-      if (!confirmed) return;
+      if (!confirmed) {
+        return;
+      }
 
 
       try {
@@ -651,10 +772,14 @@
         let result = {};
 
         try {
+
           result =
             await response.json();
+
         } catch {
+
           result = {};
+
         }
 
 
@@ -678,12 +803,14 @@
 
         loadBookings();
 
+
       } catch (error) {
 
         console.error(
           "CANCEL BOOKING ERROR:",
           error
         );
+
 
         showBookingMessage(
           error.message ||
@@ -697,18 +824,14 @@
 
 
     async function updateBookingStatus(
-      bookingId
+      bookingId,
+      status
     ) {
 
-      const select =
-        document.querySelector(
-          `#status-${bookingId}`
-        );
-
-      if (!select || !select.value) {
+      if (!status) {
 
         showBookingMessage(
-          "Please select a booking status.",
+          "Invalid booking status.",
           true
         );
 
@@ -728,7 +851,7 @@
               method: "PATCH",
 
               body: JSON.stringify({
-                status: select.value
+                status
               })
             }
           );
@@ -737,10 +860,14 @@
         let result = {};
 
         try {
+
           result =
             await response.json();
+
         } catch {
+
           result = {};
+
         }
 
 
@@ -764,12 +891,14 @@
 
         loadBookings();
 
+
       } catch (error) {
 
         console.error(
-          "UPDATE BOOKING ERROR:",
+          "UPDATE BOOKING STATUS ERROR:",
           error
         );
+
 
         showBookingMessage(
           error.message ||
@@ -778,6 +907,35 @@
         );
 
       }
+
+    }
+
+
+    async function updateAdminBookingStatus(
+      bookingId
+    ) {
+
+      const select =
+        document.querySelector(
+          `#status-${bookingId}`
+        );
+
+      if (!select) {
+
+        showBookingMessage(
+          "Status selector not found.",
+          true
+        );
+
+        return;
+
+      }
+
+
+      await updateBookingStatus(
+        bookingId,
+        select.value
+      );
 
     }
 
@@ -812,6 +970,9 @@
 
     window.updateBookingStatus =
       updateBookingStatus;
+
+    window.updateAdminBookingStatus =
+      updateAdminBookingStatus;
 
   </script>
 
