@@ -12,7 +12,7 @@ const paymentSchema = new mongoose.Schema(
     bookingId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Booking",
-      default: null,
+      required: true,
       index: true
     },
 
@@ -33,18 +33,16 @@ const paymentSchema = new mongoose.Schema(
       type: String,
       enum: [
         "razorpay",
-        "stripe",
         "cash",
-        "bank_transfer",
-        "other",
-        "pending"
+        "bank_transfer"
       ],
-      default: "pending"
+      default: "razorpay"
     },
 
     status: {
       type: String,
       enum: [
+        "created",
         "pending",
         "processing",
         "paid",
@@ -52,8 +50,30 @@ const paymentSchema = new mongoose.Schema(
         "cancelled",
         "refunded"
       ],
-      default: "pending",
+      default: "created",
       index: true
+    },
+
+    razorpayOrderId: {
+      type: String,
+      default: "",
+      trim: true,
+      unique: true,
+      sparse: true
+    },
+
+    gatewayPaymentId: {
+      type: String,
+      default: "",
+      trim: true,
+      index: true
+    },
+
+    gatewaySignature: {
+      type: String,
+      default: "",
+      trim: true,
+      select: false
     },
 
     transactionId: {
@@ -63,17 +83,16 @@ const paymentSchema = new mongoose.Schema(
       index: true
     },
 
-    gatewayPaymentId: {
-      type: String,
-      default: "",
-      trim: true
-    },
-
     notes: {
       type: String,
       default: "",
       trim: true,
       maxlength: 2000
+    },
+
+    paidAt: {
+      type: Date,
+      default: null
     }
   },
   {
@@ -87,6 +106,14 @@ paymentSchema.index({
   createdAt: -1
 });
 
-const Payment = mongoose.model("Payment", paymentSchema);
+paymentSchema.index({
+  bookingId: 1,
+  status: 1
+});
+
+const Payment = mongoose.model(
+  "Payment",
+  paymentSchema
+);
 
 export default Payment;
