@@ -1,10 +1,21 @@
 import express from "express";
-import { requireAuth, requireRole } from "../middleware/authMiddleware.js";
+
+import {
+  requireAuth,
+  requireRole
+} from "../middleware/authMiddleware.js";
+
+import {
+  getDashboard
+} from "../controllers/adminController.js";
 
 const router = express.Router();
 
 router.use(requireAuth);
-router.use(requireRole("admin"));
+
+router.use(
+  requireRole("admin")
+);
 
 router.get("/", (req, res) => {
   res.json({
@@ -18,11 +29,9 @@ router.get("/", (req, res) => {
   });
 });
 
-router.get("/dashboard", (req, res) => {
-  res.json({
-    success: true,
-    message: "Admin dashboard data will be available here."
-  });
-});
+router.get(
+  "/dashboard",
+  getDashboard
+);
 
 export default router;
