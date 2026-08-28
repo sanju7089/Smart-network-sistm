@@ -13,6 +13,16 @@ const VALID_STATUSES = [
   "rejected"
 ];
 
+const WORKER_TRANSITIONS = {
+  pending: ["accepted", "rejected"],
+  accepted: ["confirmed"],
+  confirmed: ["in_progress"],
+  in_progress: ["completed"],
+  completed: [],
+  cancelled: [],
+  rejected: []
+};
+
 function isValidId(id) {
   return mongoose.Types.ObjectId.isValid(id);
 }
@@ -22,7 +32,31 @@ function isAdmin(user) {
 }
 
 async function getWorkerForUser(userId) {
-  return Worker.findOne({ userId });
+  return Worker.findOne({
+    userId,
+    isActive: true
+  });
+}
+
+async function populateBooking(query) {
+  return query
+    .populate(
+      "customerId",
+      "name email phone location"
+    )
+    .populate({
+      path: "workerId",
+      select:
+        "name service location phone verified userId",
+      populate: {
+        path: "userId",
+        select: "email"
+      }
+    })
+    .populate(
+      "jobId",
+      "title description category service location budget status"
+    );
 }
 
 export async function getBookings(req, res) {
@@ -30,9 +64,17 @@ export async function getBookings(req, res) {
     const filter = {};
     const userId = req.user?.id;
 
-    if (userId && !isAdmin(req.user)) {
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required."
+      });
+    }
+
+    if (!isAdmin(req.user)) {
       if (req.user.role === "worker") {
-        const worker = await getWorkerForUser(userId);
+        const worker =
+          await getWorkerForUser(userId);
 
         if (!worker) {
           return res.json({
@@ -48,18 +90,10 @@ export async function getBookings(req, res) {
       }
     }
 
-    const bookings = await Booking.find(filter)
-      .sort({ createdAt: -1 })
-      .populate("customerId", "name email phone location")
-      .populate({
-        path: "workerId",
-        select: "name service location phone verified",
-        populate: {
-          path: "userId",
-          select: "email"
-        }
-      })
-      .populate("jobId", "title description category service location budget status");
+    const bookings = await populateBooking(
+      Booking.find(filter)
+        .sort({ createdAt: -1 })
+    );
 
     return res.json({
       success: true,
@@ -67,7 +101,10 @@ export async function getBookings(req, res) {
       data: bookings
     });
   } catch (error) {
-    console.error("GET BOOKINGS ERROR:", error);
+    console.error(
+      "GET BOOKINGS ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -87,17 +124,9 @@ export async function getBookingById(req, res) {
       });
     }
 
-    const booking = await Booking.findById(id)
-      .populate("customerId", "name email phone location")
-      .populate({
-        path: "workerId",
-        select: "name service location phone verified userId",
-        populate: {
-          path: "userId",
-          select: "email"
-        }
-      })
-      .populate("jobId", "title description category service location budget status");
+    const booking = await populateBooking(
+      Booking.findById(id)
+    );
 
     if (!booking) {
       return res.status(404).json({
@@ -108,18 +137,28 @@ export async function getBookingById(req, res) {
 
     if (!isAdmin(req.user)) {
       const userId = String(req.user.id);
-      const customerId = String(booking.customerId._id);
 
-      let workerUserId = "";
+      const customerId =
+        booking.customerId?._id
+          ? String(booking.customerId._id)
+          : String(booking.customerId);
 
-      if (booking.workerId?.userId) {
-        workerUserId = String(booking.workerId.userId._id || booking.workerId.userId);
-      }
+      const workerUserId =
+        booking.workerId?.userId
+          ? String(
+              booking.workerId.userId._id ||
+              booking.workerId.userId
+            )
+          : "";
 
-      if (customerId !== userId && workerUserId !== userId) {
+      if (
+        customerId !== userId &&
+        workerUserId !== userId
+      ) {
         return res.status(403).json({
           success: false,
-          message: "You do not have permission to view this booking."
+          message:
+            "You do not have permission to view this booking."
         });
       }
     }
@@ -129,7 +168,10 @@ export async function getBookingById(req, res) {
       data: booking
     });
   } catch (error) {
-    console.error("GET BOOKING ERROR:", error);
+    console.error(
+      "GET BOOKING ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -140,19 +182,32 @@ export async function getBookingById(req, res) {
 
 export async function createBooking(req, res) {
   try {
-    if (!req.user || req.user.role !== "customer") {
+    if (
+      !req.user ||
+      req.user.role !== "customer"
+    ) {
       return res.status(403).json({
         success: false,
-        message: "Only customers can create bookings."
+        message:
+          "Only customers can create bookings."
       });
     }
 
-    const { workerId, jobId, date, notes } = req.body;
+    const {
+      workerId,
+      jobId,
+      date,
+      notes
+    } = req.body;
 
-    if (!workerId || !isValidId(workerId)) {
+    if (
+      !workerId ||
+      !isValidId(workerId)
+    ) {
       return res.status(400).json({
         success: false,
-        message: "A valid worker ID is required."
+        message:
+          "A valid worker ID is required."
       });
     }
 
@@ -164,7 +219,8 @@ export async function createBooking(req, res) {
     if (!worker) {
       return res.status(404).json({
         success: false,
-        message: "Worker not found or inactive."
+        message:
+          "Worker not found or inactive."
       });
     }
 
@@ -178,7 +234,8 @@ export async function createBooking(req, res) {
         });
       }
 
-      const job = await Job.findById(jobId);
+      const job =
+        await Job.findById(jobId);
 
       if (!job) {
         return res.status(404).json({
@@ -187,10 +244,28 @@ export async function createBooking(req, res) {
         });
       }
 
-      if (String(job.customerId) !== String(req.user.id)) {
+      if (
+        String(job.customerId) !==
+        String(req.user.id)
+      ) {
         return res.status(403).json({
           success: false,
-          message: "You can only book workers for your own jobs."
+          message:
+            "You can only book workers for your own jobs."
+        });
+      }
+
+      if (
+        ["closed", "cancelled", "completed"]
+          .includes(
+            String(job.status || "")
+              .toLowerCase()
+          )
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "This job is no longer available for booking."
         });
       }
 
@@ -202,34 +277,98 @@ export async function createBooking(req, res) {
     if (date) {
       bookingDate = new Date(date);
 
-      if (Number.isNaN(bookingDate.getTime())) {
+      if (
+        Number.isNaN(
+          bookingDate.getTime()
+        )
+      ) {
         return res.status(400).json({
           success: false,
           message: "Invalid booking date."
         });
       }
+
+      if (
+        bookingDate.getTime() <=
+        Date.now()
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Booking date must be in the future."
+        });
+      }
     }
 
-    const booking = await Booking.create({
+    const cleanNotes =
+      notes === undefined || notes === null
+        ? ""
+        : String(notes).trim();
+
+    if (cleanNotes.length > 2000) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Notes cannot exceed 2000 characters."
+      });
+    }
+
+    const duplicateFilter = {
       customerId: req.user.id,
       workerId: worker._id,
-      jobId: validJobId,
-      date: bookingDate,
-      notes: notes ? String(notes).trim() : "",
-      status: "pending"
-    });
+      status: {
+        $in: [
+          "pending",
+          "accepted",
+          "confirmed",
+          "in_progress"
+        ]
+      }
+    };
+
+    if (validJobId) {
+      duplicateFilter.jobId = validJobId;
+    }
+
+    const existingBooking =
+      await Booking.findOne(
+        duplicateFilter
+      );
+
+    if (existingBooking) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "An active booking already exists for this worker."
+      });
+    }
+
+    const booking =
+      await Booking.create({
+        customerId: req.user.id,
+        workerId: worker._id,
+        jobId: validJobId,
+        date: bookingDate,
+        notes: cleanNotes,
+        status: "pending"
+      });
 
     return res.status(201).json({
       success: true,
-      message: "Booking created successfully.",
+      message:
+        "Booking created successfully.",
       data: booking
     });
   } catch (error) {
-    console.error("CREATE BOOKING ERROR:", error);
+    console.error(
+      "CREATE BOOKING ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Unable to create booking."
+      message:
+        "Unable to create booking."
     });
   }
 }
@@ -237,7 +376,12 @@ export async function createBooking(req, res) {
 export async function updateBookingStatus(req, res) {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const requestedStatus =
+      String(
+        req.body?.status || ""
+      )
+        .trim()
+        .toLowerCase();
 
     if (!isValidId(id)) {
       return res.status(400).json({
@@ -246,14 +390,20 @@ export async function updateBookingStatus(req, res) {
       });
     }
 
-    if (!VALID_STATUSES.includes(status)) {
+    if (
+      !VALID_STATUSES.includes(
+        requestedStatus
+      )
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Invalid booking status."
+        message:
+          "Invalid booking status."
       });
     }
 
-    const booking = await Booking.findById(id);
+    const booking =
+      await Booking.findById(id);
 
     if (!booking) {
       return res.status(404).json({
@@ -262,33 +412,96 @@ export async function updateBookingStatus(req, res) {
       });
     }
 
-    const worker = await Worker.findById(booking.workerId);
+    const currentStatus =
+      String(booking.status)
+        .trim()
+        .toLowerCase();
 
-    const isBookingWorker =
-      worker &&
-      String(worker.userId) === String(req.user.id);
-
-    if (!isAdmin(req.user) && !isBookingWorker) {
-      return res.status(403).json({
+    if (currentStatus === requestedStatus) {
+      return res.status(400).json({
         success: false,
-        message: "You do not have permission to update this booking."
+        message:
+          "Booking already has this status."
       });
     }
 
-    booking.status = status;
+    if (isAdmin(req.user)) {
+      booking.status = requestedStatus;
+      await booking.save();
+
+      return res.json({
+        success: true,
+        message:
+          "Booking status updated successfully.",
+        data: booking
+      });
+    }
+
+    if (
+      req.user?.role !== "worker"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Only the assigned worker can update booking status."
+      });
+    }
+
+    const worker =
+      await getWorkerForUser(
+        req.user.id
+      );
+
+    if (
+      !worker ||
+      String(worker._id) !==
+        String(booking.workerId)
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "You do not have permission to update this booking."
+      });
+    }
+
+    const allowedNextStatuses =
+      WORKER_TRANSITIONS[
+        currentStatus
+      ] || [];
+
+    if (
+      !allowedNextStatuses.includes(
+        requestedStatus
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          `Invalid status transition from ${currentStatus} to ${requestedStatus}.`
+      });
+    }
+
+    booking.status =
+      requestedStatus;
+
     await booking.save();
 
     return res.json({
       success: true,
-      message: "Booking status updated successfully.",
+      message:
+        "Booking status updated successfully.",
       data: booking
     });
   } catch (error) {
-    console.error("UPDATE BOOKING STATUS ERROR:", error);
+    console.error(
+      "UPDATE BOOKING STATUS ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Unable to update booking."
+      message:
+        "Unable to update booking."
     });
   }
 }
@@ -304,7 +517,8 @@ export async function cancelBooking(req, res) {
       });
     }
 
-    const booking = await Booking.findById(id);
+    const booking =
+      await Booking.findById(id);
 
     if (!booking) {
       return res.status(404).json({
@@ -314,39 +528,58 @@ export async function cancelBooking(req, res) {
     }
 
     const isCustomer =
-      String(booking.customerId) === String(req.user.id);
+      String(booking.customerId) ===
+      String(req.user.id);
 
-    if (!isAdmin(req.user) && !isCustomer) {
+    if (
+      !isAdmin(req.user) &&
+      !isCustomer
+    ) {
       return res.status(403).json({
         success: false,
-        message: "You do not have permission to cancel this booking."
+        message:
+          "You do not have permission to cancel this booking."
       });
     }
 
+    const status =
+      String(booking.status)
+        .toLowerCase();
+
     if (
-      booking.status === "completed" ||
-      booking.status === "cancelled"
+      [
+        "completed",
+        "cancelled",
+        "rejected"
+      ].includes(status)
     ) {
       return res.status(400).json({
         success: false,
-        message: "This booking cannot be cancelled."
+        message:
+          "This booking cannot be cancelled."
       });
     }
 
     booking.status = "cancelled";
+
     await booking.save();
 
     return res.json({
       success: true,
-      message: "Booking cancelled successfully.",
+      message:
+        "Booking cancelled successfully.",
       data: booking
     });
   } catch (error) {
-    console.error("CANCEL BOOKING ERROR:", error);
+    console.error(
+      "CANCEL BOOKING ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Unable to cancel booking."
+      message:
+        "Unable to cancel booking."
     });
   }
-}
+        }
