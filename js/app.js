@@ -1,11 +1,9 @@
 const SWN_CONFIG = {
-  // Live backend deploy होने के बाद केवल यह URL बदलना होगा.
-  // Example: https://your-backend.onrender.com/api
   API_URL:
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1"
       ? "http://localhost:3000/api"
-      : ""
+      : "https://smart-network-sistm.onrender.com/api"
 };
 
 const SWN = {
@@ -17,46 +15,29 @@ const SWN = {
     const base = SWN_CONFIG.API_URL.replace(/\/$/, "");
     const endpoint = path.startsWith("/") ? path : `/${path}`;
 
-    if (!base) {
-      throw new Error(
-        "Production API URL is not configured yet."
-      );
-    }
-
     return `${base}${endpoint}`;
   },
 
   get(key, defaultValue = null) {
     try {
       const value = localStorage.getItem(key);
-
-      return value
-        ? JSON.parse(value)
-        : defaultValue;
+      return value ? JSON.parse(value) : defaultValue;
     } catch {
       return defaultValue;
     }
   },
 
   set(key, value) {
-    localStorage.setItem(
-      key,
-      JSON.stringify(value)
-    );
+    localStorage.setItem(key, JSON.stringify(value));
   },
 
   user() {
     try {
-      if (
-        typeof window.getCurrentUser === "function"
-      ) {
+      if (typeof window.getCurrentUser === "function") {
         return window.getCurrentUser();
       }
 
-      const user = localStorage.getItem(
-        "swn_user"
-      );
-
+      const user = localStorage.getItem("swn_user");
       return user ? JSON.parse(user) : null;
     } catch {
       return null;
@@ -64,9 +45,7 @@ const SWN = {
   },
 
   token() {
-    if (
-      typeof window.getAuthToken === "function"
-    ) {
+    if (typeof window.getAuthToken === "function") {
       return window.getAuthToken();
     }
 
@@ -89,15 +68,10 @@ const SWN = {
   },
 
   async request(path, options = {}) {
-    const response = await fetch(
-      this.api(path),
-      {
-        ...options,
-        headers: this.authHeaders(
-          options.headers || {}
-        )
-      }
-    );
+    const response = await fetch(this.api(path), {
+      ...options,
+      headers: this.authHeaders(options.headers || {})
+    });
 
     let data = null;
 
@@ -119,7 +93,8 @@ const SWN = {
 
   logout() {
     if (
-      typeof window.logout === "function"
+      typeof window.logout === "function" &&
+      window.logout !== this.logout
     ) {
       window.logout();
       return;
@@ -162,42 +137,50 @@ function escapeHtml(value = "") {
 }
 
 function authBox() {
-  const element =
-    document.querySelector("[data-auth]");
+  const element = document.querySelector("[data-auth]");
 
   if (!element) return;
 
   const user = SWN.user();
 
-  element.innerHTML = user
-    ? `
+  if (user) {
+    element.innerHTML = `
       <span class="muted">
         Hi, ${escapeHtml(user.name || "User")}
       </span>
 
-      <a href="${dashboardUrl(user)}">
-        Dashboard
-      </a>
+      <a href="${dashboardUrl(user)}">Dashboard</a>
 
       <button
+        type="button"
         class="btn btn-primary"
-        onclick="SWN.logout()"
+        id="logoutButton"
       >
         Logout
       </button>
-    `
-    : `
-      <a href="login.html">
-        Login
-      </a>
-
-      <a
-        class="btn btn-primary"
-        href="signup.html"
-      >
-        Get Started
-      </a>
     `;
+
+    const logoutButton = document.querySelector("#logoutButton");
+
+    if (logoutButton) {
+      logoutButton.addEventListener("click", () => {
+        SWN.logout();
+      });
+    }
+
+    return;
+  }
+
+  element.innerHTML = `
+    <a href="login.html">Login</a>
+
+    <a
+      class="btn btn-primary"
+      href="signup.html"
+    >
+      Get Started
+    </a>
+  `;
 }
 
 function redirectToCorrectDashboard(user) {
@@ -228,16 +211,17 @@ async function verifyAuth() {
     return null;
   }
 
-  if (
-    typeof window.refreshCurrentUser !== "function"
-  ) {
+  if (typeof window.refreshCurrentUser !== "function") {
     return SWN.user();
   }
 
   try {
     return await window.refreshCurrentUser();
   } catch (error) {
-    console.error("Authentication verification failed:", error);
+    console.error(
+      "Authentication verification failed:",
+      error
+    );
 
     localStorage.removeItem("swn_token");
     localStorage.removeItem("swn_user");
@@ -246,22 +230,19 @@ async function verifyAuth() {
   }
 }
 
-document.addEventListener(
-  "DOMContentLoaded",
-  async () => {
-    authBox();
+document.addEventListener("DOMContentLoaded", async () => {
+  authBox();
 
-    const token = SWN.token();
+  const token = SWN.token();
 
-    if (token) {
-      const user = await verifyAuth();
+  if (token) {
+    const user = await verifyAuth();
 
-      if (user) {
-        authBox();
-      }
+    if (user) {
+      authBox();
     }
   }
-);
+});
 
 window.SWN_CONFIG = SWN_CONFIG;
 window.SWN = SWN;
