@@ -1,28 +1,29 @@
 import express from "express";
-import { requireAuth } from "../middleware/authMiddleware.js";
 
 import {
-  getPayments,
-  getPaymentById,
-  createPayment,
-  updatePaymentStatus
+  requireAuth
+} from "../middleware/authMiddleware.js";
+
+import {
+  createRazorpayOrder,
+  verifyRazorpayPayment,
+  getMyPayments
 } from "../controllers/paymentController.js";
 
 const router = express.Router();
 
-// सभी payment routes के लिए login जरूरी है
 router.use(requireAuth);
 
-// अपनी payments / Admin के लिए सभी payments
-router.get("/", getPayments);
+router.get("/", getMyPayments);
 
-// नया payment record बनाना
-router.post("/", createPayment);
+router.post(
+  "/razorpay/order",
+  createRazorpayOrder
+);
 
-// Payment status update (Admin only check controller में है)
-router.patch("/:id/status", updatePaymentStatus);
-
-// एक specific payment देखना
-router.get("/:id", getPaymentById);
+router.post(
+  "/razorpay/verify",
+  verifyRazorpayPayment
+);
 
 export default router;
