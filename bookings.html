@@ -1,12 +1,12 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
 
   <meta
     name="viewport"
-    content="width=device-width,initial-scale=1"
+    content="width=device-width, initial-scale=1"
   >
 
   <title>My Bookings | Smart Work Network</title>
@@ -23,26 +23,15 @@
 
     <div class="container nav">
 
-      <a
-        class="brand"
-        href="index.html"
-      >
+      <a class="brand" href="index.html">
         Smart Work Network
       </a>
 
       <nav class="navlinks">
 
-        <a href="services.html">
-          Services
-        </a>
-
-        <a href="find-help.html">
-          Find Help
-        </a>
-
-        <a href="workers.html">
-          Workers
-        </a>
+        <a href="services.html">Services</a>
+        <a href="find-help.html">Find Help</a>
+        <a href="workers.html">Workers</a>
 
         <span data-auth></span>
 
@@ -59,10 +48,39 @@
 
       <div class="container">
 
-        <h1>My Bookings</h1>
+        <div class="row between">
 
-        <div class="notice">
-          Bookings will be stored here after backend connection.
+          <div>
+            <h1>My Bookings</h1>
+
+            <p class="lead" id="bookingSubtitle">
+              Loading your bookings...
+            </p>
+          </div>
+
+          <button
+            type="button"
+            class="btn"
+            id="refreshBookingsButton"
+          >
+            Refresh
+          </button>
+
+        </div>
+
+
+        <div id="bookingMessage"></div>
+
+
+        <div
+          id="bookingsList"
+          class="grid"
+        >
+
+          <div class="notice">
+            Loading bookings...
+          </div>
+
         </div>
 
       </div>
@@ -84,17 +102,11 @@
 
       <div class="row">
 
-        <a href="support.html">
-          Support
-        </a>
+        <a href="support.html">Support</a>
 
-        <a href="profile.html">
-          Profile
-        </a>
+        <a href="profile.html">Profile</a>
 
-        <a href="urgent-help.html">
-          Urgent Help
-        </a>
+        <a href="urgent-help.html">Urgent Help</a>
 
       </div>
 
@@ -104,7 +116,705 @@
 
 
   <script src="js/app.js"></script>
+  <script src="js/auth.js"></script>
+
+
+  <script>
+
+    function escapeBookingHtml(value = "") {
+
+      if (
+        typeof window.escapeHtml === "function"
+      ) {
+        return window.escapeHtml(value);
+      }
+
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+    }
+
+
+    function formatBookingDate(value) {
+
+      if (!value) {
+        return "Not scheduled";
+      }
+
+      const date = new Date(value);
+
+      if (Number.isNaN(date.getTime())) {
+        return "Not scheduled";
+      }
+
+      return date.toLocaleString(
+        "en-IN",
+        {
+          dateStyle: "medium",
+          timeStyle: "short"
+        }
+      );
+
+    }
+
+
+    function formatStatus(status = "pending") {
+
+      return String(status)
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, function(letter) {
+          return letter.toUpperCase();
+        });
+
+    }
+
+
+    function showBookingMessage(
+      message,
+      isError = false
+    ) {
+
+      const element =
+        document.querySelector("#bookingMessage");
+
+      if (!element) return;
+
+      element.innerHTML = `
+        <div class="notice">
+          ${escapeBookingHtml(message)}
+        </div>
+      `;
+
+      if (isError) {
+        console.error(message);
+      }
+
+    }
+
+
+    function getWorkerName(booking) {
+
+      if (!booking.workerId) {
+        return "Worker not available";
+      }
+
+      if (
+        typeof booking.workerId === "object"
+      ) {
+        return (
+          booking.workerId.name ||
+          "Worker"
+        );
+      }
+
+      return "Worker";
+
+    }
+
+
+    function getCustomerName(booking) {
+
+      if (!booking.customerId) {
+        return "Customer not available";
+      }
+
+      if (
+        typeof booking.customerId === "object"
+      ) {
+        return (
+          booking.customerId.name ||
+          "Customer"
+        );
+      }
+
+      return "Customer";
+
+    }
+
+
+    function getJobTitle(booking) {
+
+      if (!booking.jobId) {
+        return "";
+      }
+
+      if (
+        typeof booking.jobId === "object"
+      ) {
+        return (
+          booking.jobId.title || ""
+        );
+      }
+
+      return "";
+
+    }
+
+
+    function allowedWorkerStatuses() {
+
+      return [
+        "accepted",
+        "confirmed",
+        "in_progress",
+        "completed",
+        "rejected"
+      ];
+
+    }
+
+
+    function renderBookingCard(
+      booking,
+      user
+    ) {
+
+      const bookingId =
+        booking._id || booking.id;
+
+      const status =
+        booking.status || "pending";
+
+      const workerName =
+        escapeBookingHtml(
+          getWorkerName(booking)
+        );
+
+      const customerName =
+        escapeBookingHtml(
+          getCustomerName(booking)
+        );
+
+      const jobTitle =
+        escapeBookingHtml(
+          getJobTitle(booking)
+        );
+
+      const notes =
+        escapeBookingHtml(
+          booking.notes ||
+          "No additional notes."
+        );
+
+      const role =
+        user?.role || "customer";
+
+      let personSection = "";
+
+      if (role === "worker") {
+
+        personSection = `
+          <p>
+            <b>Customer:</b>
+            ${customerName}
+          </p>
+        `;
+
+      } else if (role === "admin") {
+
+        personSection = `
+          <p>
+            <b>Customer:</b>
+            ${customerName}
+          </p>
+
+          <p>
+            <b>Worker:</b>
+            ${workerName}
+          </p>
+        `;
+
+      } else {
+
+        personSection = `
+          <p>
+            <b>Worker:</b>
+            ${workerName}
+          </p>
+        `;
+
+      }
+
+
+      let jobSection = "";
+
+      if (jobTitle) {
+
+        jobSection = `
+          <p>
+            <b>Work:</b>
+            ${jobTitle}
+          </p>
+        `;
+
+      }
+
+
+      let actions = "";
+
+      if (
+        role === "customer" &&
+        status !== "completed" &&
+        status !== "cancelled"
+      ) {
+
+        actions += `
+          <button
+            type="button"
+            class="btn"
+            onclick="cancelBooking('${bookingId}')"
+          >
+            Cancel Booking
+          </button>
+        `;
+
+      }
+
+
+      if (
+        role === "worker" ||
+        role === "admin"
+      ) {
+
+        const statuses =
+          allowedWorkerStatuses();
+
+        const options = statuses
+          .map(function(item) {
+
+            const selected =
+              item === status
+                ? "selected"
+                : "";
+
+            return `
+              <option
+                value="${item}"
+                ${selected}
+              >
+                ${formatStatus(item)}
+              </option>
+            `;
+
+          })
+          .join("");
+
+
+        actions += `
+
+          <select
+            id="status-${bookingId}"
+          >
+
+            <option
+              value=""
+              ${statuses.includes(status)
+                ? ""
+                : "selected"
+              }
+            >
+              Select status
+            </option>
+
+            ${options}
+
+          </select>
+
+          <button
+            type="button"
+            class="btn btn-primary"
+            onclick="updateBookingStatus('${bookingId}')"
+          >
+            Update Status
+          </button>
+
+        `;
+
+      }
+
+
+      return `
+
+        <div class="card">
+
+          <div class="row between">
+
+            <h3>
+              Booking
+            </h3>
+
+            <span class="tag">
+              ${escapeBookingHtml(
+                formatStatus(status)
+              )}
+            </span>
+
+          </div>
+
+
+          ${personSection}
+
+          ${jobSection}
+
+
+          <p>
+            <b>Preferred Date:</b>
+            ${escapeBookingHtml(
+              formatBookingDate(
+                booking.date
+              )
+            )}
+          </p>
+
+
+          <p>
+            <b>Notes:</b>
+            ${notes}
+          </p>
+
+
+          <p class="muted">
+
+            Created:
+            ${escapeBookingHtml(
+              formatBookingDate(
+                booking.createdAt
+              )
+            )}
+
+          </p>
+
+
+          <div class="row">
+
+            ${actions}
+
+          </div>
+
+        </div>
+
+      `;
+
+    }
+
+
+    async function loadBookings() {
+
+      const user =
+        typeof window.protect === "function"
+          ? protect()
+          : null;
+
+      if (!user) return;
+
+
+      const list =
+        document.querySelector("#bookingsList");
+
+      const subtitle =
+        document.querySelector(
+          "#bookingSubtitle"
+        );
+
+      list.innerHTML = `
+        <div class="notice">
+          Loading bookings...
+        </div>
+      `;
+
+
+      try {
+
+        const response =
+          await apiFetch("/bookings");
+
+        let result = {};
+
+        try {
+          result =
+            await response.json();
+        } catch {
+          result = {};
+        }
+
+
+        if (
+          !response.ok ||
+          !result.success
+        ) {
+
+          throw new Error(
+            result.message ||
+            "Unable to load bookings."
+          );
+
+        }
+
+
+        const bookings =
+          Array.isArray(result.data)
+            ? result.data
+            : [];
+
+
+        if (subtitle) {
+
+          subtitle.textContent =
+            `${bookings.length} booking(s) found`;
+
+        }
+
+
+        if (!bookings.length) {
+
+          list.innerHTML = `
+            <div class="notice">
+              No bookings found yet.
+            </div>
+          `;
+
+          return;
+
+        }
+
+
+        list.innerHTML =
+          bookings
+            .map(function(booking) {
+
+              return renderBookingCard(
+                booking,
+                user
+              );
+
+            })
+            .join("");
+
+      } catch (error) {
+
+        console.error(
+          "LOAD BOOKINGS ERROR:",
+          error
+        );
+
+        if (subtitle) {
+
+          subtitle.textContent =
+            "Unable to load bookings";
+
+        }
+
+
+        list.innerHTML = `
+          <div class="notice">
+            ${escapeBookingHtml(
+              error.message ||
+              "Unable to load bookings."
+            )}
+          </div>
+        `;
+
+      }
+
+    }
+
+
+    async function cancelBooking(
+      bookingId
+    ) {
+
+      const confirmed =
+        window.confirm(
+          "Are you sure you want to cancel this booking?"
+        );
+
+      if (!confirmed) return;
+
+
+      try {
+
+        const response =
+          await apiFetch(
+            `/bookings/${encodeURIComponent(
+              bookingId
+            )}/cancel`,
+            {
+              method: "PATCH"
+            }
+          );
+
+
+        let result = {};
+
+        try {
+          result =
+            await response.json();
+        } catch {
+          result = {};
+        }
+
+
+        if (
+          !response.ok ||
+          !result.success
+        ) {
+
+          throw new Error(
+            result.message ||
+            "Unable to cancel booking."
+          );
+
+        }
+
+
+        showBookingMessage(
+          result.message ||
+          "Booking cancelled successfully."
+        );
+
+        loadBookings();
+
+      } catch (error) {
+
+        console.error(
+          "CANCEL BOOKING ERROR:",
+          error
+        );
+
+        showBookingMessage(
+          error.message ||
+          "Unable to cancel booking.",
+          true
+        );
+
+      }
+
+    }
+
+
+    async function updateBookingStatus(
+      bookingId
+    ) {
+
+      const select =
+        document.querySelector(
+          `#status-${bookingId}`
+        );
+
+      if (!select || !select.value) {
+
+        showBookingMessage(
+          "Please select a booking status.",
+          true
+        );
+
+        return;
+
+      }
+
+
+      try {
+
+        const response =
+          await apiFetch(
+            `/bookings/${encodeURIComponent(
+              bookingId
+            )}/status`,
+            {
+              method: "PATCH",
+
+              body: JSON.stringify({
+                status: select.value
+              })
+            }
+          );
+
+
+        let result = {};
+
+        try {
+          result =
+            await response.json();
+        } catch {
+          result = {};
+        }
+
+
+        if (
+          !response.ok ||
+          !result.success
+        ) {
+
+          throw new Error(
+            result.message ||
+            "Unable to update booking status."
+          );
+
+        }
+
+
+        showBookingMessage(
+          result.message ||
+          "Booking status updated successfully."
+        );
+
+        loadBookings();
+
+      } catch (error) {
+
+        console.error(
+          "UPDATE BOOKING ERROR:",
+          error
+        );
+
+        showBookingMessage(
+          error.message ||
+          "Unable to update booking status.",
+          true
+        );
+
+      }
+
+    }
+
+
+    document.addEventListener(
+      "DOMContentLoaded",
+      function() {
+
+        const refreshButton =
+          document.querySelector(
+            "#refreshBookingsButton"
+          );
+
+        if (refreshButton) {
+
+          refreshButton.addEventListener(
+            "click",
+            loadBookings
+          );
+
+        }
+
+
+        loadBookings();
+
+      }
+    );
+
+
+    window.cancelBooking =
+      cancelBooking;
+
+    window.updateBookingStatus =
+      updateBookingStatus;
+
+  </script>
 
 </body>
 
-</html>
+  </html>
