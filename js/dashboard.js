@@ -12,20 +12,77 @@ function getData(result) {
   return [];
 }
 
+function escapeDashboardHtml(value = "") {
+  if (typeof window.escapeHtml === "function") {
+    return window.escapeHtml(value);
+  }
+
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 async function fetchApiData(path) {
   const response = await apiFetch(path);
 
-  if (!response.ok) {
-    throw new Error(`API request failed: ${path}`);
+  let result = {};
+
+  try {
+    result = await response.json();
+  } catch {
+    result = {};
   }
 
-  return response.json();
+  if (!response.ok || result.success === false) {
+    throw new Error(
+      result.message || `API request failed: ${path}`
+    );
+  }
+
+  return result;
 }
 
 function showDashboardError(element, message) {
   element.innerHTML = `
     <div class="notice">
-      ${message}
+      ${escapeDashboardHtml(message)}
+    </div>
+  `;
+}
+
+function formatNumber(value) {
+  return Number(value || 0).toLocaleString("en-IN");
+}
+
+function getJobStatus(job) {
+  return String(job?.status || "open").toLowerCase();
+}
+
+function getBookingStatus(booking) {
+  return String(booking?.status || "pending").toLowerCase();
+}
+
+function createStatCard(number, label) {
+  return `
+    <div class="card">
+      <div class="stat">
+        ${escapeDashboardHtml(String(number))}
+      </div>
+      <p>${escapeDashboardHtml(label)}</p>
+    </div>
+  `;
+}
+
+function createStatusCard(label, count) {
+  return `
+    <div class="card">
+      <div class="stat">
+        ${formatNumber(count)}
+      </div>
+      <p>${escapeDashboardHtml(label)}</p>
     </div>
   `;
 }
@@ -33,112 +90,206 @@ function showDashboardError(element, message) {
 async function loadCustomerDashboard(element, user) {
   const [jobsResult, bookingsResult] =
     await Promise.all([
-      fetchApiData("/jobs"),
+      fetchApiData(
+        `/jobs?customerId=${encodeURIComponent(user.id)}`
+      ),
       fetchApiData("/bookings")
     ]);
 
-  const jobs = getData(jobsResult).filter((job) => {
-    const customerId =
-      job.customerId?._id ||
-      job.customerId;
-
-    return String(customerId) === String(user.id);
-  });
-
+  const jobs = getData(jobsResult);
   const bookings = getData(bookingsResult);
 
+  const activeJobs = jobs.filter((job) =>
+    ["open", "active"].includes(getJobStatus(job))
+  );
+
+  const closedJobs = jobs.filter((job) =>
+    ["closed", "completed", "cancelled"].includes(
+      getJobStatus(job)
+    )
+  );
+
+  const activeBookings = bookings.filter((booking) =>
+    !["completed", "cancelled", "rejected"].includes(
+      getBookingStatus(booking)
+    )
+  );
+
+  const completedBookings = bookings.filter(
+    (booking) =>
+      getBookingStatus(booking) === "completed"
+  );
+
   element.innerHTML = `
-    <h1>Customer Dashboard</h1>
+    <div class="row between">
+      <div>
+        <h1>Customer Dashboard</h1>
+        <p class="lead">
+          Manage your work requests and bookings.
+        </p>
+      </div>
+
+      <a
+        class="btn btn-primary"
+        href="find-help.html"
+      >
+        Post New Work
+      </a>
+    </div>
 
     <div class="grid2">
 
-      <div class="card">
-        <div class="stat">${jobs.length}</div>
-        <p>My work requests</p>
-      </div>
+      ${createStatusCard(
+        "My Work Requests",
+        jobs.length
+      )}
 
-      <div class="card">
-        <div class="stat">${bookings.length}</div>
-        <p>Bookings</p>
-      </div>
+      ${createStatusCard(
+        "Active Work",
+        activeJobs.length
+      )}
+
+      ${createStatusCard(
+        "Active Bookings",
+        activeBookings.length
+      )}
+
+      ${createStatusCard(
+        "Completed Bookings",
+        completedBookings.length
+      )}
 
     </div>
 
     <br>
 
-    <a
-      class="btn btn-primary"
-      href="find-help.html"
-    >
-      Post New Work
-    </a>
+    <div class="row">
+
+      <a
+        class="btn"
+        href="bookings.html"
+      >
+        View My Bookings
+      </a>
+
+      <a
+        class="btn"
+        href="find-work.html"
+      >
+        View Work Requests
+      </a>
+
+    </div>
+
+    ${
+      closedJobs.length
+        ? `
+          <br>
+          <div class="notice">
+            ${closedJobs.length} closed/completed work request(s).
+          </div>
+        `
+        : ""
+    }
   `;
 }
 
 async function loadWorkerDashboard(element) {
-  const [jobsResult, bookingsResult, paymentsResult] =
+  const [jobsResult, bookingsResult] =
     await Promise.all([
-      fetchApiData("/jobs"),
-      fetchApiData("/bookings"),
-      fetchApiData("/payments")
+      fetchApiData("/jobs?status=open"),
+      fetchApiData("/bookings")
     ]);
 
   const jobs = getData(jobsResult);
 
-  const availableJobs = jobs.filter((job) => {
-    return (
-      !job.status ||
-      job.status === "open" ||
-      job.status === "active"
-    );
-  });
-
   const bookings = getData(bookingsResult);
 
-  const payments = getData(paymentsResult);
+  const pendingBookings = bookings.filter(
+    (booking) =>
+      getBookingStatus(booking) === "pending"
+  );
 
-  const earnings = payments
-    .filter((payment) => payment.status === "paid")
-    .reduce((total, payment) => {
-      return total + Number(payment.amount || 0);
-    }, 0);
+  const activeBookings = bookings.filter((booking) =>
+    ["accepted", "confirmed", "in_progress"].includes(
+      getBookingStatus(booking)
+    )
+  );
+
+  const completedBookings = bookings.filter(
+    (booking) =>
+      getBookingStatus(booking) === "completed"
+  );
 
   element.innerHTML = `
-    <h1>Worker Dashboard</h1>
+    <div class="row between">
+
+      <div>
+        <h1>Worker Dashboard</h1>
+
+        <p class="lead">
+          Manage available work and your bookings.
+        </p>
+      </div>
+
+      <a
+        class="btn btn-primary"
+        href="find-work.html"
+      >
+        Find Work
+      </a>
+
+    </div>
 
     <div class="grid2">
 
-      <div class="card">
-        <div class="stat">
-          ${availableJobs.length}
-        </div>
-        <p>Available requests</p>
-      </div>
+      ${createStatusCard(
+        "Available Requests",
+        jobs.length
+      )}
 
-      <div class="card">
-        <div class="stat">
-          ₹${earnings.toLocaleString("en-IN")}
-        </div>
-        <p>Earnings</p>
-      </div>
+      ${createStatusCard(
+        "Pending Requests",
+        pendingBookings.length
+      )}
 
-      <div class="card">
-        <div class="stat">
-          ${bookings.length}
-        </div>
-        <p>My bookings</p>
-      </div>
+      ${createStatusCard(
+        "Active Bookings",
+        activeBookings.length
+      )}
+
+      ${createStatusCard(
+        "Completed Work",
+        completedBookings.length
+      )}
 
     </div>
 
     <br>
 
-    <a
-      class="btn btn-primary"
-      href="workers.html"
-    >
-      Explore Work
-    </a>
+    <div class="row">
+
+      <a
+        class="btn btn-primary"
+        href="bookings.html"
+      >
+        Manage My Bookings
+      </a>
+
+      <a
+        class="btn"
+        href="find-work.html"
+      >
+        Explore Available Work
+      </a>
+
+    </div>
+
+    <br>
+
+    <div class="notice">
+      Earnings will be shown here after the payment and worker payout system is connected securely.
+    </div>
   `;
 }
 
@@ -161,35 +312,36 @@ async function loadAdminDashboard(element) {
   const payments = getData(paymentsResult);
 
   const paidRevenue = payments
-    .filter((payment) => payment.status === "paid")
-    .reduce((total, payment) => {
-      return total + Number(payment.amount || 0);
-    }, 0);
+    .filter(
+      (payment) =>
+        String(payment.status).toLowerCase() ===
+        "paid"
+    )
+    .reduce(
+      (total, payment) =>
+        total + Number(payment.amount || 0),
+      0
+    );
 
   element.innerHTML = `
     <h1>Admin Control Center</h1>
 
     <div class="grid">
 
-      <div class="card">
-        <div class="stat">${users.length}</div>
-        <p>Users</p>
-      </div>
+      ${createStatusCard("Users", users.length)}
 
-      <div class="card">
-        <div class="stat">${jobs.length}</div>
-        <p>Jobs</p>
-      </div>
+      ${createStatusCard("Jobs", jobs.length)}
 
-      <div class="card">
-        <div class="stat">${bookings.length}</div>
-        <p>Bookings</p>
-      </div>
+      ${createStatusCard(
+        "Bookings",
+        bookings.length
+      )}
 
       <div class="card">
         <div class="stat">
-          ₹${paidRevenue.toLocaleString("en-IN")}
+          ₹${formatNumber(paidRevenue)}
         </div>
+
         <p>Paid Revenue</p>
       </div>
 
@@ -206,10 +358,9 @@ async function loadAdminDashboard(element) {
 document.addEventListener(
   "DOMContentLoaded",
   async () => {
-    const element =
-      document.querySelector(
-        "#dashboardContent"
-      );
+    const element = document.querySelector(
+      "#dashboardContent"
+    );
 
     if (!element) return;
 
@@ -262,7 +413,8 @@ document.addEventListener(
 
       showDashboardError(
         element,
-        "Unable to load live dashboard data. Please check your server connection."
+        error.message ||
+          "Unable to load live dashboard data."
       );
     }
   }
