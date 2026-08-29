@@ -9,18 +9,53 @@ export async function connectDatabase() {
     );
   }
 
-  try {
-    await mongoose.connect(mongoUri);
-
+  mongoose.connection.on("connected", () => {
     console.log(
       `MongoDB connected: ${mongoose.connection.host}`
     );
-  } catch (error) {
+  });
+
+  mongoose.connection.on("error", (error) => {
     console.error(
-      "MongoDB connection failed:",
+      "MongoDB connection error:",
       error.message
     );
+  });
 
-    process.exit(1);
-  }
+  mongoose.connection.on("disconnected", () => {
+    console.warn("MongoDB disconnected.");
+  });
+
+  await mongoose.connect(mongoUri, {
+    serverSelectionTimeoutMS: 10000,
+    connectTimeoutMS: 10000
+  });
+
+  return mongoose.connection;
 }
+
+export function getDatabaseStatus() {
+  const states = {
+    0: "disconnected",
+    1: "connected",
+    2: "connecting",
+    3: "disconnecting"
+  };
+
+  return {
+    status:
+      states[mongoose.connection.readyState] ||
+      "unknown",
+    readyState: mongoose.connection.readyState,
+    host: mongoose.connection.host || null,
+    name: mongoose.connection.name || null
+  };
+}
+
+export async function disconnectDatabase() {
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.connection.close(false);
+
+    console.log("MongoDB connection closed.");
+  }
+    }
