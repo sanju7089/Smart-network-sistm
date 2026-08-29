@@ -14,9 +14,25 @@ import {
 
 const router = express.Router();
 
+/*
+  Public listing.
+
+  Authentication middleware optional
+  नहीं रखा गया है क्योंकि public users
+  को open jobs देखने हैं.
+*/
+
 router.get("/", getJobs);
 
+/*
+  Public open job details.
+*/
+
 router.get("/:id", getJobById);
+
+/*
+  Protected operations.
+*/
 
 router.post(
   "/",
