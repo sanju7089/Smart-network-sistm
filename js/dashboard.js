@@ -38,7 +38,8 @@ async function fetchApiData(path) {
 
   if (!response.ok || result.success === false) {
     throw new Error(
-      result.message || `API request failed: ${path}`
+      result.message ||
+      `API request failed: ${path}`
     );
   }
 
@@ -54,15 +55,20 @@ function showDashboardError(element, message) {
 }
 
 function formatNumber(value) {
-  return Number(value || 0).toLocaleString("en-IN");
+  return Number(value || 0)
+    .toLocaleString("en-IN");
 }
 
 function getJobStatus(job) {
-  return String(job?.status || "open").toLowerCase();
+  return String(
+    job?.status || "open"
+  ).toLowerCase();
 }
 
 function getBookingStatus(booking) {
-  return String(booking?.status || "pending").toLowerCase();
+  return String(
+    booking?.status || "pending"
+  ).toLowerCase();
 }
 
 function createStatCard(number, label) {
@@ -88,37 +94,52 @@ function createStatusCard(label, count) {
 }
 
 async function loadCustomerDashboard(element, user) {
-  const [jobsResult, bookingsResult] =
-    await Promise.all([
-      fetchApiData(
-        `/jobs?customerId=${encodeURIComponent(user.id)}`
-      ),
-      fetchApiData("/bookings")
-    ]);
+  const [
+    jobsResult,
+    bookingsResult
+  ] = await Promise.all([
+    fetchApiData(
+      `/jobs?customerId=${encodeURIComponent(
+        user.id
+      )}`
+    ),
+    fetchApiData("/bookings")
+  ]);
 
   const jobs = getData(jobsResult);
   const bookings = getData(bookingsResult);
 
-  const activeJobs = jobs.filter((job) =>
-    ["open", "active"].includes(getJobStatus(job))
+  const activeJobs = jobs.filter(
+    (job) =>
+      ["open", "active"].includes(
+        getJobStatus(job)
+      )
   );
 
-  const closedJobs = jobs.filter((job) =>
-    ["closed", "completed", "cancelled"].includes(
-      getJobStatus(job)
-    )
+  const closedJobs = jobs.filter(
+    (job) =>
+      [
+        "closed",
+        "completed",
+        "cancelled"
+      ].includes(getJobStatus(job))
   );
 
-  const activeBookings = bookings.filter((booking) =>
-    !["completed", "cancelled", "rejected"].includes(
-      getBookingStatus(booking)
-    )
-  );
-
-  const completedBookings = bookings.filter(
+  const activeBookings = bookings.filter(
     (booking) =>
-      getBookingStatus(booking) === "completed"
+      ![
+        "completed",
+        "cancelled",
+        "rejected"
+      ].includes(getBookingStatus(booking))
   );
+
+  const completedBookings =
+    bookings.filter(
+      (booking) =>
+        getBookingStatus(booking) ===
+        "completed"
+    );
 
   element.innerHTML = `
     <div class="row between">
@@ -131,7 +152,7 @@ async function loadCustomerDashboard(element, user) {
 
       <a
         class="btn btn-primary"
-        href="find-help.html"
+        href="post-work.html"
       >
         Post New Work
       </a>
@@ -185,16 +206,18 @@ async function loadCustomerDashboard(element, user) {
       closedJobs.length
         ? `
           <br>
+
           <div class="notice">
-            ${closedJobs.length} closed/completed work request(s).
+            ${closedJobs.length}
+            closed/completed work request(s).
           </div>
         `
         : ""
     }
   `;
 }
-async function loadWorkerDashboard(element) {
 
+async function loadWorkerDashboard(element) {
   const [
     jobsResult,
     bookingsResult,
@@ -202,11 +225,10 @@ async function loadWorkerDashboard(element) {
   ] = await Promise.all([
     fetchApiData("/jobs?status=open"),
     fetchApiData("/bookings"),
-    fetchApiData("/workers/me")
+    fetchApiData("/workers/me/profile")
   ]);
 
   const jobs = getData(jobsResult);
-
   const bookings = getData(bookingsResult);
 
   const worker =
@@ -214,7 +236,8 @@ async function loadWorkerDashboard(element) {
 
   const pendingBookings = bookings.filter(
     (booking) =>
-      getBookingStatus(booking) === "pending"
+      getBookingStatus(booking) ===
+      "pending"
   );
 
   const activeBookings = bookings.filter(
@@ -223,31 +246,28 @@ async function loadWorkerDashboard(element) {
         "accepted",
         "confirmed",
         "in_progress"
-      ].includes(
-        getBookingStatus(booking)
-      )
+      ].includes(getBookingStatus(booking))
   );
 
-  const completedBookings = bookings.filter(
-    (booking) =>
-      getBookingStatus(booking) === "completed"
-  );
+  const completedBookings =
+    bookings.filter(
+      (booking) =>
+        getBookingStatus(booking) ===
+        "completed"
+    );
 
   const profileCompleted =
     Boolean(worker?.profileCompleted);
 
   element.innerHTML = `
-
     <div class="row between">
 
       <div>
-
         <h1>Worker Dashboard</h1>
 
         <p class="lead">
           Manage available work and your bookings.
         </p>
-
       </div>
 
       <a
@@ -259,14 +279,14 @@ async function loadWorkerDashboard(element) {
 
     </div>
 
-
     ${
       !profileCompleted
         ? `
-
           <div class="notice">
 
-            <h3>⚠️ Complete Your Worker Profile</h3>
+            <h3>
+              ⚠️ Complete Your Worker Profile
+            </h3>
 
             <p>
               Your profile is not complete yet.
@@ -285,7 +305,6 @@ async function loadWorkerDashboard(element) {
           </div>
 
           <br>
-
         `
         : `
           <div class="notice">
@@ -296,7 +315,6 @@ async function loadWorkerDashboard(element) {
           <br>
         `
     }
-
 
     <div class="grid2">
 
@@ -356,6 +374,5 @@ async function loadWorkerDashboard(element) {
       payment and worker payout system is
       connected securely.
     </div>
-
   `;
 }
