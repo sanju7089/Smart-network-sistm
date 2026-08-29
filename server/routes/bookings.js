@@ -1,5 +1,8 @@
 import express from "express";
-import { requireAuth } from "../middleware/authMiddleware.js";
+
+import {
+  requireAuth
+} from "../middleware/authMiddleware.js";
 
 import {
   getBookings,
@@ -11,22 +14,25 @@ import {
 
 const router = express.Router();
 
-// सभी booking routes के लिए login जरूरी है
 router.use(requireAuth);
 
-// अपनी bookings / role के अनुसार bookings
 router.get("/", getBookings);
 
-// नई booking बनाना
 router.post("/", createBooking);
 
-// Booking cancel करना
-router.patch("/:id/cancel", cancelBooking);
+router.patch(
+  "/:id/cancel",
+  cancelBooking
+);
 
-// Booking status update करना
-router.patch("/:id/status", updateBookingStatus);
+router.patch(
+  "/:id/status",
+  updateBookingStatus
+);
 
-// एक specific booking देखना
-router.get("/:id", getBookingById);
+router.get(
+  "/:id",
+  getBookingById
+);
 
 export default router;
