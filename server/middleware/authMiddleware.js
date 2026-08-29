@@ -1,7 +1,10 @@
 import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 
 function getJwtSecret() {
-  const secret = process.env.JWT_SECRET;
+  const secret = String(
+    process.env.JWT_SECRET || ""
+  ).trim();
 
   if (!secret) {
     const error = new Error(
@@ -18,23 +21,33 @@ function getJwtSecret() {
 
 function getToken(req) {
   const authorization =
-    req.headers.authorization || "";
+    String(
+      req.headers.authorization || ""
+    ).trim();
 
-  const [type, token] =
-    authorization.split(" ");
+  if (!authorization) {
+    return null;
+  }
+
+  const parts =
+    authorization.split(/\s+/);
 
   if (
-    type !== "Bearer" ||
-    !token ||
-    !token.trim()
+    parts.length !== 2 ||
+    parts[0].toLowerCase() !== "bearer" ||
+    !parts[1]
   ) {
     return null;
   }
 
-  return token.trim();
+  return parts[1].trim();
 }
 
-export function requireAuth(req, res, next) {
+export async function requireAuth(
+  req,
+  res,
+  next
+) {
   try {
     const token = getToken(req);
 
@@ -46,18 +59,17 @@ export function requireAuth(req, res, next) {
       });
     }
 
-    const secret = getJwtSecret();
-
     const payload = jwt.verify(
       token,
-      secret
+      getJwtSecret(),
+      {
+        issuer: "smart-work-network",
+        audience:
+          "smart-work-network-users"
+      }
     );
 
-    if (
-      !payload ||
-      !payload.id ||
-      !payload.role
-    ) {
+    if (!payload?.id) {
       return res.status(401).json({
         success: false,
         message:
@@ -65,17 +77,54 @@ export function requireAuth(req, res, next) {
       });
     }
 
+    /*
+      Do not trust role/status from an
+      old token forever.
+
+      Check the current database user.
+    */
+
+    const user =
+      await User.findById(payload.id)
+        .select(
+          "_id name email role phone location isActive"
+        );
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Authentication is no longer valid."
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "This account is inactive."
+      });
+    }
+
     req.user = {
-      id: String(payload.id),
-      email: payload.email || "",
-      role: payload.role
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role
     };
+
+    /*
+      Full current user for controllers
+      that need profile information.
+    */
+
+    req.authUser = user;
 
     return next();
 
   } catch (error) {
     if (
-      error.name === "TokenExpiredError"
+      error?.name ===
+      "TokenExpiredError"
     ) {
       return res.status(401).json({
         success: false,
@@ -85,7 +134,10 @@ export function requireAuth(req, res, next) {
     }
 
     if (
-      error.name === "JsonWebTokenError"
+      error?.name ===
+      "JsonWebTokenError" ||
+      error?.name ===
+      "NotBeforeError"
     ) {
       return res.status(401).json({
         success: false,
@@ -111,11 +163,15 @@ export function requireAuth(req, res, next) {
   }
 }
 
-export function requireRole(...allowedRoles) {
+export function requireRole(
+  ...allowedRoles
+) {
   const validRoles =
     allowedRoles
       .map((role) =>
-        String(role).trim().toLowerCase()
+        String(role)
+          .trim()
+          .toLowerCase()
       )
       .filter(Boolean);
 
@@ -125,6 +181,14 @@ export function requireRole(...allowedRoles) {
         success: false,
         message:
           "Authentication required."
+      });
+    }
+
+    if (validRoles.length === 0) {
+      return res.status(500).json({
+        success: false,
+        message:
+          "Server role configuration error."
       });
     }
 
