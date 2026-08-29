@@ -12,13 +12,10 @@ import {
 const router = express.Router();
 
 router.use(requireAuth);
-
-router.use(
-  requireRole("admin")
-);
+router.use(requireRole("admin"));
 
 router.get("/", (req, res) => {
-  res.json({
+  return res.status(200).json({
     success: true,
     message: "Admin API is working.",
     admin: {
@@ -29,9 +26,6 @@ router.get("/", (req, res) => {
   });
 });
 
-router.get(
-  "/dashboard",
-  getDashboard
-);
+router.get("/dashboard", getDashboard);
 
 export default router;
