@@ -1,17 +1,15 @@
 import mongoose from "mongoose";
 
-export async function connectDatabase() {
-  const mongoUri = process.env.MONGODB_URI;
+let listenersRegistered = false;
 
-  if (!mongoUri) {
-    throw new Error(
-      "MONGODB_URI is not configured in environment variables."
-    );
-  }
+function registerDatabaseListeners() {
+  if (listenersRegistered) return;
+
+  listenersRegistered = true;
 
   mongoose.connection.on("connected", () => {
     console.log(
-      `MongoDB connected: ${mongoose.connection.host}`
+      `MongoDB connected: ${mongoose.connection.host}/${mongoose.connection.name}`
     );
   });
 
@@ -25,6 +23,18 @@ export async function connectDatabase() {
   mongoose.connection.on("disconnected", () => {
     console.warn("MongoDB disconnected.");
   });
+}
+
+export async function connectDatabase() {
+  const mongoUri = process.env.MONGODB_URI;
+
+  if (!mongoUri) {
+    throw new Error(
+      "MONGODB_URI is not configured in environment variables."
+    );
+  }
+
+  registerDatabaseListeners();
 
   await mongoose.connect(mongoUri, {
     serverSelectionTimeoutMS: 10000,
@@ -42,11 +52,11 @@ export function getDatabaseStatus() {
     3: "disconnecting"
   };
 
+  const readyState = mongoose.connection.readyState;
+
   return {
-    status:
-      states[mongoose.connection.readyState] ||
-      "unknown",
-    readyState: mongoose.connection.readyState,
+    status: states[readyState] || "unknown",
+    readyState,
     host: mongoose.connection.host || null,
     name: mongoose.connection.name || null
   };
@@ -54,8 +64,8 @@ export function getDatabaseStatus() {
 
 export async function disconnectDatabase() {
   if (mongoose.connection.readyState !== 0) {
-    await mongoose.connection.close(false);
+    await mongoose.connection.close();
 
     console.log("MongoDB connection closed.");
   }
-    }
+}
