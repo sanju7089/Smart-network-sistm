@@ -8,10 +8,7 @@ function isValidId(id) {
 }
 
 function isOwner(job, userId) {
-  return (
-    String(job.customerId) ===
-    String(userId)
-  );
+  return String(job.customerId) === String(userId);
 }
 
 function publicJobCustomerFields() {
@@ -26,8 +23,7 @@ export async function createJob(req, res) {
     ) {
       return res.status(403).json({
         success: false,
-        message:
-          "Only customers can create jobs."
+        message: "Only customers can create jobs."
       });
     }
 
@@ -48,8 +44,7 @@ export async function createJob(req, res) {
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Title and description are required."
+        message: "Title and description are required."
       });
     }
 
@@ -68,16 +63,14 @@ export async function createJob(req, res) {
       ) {
         return res.status(400).json({
           success: false,
-          message:
-            "Budget must be a valid number."
+          message: "Budget must be a valid number."
         });
       }
     }
 
     const job = await Job.create({
       title: String(title).trim(),
-      description:
-        String(description).trim(),
+      description: String(description).trim(),
       category: category
         ? String(category).trim()
         : "",
@@ -116,30 +109,80 @@ export async function getJobs(req, res) {
       status,
       category,
       service,
-      location
+      location,
+      customerId
     } = req.query;
 
     const filter = {};
 
-    // Public API default:
-    // केवल open jobs दिखें
-    filter.status = status || "open";
+    /*
+      Public request:
+      Default केवल open jobs.
 
-    if (category) {
+      customerId request:
+      Login आवश्यक है और केवल अपना
+      customerId इस्तेमाल किया जा सकता है.
+    */
+    if (customerId) {
+      if (!isValidId(customerId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid customer ID."
+        });
+      }
+
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message:
+            "Authentication is required to view customer jobs."
+        });
+      }
+
+      if (
+        req.user.role !== "admin" &&
+        String(customerId) !== String(req.user.id)
+      ) {
+        return res.status(403).json({
+          success: false,
+          message:
+            "You do not have permission to view these jobs."
+        });
+      }
+
+      filter.customerId = customerId;
+
+      /*
+        Dashboard में customer के सभी
+        statuses दिखाई देने चाहिए.
+      */
+      if (status) {
+        filter.status = String(status).trim();
+      }
+    } else {
+      /*
+        Public API default
+      */
+      filter.status = status
+        ? String(status).trim()
+        : "open";
+    }
+
+    if (category && String(category).trim()) {
       filter.category = {
         $regex: String(category).trim(),
         $options: "i"
       };
     }
 
-    if (service) {
+    if (service && String(service).trim()) {
       filter.service = {
         $regex: String(service).trim(),
         $options: "i"
       };
     }
 
-    if (location) {
+    if (location && String(location).trim()) {
       filter.location = {
         $regex: String(location).trim(),
         $options: "i"
@@ -263,12 +306,15 @@ export async function updateJob(req, res) {
       }
     }
 
-    // केवल admin status बदल सकता है
     if (
       req.user.role === "admin" &&
       req.body.status !== undefined
     ) {
-      updates.status = req.body.status;
+      updates.status = String(
+        req.body.status
+      )
+        .trim()
+        .toLowerCase();
     }
 
     if (
@@ -278,6 +324,28 @@ export async function updateJob(req, res) {
         success: false,
         message:
           "No valid fields provided."
+      });
+    }
+
+    if (
+      updates.title !== undefined &&
+      !String(updates.title).trim()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Title cannot be empty."
+      });
+    }
+
+    if (
+      updates.description !== undefined &&
+      !String(updates.description).trim()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Description cannot be empty."
       });
     }
 
@@ -317,7 +385,8 @@ export async function updateJob(req, res) {
 
     return res.json({
       success: true,
-      message: "Job updated successfully.",
+      message:
+        "Job updated successfully.",
       data: updatedJob
     });
   } catch (error) {
@@ -389,7 +458,8 @@ export async function deleteJob(req, res) {
 
     return res.json({
       success: true,
-      message: "Job deleted successfully."
+      message:
+        "Job deleted successfully."
     });
   } catch (error) {
     console.error(
@@ -402,4 +472,4 @@ export async function deleteJob(req, res) {
       message: "Unable to delete job."
     });
   }
-        }
+}
