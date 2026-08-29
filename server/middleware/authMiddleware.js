@@ -145,4 +145,4 @@ export function requireRole(...allowedRoles) {
 
     return next();
   };
-        }
+}
