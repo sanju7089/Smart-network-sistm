@@ -1,16 +1,19 @@
 export function securityHeaders(req, res, next) {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader(
+    "Referrer-Policy",
+    "strict-origin-when-cross-origin"
+  );
 
   next();
 }
 
 export function requestLogger(req, res, next) {
-  const startTime = Date.now();
+  const startedAt = Date.now();
 
   res.on("finish", () => {
-    const duration = Date.now() - startTime;
+    const duration = Date.now() - startedAt;
 
     console.log(
       `${new Date().toISOString()} | ` +
