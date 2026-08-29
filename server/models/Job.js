@@ -1,5 +1,13 @@
 import mongoose from "mongoose";
 
+const JOB_STATUSES = [
+  "open",
+  "assigned",
+  "in_progress",
+  "completed",
+  "cancelled"
+];
+
 const jobSchema = new mongoose.Schema(
   {
     title: {
@@ -20,19 +28,22 @@ const jobSchema = new mongoose.Schema(
     category: {
       type: String,
       default: "",
-      trim: true
+      trim: true,
+      maxlength: 100
     },
 
     service: {
       type: String,
       default: "",
-      trim: true
+      trim: true,
+      maxlength: 150
     },
 
     location: {
       type: String,
       default: "",
-      trim: true
+      trim: true,
+      maxlength: 200
     },
 
     budget: {
@@ -44,19 +55,15 @@ const jobSchema = new mongoose.Schema(
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true
+      required: true,
+      index: true
     },
 
     status: {
       type: String,
-      enum: [
-        "open",
-        "assigned",
-        "in_progress",
-        "completed",
-        "cancelled"
-      ],
-      default: "open"
+      enum: JOB_STATUSES,
+      default: "open",
+      index: true
     }
   },
   {
@@ -66,11 +73,30 @@ const jobSchema = new mongoose.Schema(
 
 jobSchema.index({
   status: 1,
+  createdAt: -1
+});
+
+jobSchema.index({
+  customerId: 1,
+  createdAt: -1
+});
+
+jobSchema.index({
   category: 1,
   location: 1,
   createdAt: -1
 });
 
+jobSchema.index({
+  title: "text",
+  description: "text",
+  category: "text",
+  service: "text",
+  location: "text"
+});
+
 const Job = mongoose.model("Job", jobSchema);
+
+export { JOB_STATUSES };
 
 export default Job;
