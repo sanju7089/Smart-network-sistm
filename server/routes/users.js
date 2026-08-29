@@ -1,5 +1,9 @@
 import express from "express";
-import { requireAuth } from "../middleware/authMiddleware.js";
+
+import {
+  requireAuth,
+  requireRole
+} from "../middleware/authMiddleware.js";
 
 import {
   getUsers,
@@ -11,22 +15,28 @@ import {
 
 const router = express.Router();
 
-// सभी user routes के लिए login जरूरी है
 router.use(requireAuth);
 
-// अपना profile
 router.get("/me", getMyProfile);
 
-// अपना profile update
 router.patch("/me", updateMyProfile);
 
-// सभी users (Admin permission controller में check होगी)
-router.get("/", getUsers);
+router.get(
+  "/",
+  requireRole("admin"),
+  getUsers
+);
 
-// एक specific user
-router.get("/:id", getUserById);
+router.get(
+  "/:id",
+  requireRole("admin"),
+  getUserById
+);
 
-// User deactivate (Admin)
-router.delete("/:id", deleteUser);
+router.delete(
+  "/:id",
+  requireRole("admin"),
+  deleteUser
+);
 
 export default router;
