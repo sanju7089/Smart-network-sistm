@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 
-import Job from "../models/Job.js";
+import Job, {
+  JOB_STATUSES
+} from "../models/Job.js";
+
 import Booking from "../models/Booking.js";
 
 function isValidId(id) {
@@ -8,12 +11,66 @@ function isValidId(id) {
 }
 
 function isOwner(job, userId) {
-  return String(job.customerId) === String(userId);
+  return (
+    String(job.customerId) ===
+    String(userId)
+  );
 }
 
 function publicJobCustomerFields() {
   return "name location";
 }
+
+function normalizeText(value, maxLength = 5000) {
+  return String(value ?? "")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function parsePositiveInteger(
+  value,
+  fallback,
+  max
+) {
+  const number = Number.parseInt(value, 10);
+
+  if (!Number.isFinite(number)) {
+    return fallback;
+  }
+
+  return Math.min(
+    Math.max(number, 1),
+    max
+  );
+}
+
+function isValidStatus(status) {
+  return JOB_STATUSES.includes(status);
+}
+
+function escapeRegex(value) {
+  return String(value).replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&"
+  );
+}
+
+function canViewCustomerJobs(req, customerId) {
+  return (
+    req.user &&
+    (
+      req.user.role === "admin" ||
+      String(req.user.id) ===
+        String(customerId)
+    )
+  );
+}
+
+/*
+========================================
+CREATE JOB
+========================================
+*/
 
 export async function createJob(req, res) {
   try {
@@ -23,7 +80,8 @@ export async function createJob(req, res) {
     ) {
       return res.status(403).json({
         success: false,
-        message: "Only customers can create jobs."
+        message:
+          "Only customers can create jobs."
       });
     }
 
@@ -34,17 +92,27 @@ export async function createJob(req, res) {
       service,
       location,
       budget
-    } = req.body;
+    } = req.body || {};
 
-    if (
-      !title ||
-      !String(title).trim() ||
-      !description ||
-      !String(description).trim()
-    ) {
+    const cleanTitle =
+      normalizeText(title, 200);
+
+    const cleanDescription =
+      normalizeText(description, 5000);
+
+    if (!cleanTitle || !cleanDescription) {
       return res.status(400).json({
         success: false,
-        message: "Title and description are required."
+        message:
+          "Title and description are required."
+      });
+    }
+
+    if (cleanTitle.length < 3) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Title must be at least 3 characters."
       });
     }
 
@@ -63,23 +131,27 @@ export async function createJob(req, res) {
       ) {
         return res.status(400).json({
           success: false,
-          message: "Budget must be a valid number."
+          message:
+            "Budget must be a valid non-negative number."
         });
       }
     }
 
     const job = await Job.create({
-      title: String(title).trim(),
-      description: String(description).trim(),
-      category: category
-        ? String(category).trim()
-        : "",
-      service: service
-        ? String(service).trim()
-        : "",
-      location: location
-        ? String(location).trim()
-        : "",
+      title: cleanTitle,
+      description: cleanDescription,
+      category: normalizeText(
+        category,
+        100
+      ),
+      service: normalizeText(
+        service,
+        150
+      ),
+      location: normalizeText(
+        location,
+        200
+      ),
       budget: normalizedBudget,
       customerId: req.user.id,
       status: "open"
@@ -87,9 +159,11 @@ export async function createJob(req, res) {
 
     return res.status(201).json({
       success: true,
-      message: "Job created successfully.",
+      message:
+        "Job created successfully.",
       data: job
     });
+
   } catch (error) {
     console.error(
       "CREATE JOB ERROR:",
@@ -98,10 +172,17 @@ export async function createJob(req, res) {
 
     return res.status(500).json({
       success: false,
-      message: "Unable to create job."
+      message:
+        "Unable to create job."
     });
   }
 }
+
+/*
+========================================
+GET JOBS
+========================================
+*/
 
 export async function getJobs(req, res) {
   try {
@@ -110,39 +191,31 @@ export async function getJobs(req, res) {
       category,
       service,
       location,
-      customerId
+      customerId,
+      search,
+      page,
+      limit
     } = req.query;
 
     const filter = {};
 
     /*
-      Public request:
-      Default केवल open jobs.
-
-      customerId request:
-      Login आवश्यक है और केवल अपना
-      customerId इस्तेमाल किया जा सकता है.
+      CUSTOMER DASHBOARD JOBS
     */
+
     if (customerId) {
       if (!isValidId(customerId)) {
         return res.status(400).json({
           success: false,
-          message: "Invalid customer ID."
-        });
-      }
-
-      if (!req.user) {
-        return res.status(401).json({
-          success: false,
           message:
-            "Authentication is required to view customer jobs."
+            "Invalid customer ID."
         });
       }
 
-      if (
-        req.user.role !== "admin" &&
-        String(customerId) !== String(req.user.id)
-      ) {
+      if (!canViewCustomerJobs(
+        req,
+        customerId
+      )) {
         return res.status(403).json({
           success: false,
           message:
@@ -152,55 +225,209 @@ export async function getJobs(req, res) {
 
       filter.customerId = customerId;
 
-      /*
-        Dashboard में customer के सभी
-        statuses दिखाई देने चाहिए.
-      */
       if (status) {
-        filter.status = String(status).trim();
+        const requestedStatus =
+          normalizeText(
+            status,
+            50
+          ).toLowerCase();
+
+        if (
+          !isValidStatus(
+            requestedStatus
+          )
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Invalid job status."
+          });
+        }
+
+        filter.status =
+          requestedStatus;
       }
+
     } else {
       /*
-        Public API default
+        PUBLIC JOB LIST:
+        only OPEN jobs are public.
       */
-      filter.status = status
-        ? String(status).trim()
-        : "open";
+
+      filter.status = "open";
     }
 
-    if (category && String(category).trim()) {
-      filter.category = {
-        $regex: String(category).trim(),
-        $options: "i"
-      };
+    /*
+      CATEGORY FILTER
+    */
+
+    if (category) {
+      const value =
+        normalizeText(
+          category,
+          100
+        );
+
+      if (value) {
+        filter.category = {
+          $regex: escapeRegex(value),
+          $options: "i"
+        };
+      }
     }
 
-    if (service && String(service).trim()) {
-      filter.service = {
-        $regex: String(service).trim(),
-        $options: "i"
-      };
+    /*
+      SERVICE FILTER
+    */
+
+    if (service) {
+      const value =
+        normalizeText(
+          service,
+          150
+        );
+
+      if (value) {
+        filter.service = {
+          $regex: escapeRegex(value),
+          $options: "i"
+        };
+      }
     }
 
-    if (location && String(location).trim()) {
-      filter.location = {
-        $regex: String(location).trim(),
-        $options: "i"
-      };
+    /*
+      LOCATION FILTER
+    */
+
+    if (location) {
+      const value =
+        normalizeText(
+          location,
+          200
+        );
+
+      if (value) {
+        filter.location = {
+          $regex: escapeRegex(value),
+          $options: "i"
+        };
+      }
     }
 
-    const jobs = await Job.find(filter)
-      .sort({ createdAt: -1 })
-      .populate(
-        "customerId",
-        publicJobCustomerFields()
+    /*
+      SEARCH
+    */
+
+    if (search) {
+      const searchText =
+        normalizeText(
+          search,
+          200
+        );
+
+      if (searchText) {
+        const safeSearch =
+          escapeRegex(searchText);
+
+        filter.$or = [
+          {
+            title: {
+              $regex: safeSearch,
+              $options: "i"
+            }
+          },
+          {
+            description: {
+              $regex: safeSearch,
+              $options: "i"
+            }
+          },
+          {
+            category: {
+              $regex: safeSearch,
+              $options: "i"
+            }
+          },
+          {
+            service: {
+              $regex: safeSearch,
+              $options: "i"
+            }
+          },
+          {
+            location: {
+              $regex: safeSearch,
+              $options: "i"
+            }
+          }
+        ];
+      }
+    }
+
+    /*
+      PAGINATION
+    */
+
+    const currentPage =
+      parsePositiveInteger(
+        page,
+        1,
+        100000
       );
 
-    return res.json({
+    const pageLimit =
+      parsePositiveInteger(
+        limit,
+        20,
+        100
+      );
+
+    const skip =
+      (currentPage - 1) *
+      pageLimit;
+
+    const [
+      jobs,
+      total
+    ] = await Promise.all([
+      Job.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(pageLimit)
+        .populate(
+          "customerId",
+          publicJobCustomerFields()
+        ),
+
+      Job.countDocuments(filter)
+    ]);
+
+    return res.status(200).json({
       success: true,
+
+      pagination: {
+        page: currentPage,
+        limit: pageLimit,
+        total,
+        totalPages:
+          Math.max(
+            1,
+            Math.ceil(
+              total / pageLimit
+            )
+          ),
+        hasNextPage:
+          currentPage * pageLimit <
+          total,
+        hasPreviousPage:
+          currentPage > 1
+      },
+
       count: jobs.length,
+
       data: jobs
     });
+
   } catch (error) {
     console.error(
       "GET JOBS ERROR:",
@@ -209,10 +436,17 @@ export async function getJobs(req, res) {
 
     return res.status(500).json({
       success: false,
-      message: "Unable to fetch jobs."
+      message:
+        "Unable to fetch jobs."
     });
   }
 }
+
+/*
+========================================
+GET JOB BY ID
+========================================
+*/
 
 export async function getJobById(req, res) {
   try {
@@ -221,27 +455,51 @@ export async function getJobById(req, res) {
     if (!isValidId(id)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid job ID."
+        message:
+          "Invalid job ID."
       });
     }
 
-    const job = await Job.findById(id)
-      .populate(
-        "customerId",
-        publicJobCustomerFields()
-      );
+    const job =
+      await Job.findById(id)
+        .populate(
+          "customerId",
+          publicJobCustomerFields()
+        );
 
     if (!job) {
       return res.status(404).json({
         success: false,
-        message: "Job not found."
+        message:
+          "Job not found."
       });
     }
 
-    return res.json({
+    /*
+      Non-open jobs are private unless
+      owner or admin.
+    */
+
+    if (
+      job.status !== "open" &&
+      !canViewCustomerJobs(
+        req,
+        job.customerId._id ||
+          job.customerId
+      )
+    ) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "Job not found."
+      });
+    }
+
+    return res.status(200).json({
       success: true,
       data: job
     });
+
   } catch (error) {
     console.error(
       "GET JOB ERROR:",
@@ -250,10 +508,17 @@ export async function getJobById(req, res) {
 
     return res.status(500).json({
       success: false,
-      message: "Unable to fetch job."
+      message:
+        "Unable to fetch job."
     });
   }
 }
+
+/*
+========================================
+UPDATE JOB
+========================================
+*/
 
 export async function updateJob(req, res) {
   try {
@@ -262,27 +527,52 @@ export async function updateJob(req, res) {
     if (!isValidId(id)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid job ID."
+        message:
+          "Invalid job ID."
       });
     }
 
-    const job = await Job.findById(id);
+    const job =
+      await Job.findById(id);
 
     if (!job) {
       return res.status(404).json({
         success: false,
-        message: "Job not found."
+        message:
+          "Job not found."
       });
     }
 
     if (
       req.user.role !== "admin" &&
-      !isOwner(job, req.user.id)
+      !isOwner(
+        job,
+        req.user.id
+      )
     ) {
       return res.status(403).json({
         success: false,
         message:
           "You do not have permission to update this job."
+      });
+    }
+
+    /*
+      Completed/cancelled jobs cannot
+      be edited by customers.
+    */
+
+    if (
+      req.user.role !== "admin" &&
+      [
+        "completed",
+        "cancelled"
+      ].includes(job.status)
+    ) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "This job can no longer be edited."
       });
     }
 
@@ -298,23 +588,52 @@ export async function updateJob(req, res) {
     const updates = {};
 
     for (const field of allowedFields) {
-      if (req.body[field] !== undefined) {
+      if (
+        req.body?.[field] !== undefined
+      ) {
         updates[field] =
-          typeof req.body[field] === "string"
-            ? req.body[field].trim()
+          typeof req.body[field] ===
+          "string"
+            ? normalizeText(
+                req.body[field],
+                field === "description"
+                  ? 5000
+                  : field === "title"
+                    ? 200
+                    : field === "category"
+                      ? 100
+                      : field === "service"
+                        ? 150
+                        : 200
+              )
             : req.body[field];
       }
     }
 
+    /*
+      Only admin can directly change
+      status from this endpoint.
+    */
+
     if (
       req.user.role === "admin" &&
-      req.body.status !== undefined
+      req.body?.status !== undefined
     ) {
-      updates.status = String(
-        req.body.status
-      )
-        .trim()
-        .toLowerCase();
+      const newStatus =
+        normalizeText(
+          req.body.status,
+          50
+        ).toLowerCase();
+
+      if (!isValidStatus(newStatus)) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid job status."
+        });
+      }
+
+      updates.status = newStatus;
     }
 
     if (
@@ -329,18 +648,18 @@ export async function updateJob(req, res) {
 
     if (
       updates.title !== undefined &&
-      !String(updates.title).trim()
+      updates.title.length < 3
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "Title cannot be empty."
+          "Title must be at least 3 characters."
       });
     }
 
     if (
       updates.description !== undefined &&
-      !String(updates.description).trim()
+      !updates.description
     ) {
       return res.status(400).json({
         success: false,
@@ -365,7 +684,7 @@ export async function updateJob(req, res) {
           return res.status(400).json({
             success: false,
             message:
-              "Budget must be a valid number."
+              "Budget must be a valid non-negative number."
           });
         }
 
@@ -376,19 +695,25 @@ export async function updateJob(req, res) {
     const updatedJob =
       await Job.findByIdAndUpdate(
         id,
-        { $set: updates },
+        {
+          $set: updates
+        },
         {
           new: true,
           runValidators: true
         }
+      ).populate(
+        "customerId",
+        publicJobCustomerFields()
       );
 
-    return res.json({
+    return res.status(200).json({
       success: true,
       message:
         "Job updated successfully.",
       data: updatedJob
     });
+
   } catch (error) {
     console.error(
       "UPDATE JOB ERROR:",
@@ -397,10 +722,17 @@ export async function updateJob(req, res) {
 
     return res.status(500).json({
       success: false,
-      message: "Unable to update job."
+      message:
+        "Unable to update job."
     });
   }
 }
+
+/*
+========================================
+DELETE JOB
+========================================
+*/
 
 export async function deleteJob(req, res) {
   try {
@@ -409,22 +741,28 @@ export async function deleteJob(req, res) {
     if (!isValidId(id)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid job ID."
+        message:
+          "Invalid job ID."
       });
     }
 
-    const job = await Job.findById(id);
+    const job =
+      await Job.findById(id);
 
     if (!job) {
       return res.status(404).json({
         success: false,
-        message: "Job not found."
+        message:
+          "Job not found."
       });
     }
 
     if (
       req.user.role !== "admin" &&
-      !isOwner(job, req.user.id)
+      !isOwner(
+        job,
+        req.user.id
+      )
     ) {
       return res.status(403).json({
         success: false,
@@ -456,11 +794,12 @@ export async function deleteJob(req, res) {
 
     await Job.findByIdAndDelete(id);
 
-    return res.json({
+    return res.status(200).json({
       success: true,
       message:
         "Job deleted successfully."
     });
+
   } catch (error) {
     console.error(
       "DELETE JOB ERROR:",
@@ -469,7 +808,8 @@ export async function deleteJob(req, res) {
 
     return res.status(500).json({
       success: false,
-      message: "Unable to delete job."
+      message:
+        "Unable to delete job."
     });
   }
 }
