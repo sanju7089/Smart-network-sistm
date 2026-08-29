@@ -3,7 +3,18 @@ import cors from "cors";
 import dotenv from "dotenv";
 import helmet from "helmet";
 
-import { connectDatabase } from "./config/database.js";
+import {
+  connectDatabase,
+  getDatabaseStatus,
+  disconnectDatabase
+} from "./config/database.js";
+
+import {
+  securityHeaders,
+  requestLogger,
+  notFound,
+  errorHandler
+} from "./middleware/securityMiddleware.js";
 
 import authRoutes from "./routes/auth.js";
 import adminRoutes from "./routes/admin.js";
@@ -18,7 +29,9 @@ dotenv.config();
 const app = express();
 
 const PORT = Number(process.env.PORT) || 3000;
-const isProduction = process.env.NODE_ENV === "production";
+
+const isProduction =
+  process.env.NODE_ENV === "production";
 
 const allowedOrigins = String(
   process.env.ALLOWED_ORIGINS || ""
@@ -27,11 +40,20 @@ const allowedOrigins = String(
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-if (isProduction && allowedOrigins.length === 0) {
+if (
+  isProduction &&
+  allowedOrigins.length === 0
+) {
   throw new Error(
     "ALLOWED_ORIGINS must be configured in production."
   );
 }
+
+/*
+========================================
+SERVER SECURITY
+========================================
+*/
 
 app.disable("x-powered-by");
 
@@ -41,15 +63,36 @@ app.use(
   })
 );
 
+app.use(securityHeaders);
+
+/*
+========================================
+CORS
+========================================
+*/
+
 app.use(
   cors({
     origin(origin, callback) {
-      // Server-to-server requests / health checks
+      /*
+       Allow requests without Origin:
+       server-to-server,
+       health checks,
+       command line tools.
+      */
       if (!origin) {
         return callback(null, true);
       }
 
-      if (!isProduction && allowedOrigins.length === 0) {
+      /*
+       Development mode:
+       allow all origins only when
+       ALLOWED_ORIGINS is not configured.
+      */
+      if (
+        !isProduction &&
+        allowedOrigins.length === 0
+      ) {
         return callback(null, true);
       }
 
@@ -84,67 +127,143 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: "1mb" }));
+/*
+========================================
+REQUEST PARSING
+========================================
+*/
+
+app.use(express.json({
+  limit: "1mb"
+}));
+
+app.use(express.urlencoded({
+  extended: true,
+  limit: "1mb"
+}));
+
+/*
+========================================
+REQUEST LOGGING
+========================================
+*/
+
+app.use(requestLogger);
+
+/*
+========================================
+ROOT API
+========================================
+*/
 
 app.get("/", (req, res) => {
-  res.json({
+  return res.status(200).json({
     success: true,
     message: "Smart Work Network API is running",
-    version: "2.0.0"
-  });
-});
-
-app.get("/api/health", (req, res) => {
-  res.status(200).json({
-    success: true,
-    status: "healthy",
-    environment:
-      process.env.NODE_ENV || "development",
+    version: "2.0.0",
     timestamp: new Date().toISOString()
   });
 });
 
+/*
+========================================
+HEALTH API
+========================================
+*/
+
+app.get("/api/health", (req, res) => {
+  const database = getDatabaseStatus();
+
+  const isHealthy =
+    database.status === "connected";
+
+  return res.status(
+    isHealthy ? 200 : 503
+  ).json({
+    success: isHealthy,
+
+    status:
+      isHealthy
+        ? "healthy"
+        : "unhealthy",
+
+    application: "Smart Work Network API",
+
+    environment:
+      process.env.NODE_ENV ||
+      "development",
+
+    database,
+
+    uptime: Math.floor(
+      process.uptime()
+    ),
+
+    timestamp:
+      new Date().toISOString()
+  });
+});
+
+/*
+========================================
+API ROUTES
+========================================
+*/
+
 app.use("/api/auth", authRoutes);
+
 app.use("/api/admin", adminRoutes);
+
 app.use("/api/bookings", bookingRoutes);
+
 app.use("/api/jobs", jobRoutes);
+
 app.use("/api/payments", paymentRoutes);
+
 app.use("/api/users", userRoutes);
+
 app.use("/api/workers", workerRoutes);
 
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: "API route not found."
-  });
-});
+/*
+========================================
+404 HANDLER
+Must be after all routes
+========================================
+*/
 
-app.use((error, req, res, next) => {
-  console.error("SERVER ERROR:", error);
+app.use(notFound);
 
-  if (error.name === "SyntaxError") {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid JSON request."
-    });
-  }
+/*
+========================================
+GLOBAL ERROR HANDLER
+Must be last middleware
+========================================
+*/
 
-  return res.status(error.status || 500).json({
-    success: false,
-    message:
-      error.status && error.status < 500
-        ? error.message
-        : "Internal server error."
-  });
-});
+app.use(errorHandler);
+
+/*
+========================================
+SERVER START
+========================================
+*/
+
+let server;
 
 async function startServer() {
   try {
     await connectDatabase();
 
-    app.listen(PORT, () => {
+    server = app.listen(PORT, () => {
       console.log(
         `Smart Work Network API running on port ${PORT}`
+      );
+
+      console.log(
+        `Environment: ${
+          process.env.NODE_ENV ||
+          "development"
+        }`
       );
     });
   } catch (error) {
@@ -157,4 +276,87 @@ async function startServer() {
   }
 }
 
+/*
+========================================
+GRACEFUL SHUTDOWN
+========================================
+*/
+
+async function shutdown(signal) {
+  console.log(
+    `\n${signal} received. Starting graceful shutdown...`
+  );
+
+  try {
+    if (server) {
+      await new Promise((resolve, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+
+          resolve();
+        });
+      });
+
+      console.log("HTTP server closed.");
+    }
+
+    await disconnectDatabase();
+
+    console.log(
+      "Graceful shutdown completed."
+    );
+
+    process.exit(0);
+
+  } catch (error) {
+    console.error(
+      "Error during graceful shutdown:",
+      error.message
+    );
+
+    process.exit(1);
+  }
+}
+
+process.on("SIGTERM", () => {
+  shutdown("SIGTERM");
+});
+
+process.on("SIGINT", () => {
+  shutdown("SIGINT");
+});
+
+/*
+========================================
+UNEXPECTED ERRORS
+========================================
+*/
+
+process.on(
+  "unhandledRejection",
+  (reason) => {
+    console.error(
+      "Unhandled Promise Rejection:",
+      reason
+    );
+  }
+);
+
+process.on(
+  "uncaughtException",
+  (error) => {
+    console.error(
+      "Uncaught Exception:",
+      error
+    );
+
+    process.exit(1);
+  }
+);
+
 startServer();
+
+export default app;
