@@ -1,70 +1,148 @@
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET;
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    const error = new Error(
+      "JWT_SECRET is not configured."
+    );
+
+    error.statusCode = 500;
+
+    throw error;
+  }
+
+  return secret;
+}
 
 function getToken(req) {
-  const authorization = req.headers.authorization || "";
+  const authorization =
+    req.headers.authorization || "";
 
-  if (!authorization.startsWith("Bearer ")) {
+  const [type, token] =
+    authorization.split(" ");
+
+  if (
+    type !== "Bearer" ||
+    !token ||
+    !token.trim()
+  ) {
     return null;
   }
 
-  return authorization.slice(7).trim();
+  return token.trim();
 }
 
 export function requireAuth(req, res, next) {
-  if (!JWT_SECRET) {
-    console.error("JWT_SECRET is not configured.");
-
-    return res.status(500).json({
-      success: false,
-      message: "Server authentication is not configured."
-    });
-  }
-
-  const token = getToken(req);
-
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: "Authentication required."
-    });
-  }
-
   try {
-    const payload = jwt.verify(token, JWT_SECRET);
+    const token = getToken(req);
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Authentication token is required."
+      });
+    }
+
+    const secret = getJwtSecret();
+
+    const payload = jwt.verify(
+      token,
+      secret
+    );
+
+    if (
+      !payload ||
+      !payload.id ||
+      !payload.role
+    ) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Invalid authentication token."
+      });
+    }
 
     req.user = {
-      id: payload.id,
-      email: payload.email,
+      id: String(payload.id),
+      email: payload.email || "",
       role: payload.role
     };
 
-    next();
+    return next();
+
   } catch (error) {
-    return res.status(401).json({
+    if (
+      error.name === "TokenExpiredError"
+    ) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Authentication token has expired."
+      });
+    }
+
+    if (
+      error.name === "JsonWebTokenError"
+    ) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Invalid authentication token."
+      });
+    }
+
+    console.error(
+      "AUTHENTICATION ERROR:",
+      error.message
+    );
+
+    return res.status(
+      error.statusCode || 500
+    ).json({
       success: false,
-      message: "Invalid or expired token."
+      message:
+        error.statusCode
+          ? error.message
+          : "Authentication failed."
     });
   }
 }
 
 export function requireRole(...allowedRoles) {
+  const validRoles =
+    allowedRoles
+      .map((role) =>
+        String(role).trim().toLowerCase()
+      )
+      .filter(Boolean);
+
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
         success: false,
-        message: "Authentication required."
+        message:
+          "Authentication required."
       });
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    const userRole =
+      String(req.user.role || "")
+        .trim()
+        .toLowerCase();
+
+    if (
+      !validRoles.includes(userRole)
+    ) {
       return res.status(403).json({
         success: false,
-        message: "You do not have permission to perform this action."
+        message:
+          "You do not have permission to perform this action."
       });
     }
 
-    next();
+    return next();
   };
-}
+        }
