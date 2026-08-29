@@ -40,10 +40,7 @@ const allowedOrigins = String(
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-if (
-  isProduction &&
-  allowedOrigins.length === 0
-) {
+if (isProduction && allowedOrigins.length === 0) {
   throw new Error(
     "ALLOWED_ORIGINS must be configured in production."
   );
@@ -51,7 +48,7 @@ if (
 
 /*
 ========================================
-SERVER SECURITY
+BASIC SECURITY
 ========================================
 */
 
@@ -75,10 +72,9 @@ app.use(
   cors({
     origin(origin, callback) {
       /*
-       Allow requests without Origin:
-       server-to-server,
-       health checks,
-       command line tools.
+       Server-to-server requests,
+       health checks and command-line
+       requests may not have an Origin.
       */
       if (!origin) {
         return callback(null, true);
@@ -133,14 +129,18 @@ REQUEST PARSING
 ========================================
 */
 
-app.use(express.json({
-  limit: "1mb"
-}));
+app.use(
+  express.json({
+    limit: "1mb"
+  })
+);
 
-app.use(express.urlencoded({
-  extended: true,
-  limit: "1mb"
-}));
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: "1mb"
+  })
+);
 
 /*
 ========================================
@@ -227,7 +227,6 @@ app.use("/api/workers", workerRoutes);
 /*
 ========================================
 404 HANDLER
-Must be after all routes
 ========================================
 */
 
@@ -236,7 +235,6 @@ app.use(notFound);
 /*
 ========================================
 GLOBAL ERROR HANDLER
-Must be last middleware
 ========================================
 */
 
@@ -244,11 +242,12 @@ app.use(errorHandler);
 
 /*
 ========================================
-SERVER START
+SERVER
 ========================================
 */
 
 let server;
+let shuttingDown = false;
 
 async function startServer() {
   try {
@@ -266,6 +265,7 @@ async function startServer() {
         }`
       );
     });
+
   } catch (error) {
     console.error(
       "Failed to start server:",
@@ -283,6 +283,10 @@ GRACEFUL SHUTDOWN
 */
 
 async function shutdown(signal) {
+  if (shuttingDown) return;
+
+  shuttingDown = true;
+
   console.log(
     `\n${signal} received. Starting graceful shutdown...`
   );
@@ -292,8 +296,7 @@ async function shutdown(signal) {
       await new Promise((resolve, reject) => {
         server.close((error) => {
           if (error) {
-            reject(error);
-            return;
+            return reject(error);
           }
 
           resolve();
@@ -313,7 +316,7 @@ async function shutdown(signal) {
 
   } catch (error) {
     console.error(
-      "Error during graceful shutdown:",
+      "Graceful shutdown failed:",
       error.message
     );
 
@@ -328,12 +331,6 @@ process.on("SIGTERM", () => {
 process.on("SIGINT", () => {
   shutdown("SIGINT");
 });
-
-/*
-========================================
-UNEXPECTED ERRORS
-========================================
-*/
 
 process.on(
   "unhandledRejection",
@@ -353,7 +350,7 @@ process.on(
       error
     );
 
-    process.exit(1);
+    shutdown("UNCAUGHT_EXCEPTION");
   }
 );
 
