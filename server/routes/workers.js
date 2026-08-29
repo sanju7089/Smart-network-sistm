@@ -1,5 +1,8 @@
 import express from "express";
-import { requireAuth } from "../middleware/authMiddleware.js";
+
+import {
+  requireAuth
+} from "../middleware/authMiddleware.js";
 
 import {
   getWorkers,
@@ -11,19 +14,29 @@ import {
 
 const router = express.Router();
 
-// Public: सभी active workers
 router.get("/", getWorkers);
 
-// Protected: अपनी worker profile
-router.get("/me/profile", requireAuth, getMyWorkerProfile);
+router.get(
+  "/me/profile",
+  requireAuth,
+  getMyWorkerProfile
+);
 
-// Protected: नई worker profile बनाना
-router.post("/profile", requireAuth, createWorkerProfile);
+router.post(
+  "/profile",
+  requireAuth,
+  createWorkerProfile
+);
 
-// Protected: अपनी worker profile update करना
-router.patch("/:id", requireAuth, updateWorkerProfile);
+router.patch(
+  "/:id",
+  requireAuth,
+  updateWorkerProfile
+);
 
-// Public: एक specific worker
-router.get("/:id", getWorkerById);
+router.get(
+  "/:id",
+  getWorkerById
+);
 
 export default router;
