@@ -14,7 +14,24 @@ import {
 
 const router = express.Router();
 
-router.get("/", getWorkers);
+/*
+========================================
+PUBLIC ROUTES
+========================================
+*/
+
+router.get(
+  "/",
+  getWorkers
+);
+
+/*
+========================================
+PROTECTED PERSONAL PROFILE
+IMPORTANT:
+This route must come before /:id
+========================================
+*/
 
 router.get(
   "/me/profile",
@@ -33,6 +50,12 @@ router.patch(
   requireAuth,
   updateWorkerProfile
 );
+
+/*
+========================================
+PUBLIC SINGLE WORKER
+========================================
+*/
 
 router.get(
   "/:id",
