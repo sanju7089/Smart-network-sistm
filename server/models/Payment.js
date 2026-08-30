@@ -1,5 +1,21 @@
 import mongoose from "mongoose";
 
+export const PAYMENT_STATUSES = [
+  "created",
+  "pending",
+  "processing",
+  "paid",
+  "failed",
+  "cancelled",
+  "refunded"
+];
+
+export const PAYMENT_METHODS = [
+  "razorpay",
+  "cash",
+  "bank_transfer"
+];
+
 const paymentSchema = new mongoose.Schema(
   {
     userId: {
@@ -26,30 +42,19 @@ const paymentSchema = new mongoose.Schema(
       type: String,
       default: "INR",
       uppercase: true,
-      trim: true
+      trim: true,
+      maxlength: 10
     },
 
     method: {
       type: String,
-      enum: [
-        "razorpay",
-        "cash",
-        "bank_transfer"
-      ],
+      enum: PAYMENT_METHODS,
       default: "razorpay"
     },
 
     status: {
       type: String,
-      enum: [
-        "created",
-        "pending",
-        "processing",
-        "paid",
-        "failed",
-        "cancelled",
-        "refunded"
-      ],
+      enum: PAYMENT_STATUSES,
       default: "created",
       index: true
     },
@@ -59,13 +64,16 @@ const paymentSchema = new mongoose.Schema(
       default: "",
       trim: true,
       unique: true,
-      sparse: true
+      sparse: true,
+      index: true
     },
 
     gatewayPaymentId: {
       type: String,
       default: "",
       trim: true,
+      unique: true,
+      sparse: true,
       index: true
     },
 
@@ -93,6 +101,34 @@ const paymentSchema = new mongoose.Schema(
     paidAt: {
       type: Date,
       default: null
+    },
+
+    failedAt: {
+      type: Date,
+      default: null
+    },
+
+    cancelledAt: {
+      type: Date,
+      default: null
+    },
+
+    refundedAt: {
+      type: Date,
+      default: null
+    },
+
+    refundId: {
+      type: String,
+      default: "",
+      trim: true,
+      index: true
+    },
+
+    refundAmount: {
+      type: Number,
+      default: 0,
+      min: 0
     }
   },
   {
@@ -102,13 +138,18 @@ const paymentSchema = new mongoose.Schema(
 
 paymentSchema.index({
   userId: 1,
-  status: 1,
   createdAt: -1
 });
 
 paymentSchema.index({
   bookingId: 1,
-  status: 1
+  status: 1,
+  createdAt: -1
+});
+
+paymentSchema.index({
+  status: 1,
+  createdAt: -1
 });
 
 const Payment = mongoose.model(
