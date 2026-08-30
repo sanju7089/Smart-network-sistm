@@ -16,6 +16,10 @@ import {
   errorHandler
 } from "./middleware/securityMiddleware.js";
 
+import {
+  razorpayWebhook
+} from "./controllers/paymentController.js";
+
 import authRoutes from "./routes/auth.js";
 import adminRoutes from "./routes/admin.js";
 import bookingRoutes from "./routes/bookings.js";
@@ -73,6 +77,7 @@ app.use(
     origin(origin, callback) {
       /*
        Server-to-server requests,
+       Razorpay webhook requests,
        health checks and command-line
        requests may not have an Origin.
       */
@@ -121,6 +126,28 @@ app.use(
 
     optionsSuccessStatus: 204
   })
+);
+
+/*
+========================================
+RAZORPAY WEBHOOK
+IMPORTANT:
+This route MUST come before
+express.json() because Razorpay
+signature verification requires
+the original raw request body.
+========================================
+*/
+
+app.post(
+  "/api/payments/razorpay/webhook",
+
+  express.raw({
+    type: "application/json",
+    limit: "1mb"
+  }),
+
+  razorpayWebhook
 );
 
 /*
