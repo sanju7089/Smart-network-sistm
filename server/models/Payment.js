@@ -59,9 +59,15 @@ const paymentSchema = new mongoose.Schema(
       index: true
     },
 
+    /*
+      IMPORTANT:
+      null default is used instead of ""
+      so sparse unique indexes work correctly.
+    */
+
     razorpayOrderId: {
       type: String,
-      default: "",
+      default: null,
       trim: true,
       unique: true,
       sparse: true,
@@ -70,7 +76,7 @@ const paymentSchema = new mongoose.Schema(
 
     gatewayPaymentId: {
       type: String,
-      default: "",
+      default: null,
       trim: true,
       unique: true,
       sparse: true,
@@ -79,15 +85,16 @@ const paymentSchema = new mongoose.Schema(
 
     gatewaySignature: {
       type: String,
-      default: "",
+      default: null,
       trim: true,
       select: false
     },
 
     transactionId: {
       type: String,
-      default: "",
+      default: null,
       trim: true,
+      sparse: true,
       index: true
     },
 
@@ -96,6 +103,17 @@ const paymentSchema = new mongoose.Schema(
       default: "",
       trim: true,
       maxlength: 2000
+    },
+
+    /*
+      Razorpay webhook event IDs.
+      Used for idempotency protection.
+    */
+
+    processedWebhookEvents: {
+      type: [String],
+      default: [],
+      select: false
     },
 
     paidAt: {
@@ -120,8 +138,9 @@ const paymentSchema = new mongoose.Schema(
 
     refundId: {
       type: String,
-      default: "",
+      default: null,
       trim: true,
+      sparse: true,
       index: true
     },
 
