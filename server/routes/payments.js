@@ -7,14 +7,42 @@ import {
 import {
   createRazorpayOrder,
   verifyRazorpayPayment,
-  getMyPayments
+  getMyPayments,
+  getPaymentById,
+  getAllPayments
 } from "../controllers/paymentController.js";
 
 const router = express.Router();
 
 router.use(requireAuth);
 
-router.get("/", getMyPayments);
+/*
+========================================
+PAYMENT LIST
+========================================
+*/
+
+router.get(
+  "/",
+  getMyPayments
+);
+
+/*
+========================================
+ADMIN PAYMENT LIST
+========================================
+*/
+
+router.get(
+  "/admin/all",
+  getAllPayments
+);
+
+/*
+========================================
+RAZORPAY
+========================================
+*/
 
 router.post(
   "/razorpay/order",
@@ -24,6 +52,18 @@ router.post(
 router.post(
   "/razorpay/verify",
   verifyRazorpayPayment
+);
+
+/*
+========================================
+SINGLE PAYMENT
+Must remain after named routes.
+========================================
+*/
+
+router.get(
+  "/:id",
+  getPaymentById
 );
 
 export default router;
