@@ -14,11 +14,36 @@ import {
 
 const router = express.Router();
 
+/*
+========================================
+ALL BOOKING ROUTES REQUIRE LOGIN
+========================================
+*/
+
 router.use(requireAuth);
 
-router.get("/", getBookings);
+/*
+========================================
+LIST + CREATE
+========================================
+*/
 
-router.post("/", createBooking);
+router.get(
+  "/",
+  getBookings
+);
+
+router.post(
+  "/",
+  createBooking
+);
+
+/*
+========================================
+STATUS / CANCEL
+Must come before /:id
+========================================
+*/
 
 router.patch(
   "/:id/cancel",
@@ -29,6 +54,12 @@ router.patch(
   "/:id/status",
   updateBookingStatus
 );
+
+/*
+========================================
+SINGLE BOOKING
+========================================
+*/
 
 router.get(
   "/:id",
