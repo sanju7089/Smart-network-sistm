@@ -93,8 +93,8 @@ worker.experience ||
 );
 
 const verifiedBadge = worker.verified
-? "<span class="tag">Verified</span>"
-: "<span class="tag">Profile Pending Verification</span>";
+? '<span class="tag">Verified</span>'
+: '<span class="tag">Profile Pending Verification</span>';
 
 return `
 <div class="card">
