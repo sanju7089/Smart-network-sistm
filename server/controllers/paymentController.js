@@ -2,15 +2,50 @@ import crypto from "crypto";
 import mongoose from "mongoose";
 import Razorpay from "razorpay";
 
-import Payment from "../models/Payment.js";
+import Payment, {
+  PAYMENT_STATUSES
+} from "../models/Payment.js";
+
 import Booking from "../models/Booking.js";
 
 function isValidId(id) {
   return mongoose.Types.ObjectId.isValid(id);
 }
 
+function normalizeText(
+  value,
+  maxLength = 2000
+) {
+  return String(value ?? "")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function parsePositiveInteger(
+  value,
+  fallback,
+  maximum
+) {
+  const number = Number.parseInt(value, 10);
+
+  if (
+    !Number.isFinite(number) ||
+    number < 1
+  ) {
+    return fallback;
+  }
+
+  return Math.min(number, maximum);
+}
+
+function isAdmin(req) {
+  return req.user?.role === "admin";
+}
+
 function getRazorpayClient() {
-  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keyId =
+    process.env.RAZORPAY_KEY_ID;
+
   const keySecret =
     process.env.RAZORPAY_KEY_SECRET;
 
@@ -30,34 +65,68 @@ function getRazorpayClient() {
   });
 }
 
+function getCurrency() {
+  return normalizeText(
+    process.env.PAYMENT_CURRENCY || "INR",
+    10
+  ).toUpperCase();
+}
+
+function canCreatePayment(booking) {
+  return ![
+    "cancelled",
+    "completed"
+  ].includes(booking.status);
+}
+
+function isSafePaymentStatus(status) {
+  return PAYMENT_STATUSES.includes(status);
+}
+
+/*
+========================================
+CREATE RAZORPAY ORDER
+========================================
+*/
+
 export async function createRazorpayOrder(
   req,
   res
 ) {
   try {
-    const { bookingId } = req.body;
+    const { bookingId } =
+      req.body || {};
 
-    if (!bookingId || !isValidId(bookingId)) {
+    if (
+      !bookingId ||
+      !isValidId(bookingId)
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Valid booking ID is required."
+        message:
+          "Valid booking ID is required."
       });
     }
 
-    const booking = await Booking.findById(
-      bookingId
-    ).populate("jobId");
+    const booking =
+      await Booking.findById(bookingId)
+        .populate(
+          "jobId",
+          "budget status title"
+        );
 
     if (!booking) {
       return res.status(404).json({
         success: false,
-        message: "Booking not found."
+        message:
+          "Booking not found."
       });
     }
 
     if (
+      !isAdmin(req) &&
       String(booking.customerId) !==
-      String(req.user.id)
+        String(req.user.id)
     ) {
       return res.status(403).json({
         success: false,
@@ -66,53 +135,35 @@ export async function createRazorpayOrder(
       });
     }
 
-    if (
-      ["cancelled", "rejected"].includes(
-        booking.status
-      )
-    ) {
-      return res.status(400).json({
+    if (!canCreatePayment(booking)) {
+      return res.status(409).json({
         success: false,
         message:
           "Payment cannot be created for this booking."
       });
     }
 
-    const budget = Number(
-      booking.jobId?.budget
-    );
+    const amount =
+      Number(booking.jobId?.budget);
 
     if (
-      !Number.isFinite(budget) ||
-      budget <= 0
+      !Number.isFinite(amount) ||
+      amount <= 0
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "A valid job amount is required before payment."
+          "A valid job budget is required before payment."
       });
     }
 
-    const existingPayment =
+    const paidPayment =
       await Payment.findOne({
         bookingId,
-        userId: req.user.id,
-        status: {
-          $in: [
-            "created",
-            "pending",
-            "processing",
-            "paid"
-          ]
-        }
-      }).sort({
-        createdAt: -1
+        status: "paid"
       });
 
-    if (
-      existingPayment &&
-      existingPayment.status === "paid"
-    ) {
+    if (paidPayment) {
       return res.status(409).json({
         success: false,
         message:
@@ -120,70 +171,158 @@ export async function createRazorpayOrder(
       });
     }
 
-    const razorpay = getRazorpayClient();
+    /*
+      Existing unfinished payment can be
+      reused by creating a fresh order.
+    */
 
-    const order = await razorpay.orders.create({
-      amount: Math.round(budget * 100),
-      currency:
-        process.env.PAYMENT_CURRENCY || "INR",
-      receipt: `booking_${String(
-        booking._id
-      ).slice(-12)}`,
-      notes: {
-        bookingId: String(booking._id),
-        customerId: String(req.user.id)
-      }
-    });
-
-    let payment = existingPayment;
-
-    if (payment) {
-      payment.amount = budget;
-      payment.currency = order.currency;
-      payment.method = "razorpay";
-      payment.status = "pending";
-      payment.razorpayOrderId = order.id;
-
-      await payment.save();
-    } else {
-      payment = await Payment.create({
-        userId: req.user.id,
-        bookingId: booking._id,
-        amount: budget,
-        currency: order.currency,
-        method: "razorpay",
-        status: "pending",
-        razorpayOrderId: order.id,
-        transactionId: order.receipt
+    const existingPayment =
+      await Payment.findOne({
+        bookingId,
+        userId: booking.customerId,
+        status: {
+          $in: [
+            "created",
+            "pending",
+            "processing"
+          ]
+        }
+      }).sort({
+        createdAt: -1
       });
+
+    const razorpay =
+      getRazorpayClient();
+
+    const currency =
+      getCurrency();
+
+    const receipt =
+      `booking_${String(
+        booking._id
+      ).slice(-12)}_${Date.now()}`;
+
+    const order =
+      await razorpay.orders.create({
+        amount:
+          Math.round(amount * 100),
+
+        currency,
+
+        receipt,
+
+        notes: {
+          bookingId:
+            String(booking._id),
+
+          customerId:
+            String(booking.customerId)
+        }
+      });
+
+    let payment;
+
+    if (existingPayment) {
+      existingPayment.amount =
+        amount;
+
+      existingPayment.currency =
+        order.currency;
+
+      existingPayment.method =
+        "razorpay";
+
+      existingPayment.status =
+        "pending";
+
+      existingPayment.razorpayOrderId =
+        order.id;
+
+      existingPayment.transactionId =
+        receipt;
+
+      await existingPayment.save();
+
+      payment =
+        existingPayment;
+
+    } else {
+      payment =
+        await Payment.create({
+          userId:
+            booking.customerId,
+
+          bookingId:
+            booking._id,
+
+          amount,
+
+          currency:
+            order.currency,
+
+          method:
+            "razorpay",
+
+          status:
+            "pending",
+
+          razorpayOrderId:
+            order.id,
+
+          transactionId:
+            receipt
+        });
     }
 
     return res.status(201).json({
       success: true,
+
       message:
         "Payment order created successfully.",
-      keyId: process.env.RAZORPAY_KEY_ID,
+
+      keyId:
+        process.env.RAZORPAY_KEY_ID,
+
       order: {
-        id: order.id,
-        amount: order.amount,
-        currency: order.currency
+        id:
+          order.id,
+
+        amount:
+          order.amount,
+
+        currency:
+          order.currency
       },
+
       payment: {
-        id: payment._id,
-        bookingId: payment.bookingId,
-        amount: payment.amount,
-        currency: payment.currency,
-        status: payment.status
+        id:
+          payment._id,
+
+        bookingId:
+          payment.bookingId,
+
+        amount:
+          payment.amount,
+
+        currency:
+          payment.currency,
+
+        status:
+          payment.status
       }
     });
+
   } catch (error) {
     console.error(
       "CREATE PAYMENT ORDER ERROR:",
       error
     );
 
-    return res.status(error.status || 500).json({
+    return res.status(
+      error.status || 500
+    ).json({
       success: false,
+
       message:
         error.status
           ? error.message
@@ -191,6 +330,12 @@ export async function createRazorpayOrder(
     });
   }
 }
+
+/*
+========================================
+VERIFY RAZORPAY PAYMENT
+========================================
+*/
 
 export async function verifyRazorpayPayment(
   req,
@@ -201,7 +346,7 @@ export async function verifyRazorpayPayment(
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature
-    } = req.body;
+    } = req.body || {};
 
     if (
       !razorpay_order_id ||
@@ -215,20 +360,24 @@ export async function verifyRazorpayPayment(
       });
     }
 
-    const payment = await Payment.findOne({
-      razorpayOrderId: razorpay_order_id
-    });
+    const payment =
+      await Payment.findOne({
+        razorpayOrderId:
+          razorpay_order_id
+      }).select("+gatewaySignature");
 
     if (!payment) {
       return res.status(404).json({
         success: false,
-        message: "Payment record not found."
+        message:
+          "Payment record not found."
       });
     }
 
     if (
+      !isAdmin(req) &&
       String(payment.userId) !==
-      String(req.user.id)
+        String(req.user.id)
     ) {
       return res.status(403).json({
         success: false,
@@ -237,12 +386,27 @@ export async function verifyRazorpayPayment(
       });
     }
 
-    if (payment.status === "paid") {
-      return res.json({
+    if (
+      payment.status === "paid"
+    ) {
+      return res.status(200).json({
         success: true,
         message:
           "Payment was already verified.",
-        payment
+
+        payment: {
+          id: payment._id,
+          bookingId:
+            payment.bookingId,
+          amount:
+            payment.amount,
+          currency:
+            payment.currency,
+          status:
+            payment.status,
+          paidAt:
+            payment.paidAt
+        }
       });
     }
 
@@ -257,31 +421,43 @@ export async function verifyRazorpayPayment(
       });
     }
 
-    const generatedSignature = crypto
-      .createHmac("sha256", secret)
-      .update(
-        `${razorpay_order_id}|${razorpay_payment_id}`
-      )
-      .digest("hex");
+    const generatedSignature =
+      crypto
+        .createHmac(
+          "sha256",
+          secret
+        )
+        .update(
+          `${razorpay_order_id}|${razorpay_payment_id}`
+        )
+        .digest("hex");
 
-    const expected = Buffer.from(
-      generatedSignature,
-      "utf8"
-    );
+    const expected =
+      Buffer.from(
+        generatedSignature,
+        "utf8"
+      );
 
-    const received = Buffer.from(
-      razorpay_signature,
-      "utf8"
-    );
+    const received =
+      Buffer.from(
+        razorpay_signature,
+        "utf8"
+      );
 
-    if (
-      expected.length !== received.length ||
-      !crypto.timingSafeEqual(
+    const signatureValid =
+      expected.length ===
+        received.length &&
+      crypto.timingSafeEqual(
         expected,
         received
-      )
-    ) {
-      payment.status = "failed";
+      );
+
+    if (!signatureValid) {
+      payment.status =
+        "failed";
+
+      payment.failedAt =
+        new Date();
 
       await payment.save();
 
@@ -292,41 +468,99 @@ export async function verifyRazorpayPayment(
       });
     }
 
-    payment.status = "paid";
+    /*
+      Prevent one gateway payment ID
+      from being reused.
+    */
+
+    const duplicateGatewayPayment =
+      await Payment.findOne({
+        gatewayPaymentId:
+          razorpay_payment_id,
+
+        _id: {
+          $ne: payment._id
+        }
+      });
+
+    if (
+      duplicateGatewayPayment
+    ) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "This gateway payment has already been used."
+      });
+    }
+
+    payment.status =
+      "paid";
+
     payment.gatewayPaymentId =
       razorpay_payment_id;
+
     payment.gatewaySignature =
       razorpay_signature;
-    payment.paidAt = new Date();
+
+    payment.paidAt =
+      new Date();
 
     await payment.save();
 
-    const booking = await Booking.findById(
-      payment.bookingId
-    );
+    /*
+      Payment is now successful.
+
+      Booking confirmation should remain
+      compatible with your booking workflow.
+      Pending booking becomes confirmed.
+    */
+
+    const booking =
+      await Booking.findById(
+        payment.bookingId
+      );
 
     if (
       booking &&
       booking.status === "pending"
     ) {
-      booking.status = "confirmed";
+      booking.status =
+        "confirmed";
+
+      booking.confirmedAt =
+        booking.confirmedAt ||
+        new Date();
 
       await booking.save();
     }
 
-    return res.json({
+    return res.status(200).json({
       success: true,
+
       message:
         "Payment verified successfully.",
+
       payment: {
-        id: payment._id,
-        bookingId: payment.bookingId,
-        amount: payment.amount,
-        currency: payment.currency,
-        status: payment.status,
-        paidAt: payment.paidAt
+        id:
+          payment._id,
+
+        bookingId:
+          payment.bookingId,
+
+        amount:
+          payment.amount,
+
+        currency:
+          payment.currency,
+
+        status:
+          payment.status,
+
+        paidAt:
+          payment.paidAt
       }
     });
+
   } catch (error) {
     console.error(
       "VERIFY PAYMENT ERROR:",
@@ -341,22 +575,122 @@ export async function verifyRazorpayPayment(
   }
 }
 
-export async function getMyPayments(req, res) {
+/*
+========================================
+GET MY PAYMENTS
+========================================
+*/
+
+export async function getMyPayments(
+  req,
+  res
+) {
   try {
-    const payments = await Payment.find({
+    const {
+      status,
+      page,
+      limit
+    } = req.query;
+
+    const filter = {
       userId: req.user.id
-    })
-      .sort({ createdAt: -1 })
-      .populate(
-        "bookingId",
-        "status date"
+    };
+
+    if (status) {
+      const requestedStatus =
+        normalizeText(
+          status,
+          50
+        ).toLowerCase();
+
+      if (
+        !isSafePaymentStatus(
+          requestedStatus
+        )
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid payment status."
+        });
+      }
+
+      filter.status =
+        requestedStatus;
+    }
+
+    const currentPage =
+      parsePositiveInteger(
+        page,
+        1,
+        100000
       );
 
-    return res.json({
+    const pageLimit =
+      parsePositiveInteger(
+        limit,
+        20,
+        100
+      );
+
+    const skip =
+      (currentPage - 1) *
+      pageLimit;
+
+    const [
+      payments,
+      total
+    ] = await Promise.all([
+      Payment.find(filter)
+        .sort({
+          createdAt: -1
+        })
+        .skip(skip)
+        .limit(pageLimit)
+        .populate(
+          "bookingId",
+          "status customerMessage workerMessage createdAt"
+        ),
+
+      Payment.countDocuments(filter)
+    ]);
+
+    return res.status(200).json({
       success: true,
-      count: payments.length,
-      data: payments
+
+      pagination: {
+        page:
+          currentPage,
+
+        limit:
+          pageLimit,
+
+        total,
+
+        totalPages:
+          Math.max(
+            1,
+            Math.ceil(
+              total / pageLimit
+            )
+          ),
+
+        hasNextPage:
+          currentPage *
+            pageLimit <
+          total,
+
+        hasPreviousPage:
+          currentPage > 1
+      },
+
+      count:
+        payments.length,
+
+      data:
+        payments
     });
+
   } catch (error) {
     console.error(
       "GET MY PAYMENTS ERROR:",
@@ -369,4 +703,204 @@ export async function getMyPayments(req, res) {
         "Unable to fetch payments."
     });
   }
-                          }
+}
+
+/*
+========================================
+GET SINGLE PAYMENT
+========================================
+*/
+
+export async function getPaymentById(
+  req,
+  res
+) {
+  try {
+    const { id } =
+      req.params;
+
+    if (!isValidId(id)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid payment ID."
+      });
+    }
+
+    const payment =
+      await Payment.findById(id)
+        .populate(
+          "bookingId",
+          "status customerId workerId"
+        );
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "Payment not found."
+      });
+    }
+
+    if (
+      !isAdmin(req) &&
+      String(payment.userId) !==
+        String(req.user.id)
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "You do not have permission to view this payment."
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: payment
+    });
+
+  } catch (error) {
+    console.error(
+      "GET PAYMENT ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Unable to fetch payment."
+    });
+  }
+}
+
+/*
+========================================
+ADMIN: GET ALL PAYMENTS
+========================================
+*/
+
+export async function getAllPayments(
+  req,
+  res
+) {
+  try {
+    if (!isAdmin(req)) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Admin access required."
+      });
+    }
+
+    const {
+      status,
+      page,
+      limit
+    } = req.query;
+
+    const filter = {};
+
+    if (status) {
+      const requestedStatus =
+        normalizeText(
+          status,
+          50
+        ).toLowerCase();
+
+      if (
+        !isSafePaymentStatus(
+          requestedStatus
+        )
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid payment status."
+        });
+      }
+
+      filter.status =
+        requestedStatus;
+    }
+
+    const currentPage =
+      parsePositiveInteger(
+        page,
+        1,
+        100000
+      );
+
+    const pageLimit =
+      parsePositiveInteger(
+        limit,
+        20,
+        100
+      );
+
+    const skip =
+      (currentPage - 1) *
+      pageLimit;
+
+    const [
+      payments,
+      total
+    ] = await Promise.all([
+      Payment.find(filter)
+        .sort({
+          createdAt: -1
+        })
+        .skip(skip)
+        .limit(pageLimit)
+        .populate(
+          "userId",
+          "name email phone"
+        )
+        .populate(
+          "bookingId",
+          "status customerId workerId"
+        ),
+
+      Payment.countDocuments(filter)
+    ]);
+
+    return res.status(200).json({
+      success: true,
+
+      pagination: {
+        page:
+          currentPage,
+
+        limit:
+          pageLimit,
+
+        total,
+
+        totalPages:
+          Math.max(
+            1,
+            Math.ceil(
+              total / pageLimit
+            )
+          )
+      },
+
+      count:
+        payments.length,
+
+      data:
+        payments
+    });
+
+  } catch (error) {
+    console.error(
+      "GET ALL PAYMENTS ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Unable to fetch payments."
+    });
+  }
+}
