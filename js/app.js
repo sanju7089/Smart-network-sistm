@@ -1,10 +1,8 @@
-const SWN_CONFIG = {
-  API_URL:
-    window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1"
-      ? "http://localhost:3000/api"
-      : "https://smart-network-sistm.onrender.com/api"
-};
+const SWN_CONFIG = Object.freeze({
+  // Production backend only.
+  // Frontend never falls back to localhost.
+  API_URL: "https://smart-network-sistm.onrender.com/api"
+});
 
 const SWN = {
   apiUrl() {
@@ -13,7 +11,12 @@ const SWN = {
 
   api(path = "") {
     const base = SWN_CONFIG.API_URL.replace(/\/$/, "");
-    const endpoint = path.startsWith("/") ? path : `/${path}`;
+
+    const cleanPath = String(path || "");
+
+    const endpoint = cleanPath.startsWith("/")
+      ? cleanPath
+      : `/${cleanPath}`;
 
     return `${base}${endpoint}`;
   },
@@ -21,31 +24,47 @@ const SWN = {
   get(key, defaultValue = null) {
     try {
       const value = localStorage.getItem(key);
-      return value ? JSON.parse(value) : defaultValue;
+
+      return value
+        ? JSON.parse(value)
+        : defaultValue;
     } catch {
       return defaultValue;
     }
   },
 
   set(key, value) {
-    localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(
+      key,
+      JSON.stringify(value)
+    );
   },
 
   user() {
     try {
-      if (typeof window.getCurrentUser === "function") {
+      if (
+        typeof window.getCurrentUser ===
+        "function"
+      ) {
         return window.getCurrentUser();
       }
 
-      const user = localStorage.getItem("swn_user");
-      return user ? JSON.parse(user) : null;
+      const user =
+        localStorage.getItem("swn_user");
+
+      return user
+        ? JSON.parse(user)
+        : null;
     } catch {
       return null;
     }
   },
 
   token() {
-    if (typeof window.getAuthToken === "function") {
+    if (
+      typeof window.getAuthToken ===
+      "function"
+    ) {
       return window.getAuthToken();
     }
 
@@ -61,22 +80,40 @@ const SWN = {
     const token = this.token();
 
     if (token) {
-      headers.Authorization = `Bearer ${token}`;
+      headers.Authorization =
+        `Bearer ${token}`;
     }
 
     return headers;
   },
 
   async request(path, options = {}) {
-    const response = await fetch(this.api(path), {
-      ...options,
-      headers: this.authHeaders(options.headers || {})
-    });
+    const response = await fetch(
+      this.api(path),
+      {
+        ...options,
+
+        headers: this.authHeaders(
+          options.headers || {}
+        )
+      }
+    );
 
     let data = null;
 
     try {
-      data = await response.json();
+      const contentType =
+        response.headers.get(
+          "content-type"
+        ) || "";
+
+      if (
+        contentType.includes(
+          "application/json"
+        )
+      ) {
+        data = await response.json();
+      }
     } catch {
       data = null;
     }
@@ -93,17 +130,24 @@ const SWN = {
 
   logout() {
     if (
-      typeof window.logout === "function" &&
+      typeof window.logout ===
+        "function" &&
       window.logout !== this.logout
     ) {
       window.logout();
       return;
     }
 
-    localStorage.removeItem("swn_token");
-    localStorage.removeItem("swn_user");
+    localStorage.removeItem(
+      "swn_token"
+    );
 
-    window.location.href = "login.html";
+    localStorage.removeItem(
+      "swn_user"
+    );
+
+    window.location.href =
+      "login.html";
   },
 
   flash(message) {
@@ -129,27 +173,53 @@ function dashboardUrl(user) {
 
 function escapeHtml(value = "") {
   return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+    .replace(
+      /</g,
+      "&lt;"
+    )
+    .replace(
+      />/g,
+      "&gt;"
+    )
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+    .replace(
+      /'/g,
+      "&#039;"
+    );
 }
 
 function authBox() {
-  const element = document.querySelector("[data-auth]");
+  const element =
+    document.querySelector(
+      "[data-auth]"
+    );
 
-  if (!element) return;
+  if (!element) {
+    return;
+  }
 
   const user = SWN.user();
 
   if (user) {
     element.innerHTML = `
       <span class="muted">
-        Hi, ${escapeHtml(user.name || "User")}
+        Hi, ${escapeHtml(
+          user.name || "User"
+        )}
       </span>
 
-      <a href="${dashboardUrl(user)}">Dashboard</a>
+      <a
+        href="${dashboardUrl(user)}"
+      >
+        Dashboard
+      </a>
 
       <button
         type="button"
@@ -160,19 +230,27 @@ function authBox() {
       </button>
     `;
 
-    const logoutButton = document.querySelector("#logoutButton");
+    const logoutButton =
+      document.querySelector(
+        "#logoutButton"
+      );
 
     if (logoutButton) {
-      logoutButton.addEventListener("click", () => {
-        SWN.logout();
-      });
+      logoutButton.addEventListener(
+        "click",
+        () => {
+          SWN.logout();
+        }
+      );
     }
 
     return;
   }
 
   element.innerHTML = `
-    <a href="login.html">Login</a>
+    <a href="login.html">
+      Login
+    </a>
 
     <a
       class="btn btn-primary"
@@ -183,8 +261,11 @@ function authBox() {
   `;
 }
 
-function redirectToCorrectDashboard(user) {
-  window.location.href = dashboardUrl(user);
+function redirectToCorrectDashboard(
+  user
+) {
+  window.location.href =
+    dashboardUrl(user);
 }
 
 function protect(role = null) {
@@ -192,12 +273,20 @@ function protect(role = null) {
   const token = SWN.token();
 
   if (!user || !token) {
-    window.location.href = "login.html";
+    window.location.href =
+      "login.html";
+
     return null;
   }
 
-  if (role && user.role !== role) {
-    redirectToCorrectDashboard(user);
+  if (
+    role &&
+    user.role !== role
+  ) {
+    redirectToCorrectDashboard(
+      user
+    );
+
     return null;
   }
 
@@ -211,7 +300,10 @@ async function verifyAuth() {
     return null;
   }
 
-  if (typeof window.refreshCurrentUser !== "function") {
+  if (
+    typeof window.refreshCurrentUser !==
+    "function"
+  ) {
     return SWN.user();
   }
 
@@ -223,29 +315,46 @@ async function verifyAuth() {
       error
     );
 
-    localStorage.removeItem("swn_token");
-    localStorage.removeItem("swn_user");
+    localStorage.removeItem(
+      "swn_token"
+    );
+
+    localStorage.removeItem(
+      "swn_user"
+    );
 
     return null;
   }
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  authBox();
+document.addEventListener(
+  "DOMContentLoaded",
+  async () => {
+    authBox();
 
-  const token = SWN.token();
+    const token = SWN.token();
 
-  if (token) {
-    const user = await verifyAuth();
+    if (token) {
+      const user =
+        await verifyAuth();
 
-    if (user) {
-      authBox();
+      if (user) {
+        authBox();
+      }
     }
   }
-});
+);
 
-window.SWN_CONFIG = SWN_CONFIG;
+window.SWN_CONFIG =
+  SWN_CONFIG;
+
 window.SWN = SWN;
-window.protect = protect;
-window.verifyAuth = verifyAuth;
-window.escapeHtml = escapeHtml;
+
+window.protect =
+  protect;
+
+window.verifyAuth =
+  verifyAuth;
+
+window.escapeHtml =
+  escapeHtml;
