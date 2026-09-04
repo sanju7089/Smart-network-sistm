@@ -1,35 +1,61 @@
 <!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
 
-<html lang="en"><head>
-  <meta charset="utf-8"><meta
-name="viewport"
-content="width=device-width, initial-scale=1"
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
 
-«»
+  <title>
+    Book a Worker | Smart Work Network
+  </title>
 
-  <title>Book a Worker | Smart Work Network</title>  <link
+  <link
     rel="stylesheet"
     href="css/main.css"
   >
-</head><body>  <header class="header">
-    <div class="container nav">  <a
-    class="brand"
-    href="index.html"
-  >
-    Smart Work Network
-  </a>
+</head>
 
-  <nav class="navlinks">
-    <a href="services.html">Services</a>
-    <a href="find-help.html">Find Help</a>
-    <a href="workers.html">Workers</a>
+<body>
 
-    <span data-auth></span>
-  </nav>
+<header class="header">
 
-</div>
+  <div class="container nav">
 
-  </header>  <main><section class="section">
+    <a
+      class="brand"
+      href="index.html"
+    >
+      Smart Work Network
+    </a>
+
+    <nav class="navlinks">
+
+      <a href="services.html">
+        Services
+      </a>
+
+      <a href="find-help.html">
+        Find Help
+      </a>
+
+      <a href="workers.html">
+        Workers
+      </a>
+
+      <span data-auth></span>
+
+    </nav>
+
+  </div>
+
+</header>
+
+<main>
+
+<section class="section">
 
   <div
     class="container"
@@ -38,15 +64,15 @@ content="width=device-width, initial-scale=1"
 
     <div class="card">
 
-      <h1>Book a Worker</h1>
+      <h1>
+        Book a Worker
+      </h1>
 
       <p class="lead">
         Review the worker and confirm your booking.
       </p>
 
-
       <div id="bookingMessage"></div>
-
 
       <div id="workerSummary">
 
@@ -56,14 +82,12 @@ content="width=device-width, initial-scale=1"
 
       </div>
 
-
       <br>
-
 
       <form id="bookingForm">
 
         <label for="bookingDate">
-          Preferred Date & Time
+          Preferred Date &amp; Time
         </label>
 
         <input
@@ -73,10 +97,8 @@ content="width=device-width, initial-scale=1"
           required
         >
 
-
         <br>
         <br>
-
 
         <label for="bookingNotes">
           Additional Details
@@ -90,10 +112,8 @@ content="width=device-width, initial-scale=1"
           placeholder="Describe your work or add any important details..."
         ></textarea>
 
-
         <br>
         <br>
-
 
         <button
           type="submit"
@@ -105,9 +125,7 @@ content="width=device-width, initial-scale=1"
 
       </form>
 
-
       <br>
-
 
       <p class="muted">
         Your booking will be sent to the worker for review.
@@ -119,464 +137,509 @@ content="width=device-width, initial-scale=1"
 
 </section>
 
-  </main>  <footer class="footer"><div class="container">
+</main>
 
-  <b>Smart Work Network</b>
+<footer class="footer">
 
-  <p>
-    Services • Workers • Work opportunities
-  </p>
+  <div class="container">
 
-  <div class="row">
+    <b>
+      Smart Work Network
+    </b>
 
-    <a href="support.html">Support</a>
-    <a href="profile.html">Profile</a>
-    <a href="urgent-help.html">Urgent Help</a>
+    <p>
+      Services • Workers • Work opportunities
+    </p>
+
+    <div class="row">
+
+      <a href="support.html">
+        Support
+      </a>
+
+      <a href="profile.html">
+        Profile
+      </a>
+
+      <a href="urgent-help.html">
+        Urgent Help
+      </a>
+
+    </div>
 
   </div>
 
-</div>
-
-  </footer>  <script src="js/app.js"></script>  <script src="js/auth.js"></script>  <script>
-
-    let selectedWorker = null;
-
-
-    function escapeHtmlSafe(value = "") {
-
-      if (
-        typeof window.escapeHtml === "function"
-      ) {
-        return window.escapeHtml(value);
-      }
-
-      return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-
-    }
-
-
-    function showMessage(
-      message,
-      isError = false
-    ) {
-
-      const element =
-        document.querySelector(
-          "#bookingMessage"
-        );
-
-      if (!element) return;
-
-      element.innerHTML = `
-        <div class="notice">
-          ${escapeHtmlSafe(message)}
-        </div>
-      `;
-
-      if (isError) {
-        console.error(message);
-      }
-
-    }
-
-
-    function getWorkerIdFromUrl() {
-
-      const params =
-        new URLSearchParams(
-          window.location.search
-        );
-
-      return params.get("workerId");
-
-    }
-
-
-    function setMinimumDate() {
-
-      const input =
-        document.querySelector(
-          "#bookingDate"
-        );
-
-      if (!input) return;
-
-      const now = new Date();
-
-      now.setMinutes(
-        now.getMinutes() -
-        now.getTimezoneOffset()
-      );
-
-      input.min =
-        now.toISOString()
-          .slice(0, 16);
-
-    }
-
-
-    async function loadWorker() {
-
-      const workerId =
-        getWorkerIdFromUrl();
-
-      const container =
-        document.querySelector(
-          "#workerSummary"
-        );
-
-      if (!workerId) {
-
-        container.innerHTML = `
-          <div class="notice">
-            No worker was selected.
-          </div>
-        `;
-
-        return;
-
-      }
-
-
-      try {
-
-        const response =
-          await apiFetch(
-            `/workers/${encodeURIComponent(
-              workerId
-            )}`
-          );
-
-        let result = {};
-
-        try {
-          result =
-            await response.json();
-        } catch {
-          result = {};
-        }
-
-
-        if (
-          !response.ok ||
-          result.success === false
-        ) {
-
-          throw new Error(
-            result.message ||
-            "Unable to load worker details."
-          );
-
-        }
-
-
-        selectedWorker =
-          result.data || result.worker || result;
-
-
-        if (
-          !selectedWorker ||
-          !selectedWorker._id
-        ) {
-
-          throw new Error(
-            "Worker details are invalid."
-          );
-
-        }
-
-
-        container.innerHTML = `
-
-          <div class="notice">
-
-            <h3>
-              ${escapeHtmlSafe(
-                selectedWorker.name ||
-                "Worker"
-              )}
-            </h3>
-
-            <p>
-              <b>Service:</b>
-              ${escapeHtmlSafe(
-                selectedWorker.service ||
-                "Not specified"
-              )}
-            </p>
-
-            <p>
-              <b>Location:</b>
-              ${escapeHtmlSafe(
-                selectedWorker.location ||
-                "Not specified"
-              )}
-            </p>
-
-            <p>
-              <b>Experience:</b>
-              ${escapeHtmlSafe(
-                selectedWorker.experience ||
-                "Not specified"
-              )}
-            </p>
-
-          </div>
-
-        `;
-
-
-      } catch (error) {
-
-        console.error(
-          "LOAD WORKER ERROR:",
-          error
-        );
-
-        container.innerHTML = `
-          <div class="notice">
-            ${escapeHtmlSafe(
-              error.message ||
-              "Unable to load worker details."
-            )}
-          </div>
-        `;
-
-      }
-
-    }
-
-
-    async function createBooking(event) {
-
-      event.preventDefault();
-
-
-      const user =
-        typeof window.protect === "function"
-          ? protect("customer")
-          : null;
-
-      if (!user) {
-        return;
-      }
-
-
-      if (!selectedWorker?._id) {
-
-        showMessage(
-          "Please select a valid worker.",
-          true
-        );
-
-        return;
-
-      }
-
-
-      const dateInput =
-        document.querySelector(
-          "#bookingDate"
-        );
-
-      const notesInput =
-        document.querySelector(
-          "#bookingNotes"
-        );
-
-      const button =
-        document.querySelector(
-          "#confirmBookingButton"
-        );
-
-
-      const date =
-        dateInput?.value || "";
-
-      const notes =
-        notesInput?.value?.trim() || "";
-
-
-      if (!date) {
-
-        showMessage(
-          "Please select a preferred date and time.",
-          true
-        );
-
-        return;
-
-      }
-
-
-      const bookingDate =
-        new Date(date);
-
-      if (
-        Number.isNaN(
-          bookingDate.getTime()
-        ) ||
-        bookingDate.getTime() <= Date.now()
-      ) {
-
-        showMessage(
-          "Please select a future date and time.",
-          true
-        );
-
-        return;
-
-      }
-
-
-      if (button) {
-
-        button.disabled = true;
-
-        button.textContent =
-          "Creating Booking...";
-
-      }
-
-
-      showMessage(
-        "Creating your booking..."
-      );
-
-
-      try {
-
-        const response =
-          await apiFetch(
-            "/bookings",
-            {
-              method: "POST",
-
-              body: JSON.stringify({
-                workerId:
-                  selectedWorker._id,
-
-                date:
-                  bookingDate.toISOString(),
-
-                notes
-              })
-            }
-          );
-
-
-        let result = {};
-
-        try {
-
-          result =
-            await response.json();
-
-        } catch {
-
-          result = {};
-
-        }
-
-
-        if (
-          !response.ok ||
-          !result.success
-        ) {
-
-          throw new Error(
-            result.message ||
-            "Unable to create booking."
-          );
-
-        }
-
-
-        showMessage(
-          result.message ||
-          "Booking created successfully."
-        );
-
-
-        setTimeout(
-          function() {
-
-            window.location.href =
-              "bookings.html";
-
-          },
-          1000
-        );
-
-
-      } catch (error) {
-
-        console.error(
-          "CREATE BOOKING ERROR:",
-          error
-        );
-
-
-        showMessage(
-          error.message ||
-          "Unable to create booking.",
-          true
-        );
-
-
-        if (button) {
-
-          button.disabled = false;
-
-          button.textContent =
-            "Confirm Booking";
-
-        }
-
-      }
-
-    }
-
-
-    document.addEventListener(
-      "DOMContentLoaded",
-      function() {
-
-        const user =
-          typeof window.protect === "function"
-            ? protect("customer")
-            : null;
-
-        if (!user) {
-          return;
-        }
-
-
-        setMinimumDate();
-
-        loadWorker();
-
-
-        const form =
-          document.querySelector(
-            "#bookingForm"
-          );
-
-        if (form) {
-
-          form.addEventListener(
-            "submit",
-            createBooking
-          );
-
-        }
-
-      }
+</footer>
+
+<script src="js/app.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+
+let selectedWorker = null;
+
+function escapeHtmlSafe(
+  value = ""
+) {
+  if (
+    typeof window.escapeHtml ===
+    "function"
+  ) {
+    return window.escapeHtml(
+      value
+    );
+  }
+
+  return String(value)
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+    .replace(
+      /</g,
+      "&lt;"
+    )
+    .replace(
+      />/g,
+      "&gt;"
+    )
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+    .replace(
+      /'/g,
+      "&#039;"
+    );
+}
+
+function showMessage(
+  message,
+  isError = false
+) {
+  const element =
+    document.querySelector(
+      "#bookingMessage"
     );
 
-  </script></body></html>
+  if (!element) {
+    return;
+  }
+
+  element.innerHTML = `
+    <div class="notice">
+      ${escapeHtmlSafe(
+        message
+      )}
+    </div>
+  `;
+
+  if (isError) {
+    console.error(
+      message
+    );
+  }
+}
+
+function getUrlParams() {
+  return new URLSearchParams(
+    window.location.search
+  );
+}
+
+function getWorkerIdFromUrl() {
+  return getUrlParams()
+    .get("workerId");
+}
+
+function getJobIdFromUrl() {
+  return getUrlParams()
+    .get("jobId");
+}
+
+function setMinimumDate() {
+  const input =
+    document.querySelector(
+      "#bookingDate"
+    );
+
+  if (!input) {
+    return;
+  }
+
+  const now =
+    new Date();
+
+  now.setMinutes(
+    now.getMinutes() -
+    now.getTimezoneOffset()
+  );
+
+  input.min =
+    now.toISOString()
+      .slice(0, 16);
+}
+
+async function loadWorker() {
+
+  const workerId =
+    getWorkerIdFromUrl();
+
+  const container =
+    document.querySelector(
+      "#workerSummary"
+    );
+
+  if (!container) {
+    return;
+  }
+
+  if (!workerId) {
+
+    container.innerHTML = `
+      <div class="notice">
+        No worker was selected.
+      </div>
+    `;
+
+    return;
+  }
+
+  try {
+
+    const response =
+      await apiFetch(
+        `/workers/${encodeURIComponent(
+          workerId
+        )}`
+      );
+
+    let result = {};
+
+    try {
+      result =
+        await response.json();
+    } catch {
+      result = {};
+    }
+
+    if (
+      !response.ok ||
+      result.success === false
+    ) {
+      throw new Error(
+        result.message ||
+        "Unable to load worker details."
+      );
+    }
+
+    selectedWorker =
+      result.data ||
+      result.worker ||
+      result;
+
+    if (
+      !selectedWorker ||
+      !selectedWorker._id
+    ) {
+      throw new Error(
+        "Worker details are invalid."
+      );
+    }
+
+    container.innerHTML = `
+
+      <div class="notice">
+
+        <h3>
+          ${escapeHtmlSafe(
+            selectedWorker.name ||
+            "Worker"
+          )}
+        </h3>
+
+        <p>
+          <b>Service:</b>
+          ${escapeHtmlSafe(
+            selectedWorker.service ||
+            "Not specified"
+          )}
+        </p>
+
+        <p>
+          <b>Location:</b>
+          ${escapeHtmlSafe(
+            selectedWorker.location ||
+            "Not specified"
+          )}
+        </p>
+
+        <p>
+          <b>Experience:</b>
+          ${escapeHtmlSafe(
+            selectedWorker.experience ||
+            "Not specified"
+          )}
+        </p>
+
+      </div>
+
+    `;
+
+  } catch (error) {
+
+    console.error(
+      "LOAD WORKER ERROR:",
+      error
+    );
+
+    container.innerHTML = `
+      <div class="notice">
+        ${escapeHtmlSafe(
+          error.message ||
+          "Unable to load worker details."
+        )}
+      </div>
+    `;
+  }
+}
+
+async function createBooking(
+  event
+) {
+
+  event.preventDefault();
+
+  const user =
+    typeof window.protect ===
+    "function"
+      ? protect("customer")
+      : null;
+
+  if (!user) {
+    return;
+  }
+
+  const workerId =
+    getWorkerIdFromUrl();
+
+  const jobId =
+    getJobIdFromUrl();
+
+  if (!jobId) {
+
+    showMessage(
+      "This booking must be started from a valid job.",
+      true
+    );
+
+    return;
+  }
+
+  if (
+    !workerId ||
+    !selectedWorker?._id
+  ) {
+
+    showMessage(
+      "Please select a valid worker.",
+      true
+    );
+
+    return;
+  }
+
+  const dateInput =
+    document.querySelector(
+      "#bookingDate"
+    );
+
+  const notesInput =
+    document.querySelector(
+      "#bookingNotes"
+    );
+
+  const button =
+    document.querySelector(
+      "#confirmBookingButton"
+    );
+
+  const date =
+    dateInput?.value ||
+    "";
+
+  const notes =
+    notesInput?.value?.trim() ||
+    "";
+
+  if (!date) {
+
+    showMessage(
+      "Please select a preferred date and time.",
+      true
+    );
+
+    return;
+  }
+
+  const bookingDate =
+    new Date(date);
+
+  if (
+    Number.isNaN(
+      bookingDate.getTime()
+    ) ||
+    bookingDate.getTime() <=
+      Date.now()
+  ) {
+
+    showMessage(
+      "Please select a future date and time.",
+      true
+    );
+
+    return;
+  }
+
+  if (button) {
+
+    button.disabled =
+      true;
+
+    button.textContent =
+      "Creating Booking...";
+
+  }
+
+  showMessage(
+    "Creating your booking..."
+  );
+
+  try {
+
+    const response =
+      await apiFetch(
+        "/bookings",
+        {
+          method: "POST",
+
+          body:
+            JSON.stringify({
+              jobId,
+
+              workerId,
+
+              date:
+                bookingDate.toISOString(),
+
+              notes,
+
+              customerMessage:
+                notes
+            })
+        }
+      );
+
+    let result = {};
+
+    try {
+
+      result =
+        await response.json();
+
+    } catch {
+
+      result = {};
+
+    }
+
+    if (
+      !response.ok ||
+      !result.success
+    ) {
+
+      throw new Error(
+        result.message ||
+        "Unable to create booking."
+      );
+    }
+
+    showMessage(
+      result.message ||
+      "Booking created successfully."
+    );
+
+    setTimeout(
+      function() {
+
+        window.location.href =
+          "bookings.html";
+
+      },
+      1000
+    );
+
+  } catch (error) {
+
+    console.error(
+      "CREATE BOOKING ERROR:",
+      error
+    );
+
+    showMessage(
+      error.message ||
+      "Unable to create booking.",
+      true
+    );
+
+    if (button) {
+
+      button.disabled =
+        false;
+
+      button.textContent =
+        "Confirm Booking";
+
+    }
+  }
+}
+
+document.addEventListener(
+  "DOMContentLoaded",
+  function() {
+
+    const user =
+      typeof window.protect ===
+      "function"
+        ? protect("customer")
+        : null;
+
+    if (!user) {
+      return;
+    }
+
+    setMinimumDate();
+
+    loadWorker();
+
+    const form =
+      document.querySelector(
+        "#bookingForm"
+      );
+
+    if (form) {
+
+      form.addEventListener(
+        "submit",
+        createBooking
+      );
+
+    }
+
+  }
+);
+
+</script>
+
+</body>
+          </html>
