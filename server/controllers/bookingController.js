@@ -38,20 +38,13 @@ function isAdmin(req) {
   return req.user?.role === "admin";
 }
 
-function isCustomerBooking(booking, userId) {
+function isCustomerBooking(
+  booking,
+  userId
+) {
   return (
     String(booking.customerId) ===
     String(userId)
-  );
-}
-
-function isWorkerBooking(
-  booking,
-  workerId
-) {
-  return (
-    String(booking.workerId) ===
-    String(workerId)
   );
 }
 
@@ -66,7 +59,9 @@ function canAccessBooking(
   booking,
   worker
 ) {
-  if (isAdmin(req)) return true;
+  if (isAdmin(req)) {
+    return true;
+  }
 
   if (
     isCustomerBooking(
@@ -89,7 +84,9 @@ function canCancelBooking(
   booking,
   worker
 ) {
-  if (isAdmin(req)) return true;
+  if (isAdmin(req)) {
+    return true;
+  }
 
   if (
     isCustomerBooking(
@@ -122,18 +119,24 @@ function getAllowedNextStatuses(
 ) {
   const workflows = {
     customer: {
-      pending: ["cancelled"],
+      pending: [
+        "cancelled"
+      ],
+
       accepted: [
         "confirmed",
         "cancelled"
       ],
-      confirmed: ["cancelled"]
+
+      confirmed: [
+        "cancelled"
+      ]
     },
 
     worker: {
       pending: [
         "accepted",
-        "cancelled"
+        "rejected"
       ],
 
       accepted: [
@@ -154,6 +157,7 @@ function getAllowedNextStatuses(
     admin: {
       pending: BOOKING_STATUSES,
       accepted: BOOKING_STATUSES,
+      rejected: BOOKING_STATUSES,
       confirmed: BOOKING_STATUSES,
       in_progress: BOOKING_STATUSES,
       completed: BOOKING_STATUSES,
@@ -162,9 +166,8 @@ function getAllowedNextStatuses(
   };
 
   return (
-    workflows[actor]?.[
-      currentStatus
-    ] || []
+    workflows[actor]?.[currentStatus] ||
+    []
   );
 }
 
@@ -178,6 +181,11 @@ function applyStatusTimestamp(
   switch (status) {
     case "accepted":
       booking.acceptedAt = now;
+      break;
+
+    case "rejected":
+      booking.rejectedAt = now;
+      booking.rejectedBy = userId;
       break;
 
     case "confirmed":
@@ -216,6 +224,8 @@ export async function createBooking(
     const {
       jobId,
       workerId,
+      date,
+      notes,
       customerMessage
     } = req.body || {};
 
@@ -241,12 +251,40 @@ export async function createBooking(
       });
     }
 
+    let preferredDate = null;
+
+    if (date) {
+      preferredDate = new Date(date);
+
+      if (
+        Number.isNaN(
+          preferredDate.getTime()
+        )
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid preferred booking date."
+        });
+      }
+
+      if (
+        preferredDate.getTime() <=
+        Date.now()
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Preferred booking date must be in the future."
+        });
+      }
+    }
+
     const [
       job,
       worker
     ] = await Promise.all([
       Job.findById(jobId),
-
       Worker.findById(workerId)
     ]);
 
@@ -285,11 +323,6 @@ export async function createBooking(
       });
     }
 
-    /*
-      Customer can only book their own job.
-      Admin may create/manage bookings.
-    */
-
     if (
       !isAdmin(req) &&
       String(job.customerId) !==
@@ -301,11 +334,6 @@ export async function createBooking(
           "You can only create a booking for your own job."
       });
     }
-
-    /*
-      Worker cannot be the same user
-      as the job customer.
-    */
 
     if (
       String(worker.userId) ===
@@ -333,17 +361,25 @@ export async function createBooking(
       });
     }
 
+    const finalCustomerMessage =
+      normalizeText(
+        customerMessage || notes,
+        2000
+      );
+
     const booking =
       await Booking.create({
         jobId,
         customerId: job.customerId,
         workerId,
         status: "pending",
+        date: preferredDate,
+        notes: normalizeText(
+          notes,
+          2000
+        ),
         customerMessage:
-          normalizeText(
-            customerMessage,
-            2000
-          )
+          finalCustomerMessage
       });
 
     return res.status(201).json({
@@ -354,10 +390,6 @@ export async function createBooking(
     });
 
   } catch (error) {
-    /*
-      Handle duplicate unique index race.
-    */
-
     if (error?.code === 11000) {
       return res.status(409).json({
         success: false,
@@ -398,10 +430,6 @@ export async function getBookings(
 
     const filter = {};
 
-    /*
-      ADMIN → ALL BOOKINGS
-    */
-
     if (isAdmin(req)) {
       if (status) {
         const requestedStatus =
@@ -425,10 +453,6 @@ export async function getBookings(
         filter.status =
           requestedStatus;
       }
-
-    /*
-      CUSTOMER → OWN BOOKINGS
-    */
 
     } else if (
       req.user.role === "customer"
@@ -458,10 +482,6 @@ export async function getBookings(
         filter.status =
           requestedStatus;
       }
-
-    /*
-      WORKER → BOOKINGS FOR OWN PROFILE
-    */
 
     } else if (
       req.user.role === "worker"
@@ -542,7 +562,7 @@ export async function getBookings(
         .limit(pageLimit)
         .populate(
           "jobId",
-          "title description category service location budget status"
+          "title description category service location budget status customerId"
         )
         .populate(
           "customerId",
@@ -659,11 +679,6 @@ export async function getBookingById(
           "You do not have permission to view this booking."
       });
     }
-
-    /*
-      Do not expose worker userId
-      unnecessarily.
-    */
 
     const bookingData =
       booking.toObject();
@@ -799,10 +814,6 @@ export async function updateBookingStatus(
       });
     }
 
-    /*
-      Prevent meaningless same-status updates.
-    */
-
     if (
       booking.status ===
       requestedStatus
@@ -913,7 +924,8 @@ export async function cancelBooking(
       [
         "completed",
         "cancelled",
-        "in_progress"
+        "in_progress",
+        "rejected"
       ].includes(booking.status)
     ) {
       return res.status(409).json({
@@ -923,7 +935,8 @@ export async function cancelBooking(
       });
     }
 
-    booking.status = "cancelled";
+    booking.status =
+      "cancelled";
 
     applyStatusTimestamp(
       booking,
