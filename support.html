@@ -1,129 +1,527 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
+
   <meta charset="utf-8">
 
   <meta
     name="viewport"
-    content="width=device-width,initial-scale=1"
+    content="width=device-width, initial-scale=1"
   >
 
-  <title>Support | Smart Work Network</title>
+  <title>
+    Support | Smart Work Network
+  </title>
 
   <link
     rel="stylesheet"
     href="css/main.css"
   >
+
 </head>
 
 <body>
 
-  <header class="header">
+<header class="header">
 
-    <div class="container nav">
+  <div class="container nav">
 
-      <a
-        class="brand"
-        href="index.html"
-      >
-        Smart Work Network
+    <a
+      class="brand"
+      href="index.html"
+    >
+      Smart Work Network
+    </a>
+
+    <nav class="navlinks">
+
+      <a href="services.html">
+        Services
       </a>
 
-      <nav class="navlinks">
+      <a href="find-help.html">
+        Find Help
+      </a>
 
-        <a href="services.html">
-          Services
-        </a>
+      <a href="workers.html">
+        Workers
+      </a>
 
-        <a href="find-help.html">
-          Find Help
-        </a>
+      <span data-auth></span>
 
-        <a href="workers.html">
-          Workers
-        </a>
+    </nav>
 
-        <span data-auth></span>
+  </div>
 
-      </nav>
+</header>
+
+<main>
+
+<section class="section">
+
+  <div
+    class="container"
+    style="max-width:800px"
+  >
+
+    <div class="card">
+
+      <h1>
+        Support & Complaints
+      </h1>
+
+      <p class="lead">
+        Contact Smart Work Network support.
+      </p>
+
+      <div id="supportMessage"></div>
+
+      <form id="supportForm">
+
+        <label for="supportSubject">
+          Subject
+        </label>
+
+        <input
+          id="supportSubject"
+          maxlength="200"
+          required
+        >
+
+        <br>
+        <br>
+
+        <label for="supportBody">
+          Message
+        </label>
+
+        <textarea
+          id="supportBody"
+          rows="7"
+          maxlength="5000"
+          required
+        ></textarea>
+
+        <br>
+        <br>
+
+        <button
+          class="btn btn-primary"
+          type="submit"
+          id="supportSubmit"
+        >
+          Submit Ticket
+        </button>
+
+      </form>
 
     </div>
 
-  </header>
+    <br>
 
+    <div class="card">
 
-  <main>
+      <h2>
+        My Support Tickets
+      </h2>
 
-    <section class="section">
+      <div id="ticketList">
 
-      <div
-        class="container"
-        style="max-width:700px"
-      >
-
-        <div class="card">
-
-          <h1>Support & Complaints</h1>
-
-          <form class="form">
-
-            <label>
-              Subject
-              <input>
-            </label>
-
-            <label>
-              Message
-              <textarea></textarea>
-            </label>
-
-            <button
-              type="button"
-              class="btn btn-primary"
-              onclick="SWN.flash('Ticket created in demo mode')"
-            >
-              Submit
-            </button>
-
-          </form>
-
+        <div class="notice">
+          Loading tickets...
         </div>
 
       </div>
 
-    </section>
+    </div>
 
-  </main>
+  </div>
 
+</section>
 
-  <footer class="footer">
+</main>
 
-    <div class="container">
+<footer class="footer">
 
-      <b>Smart Work Network</b>
+  <div class="container">
 
-      <p>
-        Services • Workers • Work opportunities
-      </p>
+    <b>
+      Smart Work Network
+    </b>
 
-      <div class="row">
+    <p>
+      Services • Workers • Work opportunities
+    </p>
 
-        <a href="support.html">Support</a>
+    <div class="row">
 
-        <a href="profile.html">Profile</a>
+      <a href="support.html">
+        Support
+      </a>
 
-        <a href="urgent-help.html">Urgent Help</a>
+      <a href="profile.html">
+        Profile
+      </a>
 
-      </div>
+      <a href="urgent-help.html">
+        Urgent Help
+      </a>
 
     </div>
 
-  </footer>
+  </div>
 
+</footer>
 
-  <script src="js/app.js"></script>
+<script src="js/app.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+
+function escapeSupportHtml(
+  value = ""
+) {
+  if (
+    typeof window.escapeHtml ===
+    "function"
+  ) {
+    return window.escapeHtml(value);
+  }
+
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function showSupportMessage(
+  message,
+  error = false
+) {
+  const element =
+    document.querySelector(
+      "#supportMessage"
+    );
+
+  if (!element) return;
+
+  element.innerHTML = `
+    <div class="notice">
+      ${escapeSupportHtml(message)}
+    </div>
+  `;
+
+  if (error) {
+    console.error(message);
+  }
+}
+
+function formatTicketDate(
+  value
+) {
+  if (!value) {
+    return "Unknown";
+  }
+
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return "Unknown";
+  }
+
+  return date.toLocaleString(
+    "en-IN",
+    {
+      dateStyle: "medium",
+      timeStyle: "short"
+    }
+  );
+}
+
+function renderTickets(
+  tickets
+) {
+
+  const list =
+    document.querySelector(
+      "#ticketList"
+    );
+
+  if (!list) return;
+
+  if (!tickets.length) {
+
+    list.innerHTML = `
+      <div class="notice">
+        No support tickets found.
+      </div>
+    `;
+
+    return;
+  }
+
+  list.innerHTML =
+    tickets
+      .map(
+        (ticket) => `
+          <div class="card">
+
+            <div class="row between">
+
+              <h3>
+                ${escapeSupportHtml(
+                  ticket.subject
+                )}
+              </h3>
+
+              <span class="tag">
+                ${escapeSupportHtml(
+                  ticket.status
+                )}
+              </span>
+
+            </div>
+
+            <p>
+              ${escapeSupportHtml(
+                ticket.message
+              )}
+            </p>
+
+            ${
+              ticket.adminReply
+                ? `
+                  <div class="notice">
+
+                    <b>
+                      Support Reply
+                    </b>
+
+                    <p>
+                      ${escapeSupportHtml(
+                        ticket.adminReply
+                      )}
+                    </p>
+
+                  </div>
+                `
+                : ""
+            }
+
+            <p class="muted">
+              Created:
+              ${escapeSupportHtml(
+                formatTicketDate(
+                  ticket.createdAt
+                )
+              )}
+            </p>
+
+          </div>
+        `
+      )
+      .join("");
+}
+
+async function loadTickets() {
+
+  const user =
+    typeof window.protect ===
+    "function"
+      ? protect()
+      : null;
+
+  if (!user) {
+    return;
+  }
+
+  try {
+
+    const response =
+      await apiFetch(
+        "/support"
+      );
+
+    let result = {};
+
+    try {
+      result =
+        await response.json();
+    } catch {
+      result = {};
+    }
+
+    if (
+      !response.ok ||
+      !result.success
+    ) {
+      throw new Error(
+        result.message ||
+        "Unable to load support tickets."
+      );
+    }
+
+    renderTickets(
+      Array.isArray(result.data)
+        ? result.data
+        : []
+    );
+
+  } catch (error) {
+
+    const list =
+      document.querySelector(
+        "#ticketList"
+      );
+
+    if (list) {
+      list.innerHTML = `
+        <div class="notice">
+          ${escapeSupportHtml(
+            error.message ||
+            "Unable to load tickets."
+          )}
+        </div>
+      `;
+    }
+
+  }
+}
+
+async function createTicket(
+  event
+) {
+
+  event.preventDefault();
+
+  const subject =
+    document.querySelector(
+      "#supportSubject"
+    ).value.trim();
+
+  const message =
+    document.querySelector(
+      "#supportBody"
+    ).value.trim();
+
+  const button =
+    document.querySelector(
+      "#supportSubmit"
+    );
+
+  if (
+    subject.length < 3 ||
+    message.length < 3
+  ) {
+    showSupportMessage(
+      "Please enter a valid subject and message.",
+      true
+    );
+
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+    button.textContent =
+      "Submitting...";
+  }
+
+  try {
+
+    const response =
+      await apiFetch(
+        "/support",
+        {
+          method: "POST",
+
+          body:
+            JSON.stringify({
+              subject,
+              message
+            })
+        }
+      );
+
+    let result = {};
+
+    try {
+      result =
+        await response.json();
+    } catch {
+      result = {};
+    }
+
+    if (
+      !response.ok ||
+      !result.success
+    ) {
+      throw new Error(
+        result.message ||
+        "Unable to create support ticket."
+      );
+    }
+
+    showSupportMessage(
+      result.message ||
+      "Support ticket created successfully."
+    );
+
+    document.querySelector(
+      "#supportForm"
+    ).reset();
+
+    loadTickets();
+
+  } catch (error) {
+
+    showSupportMessage(
+      error.message ||
+      "Unable to create support ticket.",
+      true
+    );
+
+  } finally {
+
+    if (button) {
+      button.disabled = false;
+      button.textContent =
+        "Submit Ticket";
+    }
+
+  }
+}
+
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    const form =
+      document.querySelector(
+        "#supportForm"
+      );
+
+    if (form) {
+      form.addEventListener(
+        "submit",
+        createTicket
+      );
+    }
+
+    loadTickets();
+
+  }
+);
+
+</script>
 
 </body>
-
 </html>
