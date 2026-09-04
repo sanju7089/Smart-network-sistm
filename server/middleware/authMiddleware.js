@@ -34,13 +34,86 @@ function getToken(req) {
 
   if (
     parts.length !== 2 ||
-    parts[0].toLowerCase() !== "bearer" ||
+    parts[0].toLowerCase() !==
+      "bearer" ||
     !parts[1]
   ) {
     return null;
   }
 
   return parts[1].trim();
+}
+
+async function authenticateRequest(
+  req,
+  res
+) {
+  const token = getToken(req);
+
+  if (!token) {
+    return {
+      authenticated: false
+    };
+  }
+
+  const payload = jwt.verify(
+    token,
+    getJwtSecret(),
+    {
+      issuer: "smart-work-network",
+      audience:
+        "smart-work-network-users"
+    }
+  );
+
+  if (!payload?.id) {
+    const error = new Error(
+      "Invalid authentication token."
+    );
+
+    error.statusCode = 401;
+
+    throw error;
+  }
+
+  const user =
+    await User.findById(
+      payload.id
+    ).select(
+      "_id name email role phone location isActive"
+    );
+
+  if (!user) {
+    const error = new Error(
+      "Authentication is no longer valid."
+    );
+
+    error.statusCode = 401;
+
+    throw error;
+  }
+
+  if (!user.isActive) {
+    const error = new Error(
+      "This account is inactive."
+    );
+
+    error.statusCode = 403;
+
+    throw error;
+  }
+
+  req.user = {
+    id: user._id.toString(),
+    email: user.email,
+    role: user.role
+  };
+
+  req.authUser = user;
+
+  return {
+    authenticated: true
+  };
 }
 
 export async function requireAuth(
@@ -59,65 +132,10 @@ export async function requireAuth(
       });
     }
 
-    const payload = jwt.verify(
-      token,
-      getJwtSecret(),
-      {
-        issuer: "smart-work-network",
-        audience:
-          "smart-work-network-users"
-      }
+    await authenticateRequest(
+      req,
+      res
     );
-
-    if (!payload?.id) {
-      return res.status(401).json({
-        success: false,
-        message:
-          "Invalid authentication token."
-      });
-    }
-
-    /*
-      Do not trust role/status from an
-      old token forever.
-
-      Check the current database user.
-    */
-
-    const user =
-      await User.findById(payload.id)
-        .select(
-          "_id name email role phone location isActive"
-        );
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message:
-          "Authentication is no longer valid."
-      });
-    }
-
-    if (!user.isActive) {
-      return res.status(403).json({
-        success: false,
-        message:
-          "This account is inactive."
-      });
-    }
-
-    req.user = {
-      id: user._id.toString(),
-      email: user.email,
-      role: user.role
-    };
-
-    /*
-      Full current user for controllers
-      that need profile information.
-    */
-
-    req.authUser = user;
 
     return next();
 
@@ -135,9 +153,9 @@ export async function requireAuth(
 
     if (
       error?.name ===
-      "JsonWebTokenError" ||
+        "JsonWebTokenError" ||
       error?.name ===
-      "NotBeforeError"
+        "NotBeforeError"
     ) {
       return res.status(401).json({
         success: false,
@@ -148,6 +166,81 @@ export async function requireAuth(
 
     console.error(
       "AUTHENTICATION ERROR:",
+      error.message
+    );
+
+    return res.status(
+      error.statusCode || 500
+    ).json({
+      success: false,
+      message:
+        error.statusCode
+          ? error.message
+          : "Authentication failed."
+    });
+  }
+}
+
+/*
+========================================
+OPTIONAL AUTH
+========================================
+
+Public requests are allowed.
+
+If a valid Bearer token is supplied,
+req.user is populated.
+
+Invalid supplied tokens are rejected
+rather than silently treated as public.
+*/
+
+export async function optionalAuth(
+  req,
+  res,
+  next
+) {
+  try {
+    const token = getToken(req);
+
+    if (!token) {
+      return next();
+    }
+
+    await authenticateRequest(
+      req,
+      res
+    );
+
+    return next();
+
+  } catch (error) {
+    if (
+      error?.name ===
+      "TokenExpiredError"
+    ) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Authentication token has expired."
+      });
+    }
+
+    if (
+      error?.name ===
+        "JsonWebTokenError" ||
+      error?.name ===
+        "NotBeforeError"
+    ) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Invalid authentication token."
+      });
+    }
+
+    console.error(
+      "OPTIONAL AUTH ERROR:",
       error.message
     );
 
@@ -175,7 +268,11 @@ export function requireRole(
       )
       .filter(Boolean);
 
-  return (req, res, next) => {
+  return (
+    req,
+    res,
+    next
+  ) => {
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -184,7 +281,9 @@ export function requireRole(
       });
     }
 
-    if (validRoles.length === 0) {
+    if (
+      validRoles.length === 0
+    ) {
       return res.status(500).json({
         success: false,
         message:
@@ -193,12 +292,16 @@ export function requireRole(
     }
 
     const userRole =
-      String(req.user.role || "")
+      String(
+        req.user.role || ""
+      )
         .trim()
         .toLowerCase();
 
     if (
-      !validRoles.includes(userRole)
+      !validRoles.includes(
+        userRole
+      )
     ) {
       return res.status(403).json({
         success: false,
