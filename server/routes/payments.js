@@ -1,7 +1,8 @@
 import express from "express";
 
 import {
-  requireAuth
+  requireAuth,
+  requireRole
 } from "../middleware/authMiddleware.js";
 
 import {
@@ -12,13 +13,16 @@ import {
   getAllPayments
 } from "../controllers/paymentController.js";
 
-const router = express.Router();
+const router =
+  express.Router();
 
-router.use(requireAuth);
+router.use(
+  requireAuth
+);
 
 /*
 ========================================
-PAYMENT LIST
+MY PAYMENTS
 ========================================
 */
 
@@ -29,18 +33,22 @@ router.get(
 
 /*
 ========================================
-ADMIN PAYMENT LIST
+ADMIN PAYMENTS
 ========================================
+
+IMPORTANT:
+Admin-only protection.
 */
 
 router.get(
   "/admin/all",
+  requireRole("admin"),
   getAllPayments
 );
 
 /*
 ========================================
-RAZORPAY
+RAZORPAY ORDER
 ========================================
 */
 
@@ -48,6 +56,12 @@ router.post(
   "/razorpay/order",
   createRazorpayOrder
 );
+
+/*
+========================================
+RAZORPAY PAYMENT VERIFICATION
+========================================
+*/
 
 router.post(
   "/razorpay/verify",
@@ -57,7 +71,6 @@ router.post(
 /*
 ========================================
 SINGLE PAYMENT
-Must remain after named routes.
 ========================================
 */
 
