@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 export const BOOKING_STATUSES = [
   "pending",
   "accepted",
+  "rejected",
   "confirmed",
   "in_progress",
   "completed",
@@ -39,6 +40,19 @@ const bookingSchema = new mongoose.Schema(
       index: true
     },
 
+    date: {
+      type: Date,
+      default: null,
+      index: true
+    },
+
+    notes: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 2000
+    },
+
     customerMessage: {
       type: String,
       default: "",
@@ -55,6 +69,17 @@ const bookingSchema = new mongoose.Schema(
 
     acceptedAt: {
       type: Date,
+      default: null
+    },
+
+    rejectedAt: {
+      type: Date,
+      default: null
+    },
+
+    rejectedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       default: null
     },
 
@@ -89,11 +114,6 @@ const bookingSchema = new mongoose.Schema(
   }
 );
 
-/*
-  Prevent the same worker from having
-  multiple active bookings for the same job.
-*/
-
 bookingSchema.index(
   {
     jobId: 1,
@@ -118,6 +138,11 @@ bookingSchema.index({
 bookingSchema.index({
   status: 1,
   createdAt: -1
+});
+
+bookingSchema.index({
+  date: 1,
+  status: 1
 });
 
 const Booking = mongoose.model(
