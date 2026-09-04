@@ -15,6 +15,9 @@
     rel="stylesheet"
     href="css/main.css"
   >
+
+  <!-- Razorpay Checkout -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 
 <body>
@@ -23,16 +26,29 @@
 
     <div class="container nav">
 
-      <a class="brand" href="index.html">
+      <a
+        class="brand"
+        href="index.html"
+      >
         Smart Work Network
       </a>
 
       <nav class="navlinks">
-        <a href="services.html">Services</a>
-        <a href="find-help.html">Find Help</a>
-        <a href="workers.html">Workers</a>
+
+        <a href="services.html">
+          Services
+        </a>
+
+        <a href="find-help.html">
+          Find Help
+        </a>
+
+        <a href="workers.html">
+          Workers
+        </a>
 
         <span data-auth></span>
+
       </nav>
 
     </div>
@@ -49,7 +65,10 @@
         <div class="row between">
 
           <div>
-            <h1>My Bookings</h1>
+
+            <h1>
+              My Bookings
+            </h1>
 
             <p
               class="lead"
@@ -57,7 +76,9 @@
             >
               Loading your bookings...
             </p>
+
           </div>
+
 
           <button
             type="button"
@@ -95,16 +116,28 @@
 
     <div class="container">
 
-      <b>Smart Work Network</b>
+      <b>
+        Smart Work Network
+      </b>
 
       <p>
         Services • Workers • Work opportunities
       </p>
 
       <div class="row">
-        <a href="support.html">Support</a>
-        <a href="profile.html">Profile</a>
-        <a href="urgent-help.html">Urgent Help</a>
+
+        <a href="support.html">
+          Support
+        </a>
+
+        <a href="profile.html">
+          Profile
+        </a>
+
+        <a href="urgent-help.html">
+          Urgent Help
+        </a>
+
       </div>
 
     </div>
@@ -118,12 +151,65 @@
 
   <script>
 
+    /*
+      ============================================================
+      SMART WORK NETWORK
+      COMPLETE BOOKINGS + RAZORPAY FRONTEND
+      ============================================================
+
+      Booking workflow:
+
+      pending
+        ├── accepted
+        └── rejected
+
+      accepted
+        └── confirmed
+
+      confirmed
+        └── in_progress
+
+      in_progress
+        └── completed
+
+
+      Payment workflow:
+
+      accepted / confirmed
+        ↓
+      Create Razorpay Order
+        ↓
+      Razorpay Checkout
+        ↓
+      Razorpay Payment
+        ↓
+      Backend Verification
+        ↓
+      Booking refresh
+    */
+
+
+    let currentUser = null;
+
+    let userPayments = [];
+
+    let paymentLoading = false;
+
+
+    /*
+      ============================================================
+      HTML ESCAPE
+      ============================================================
+    */
+
     function escapeBookingHtml(value = "") {
 
       if (
         typeof window.escapeHtml === "function"
       ) {
+
         return window.escapeHtml(value);
+
       }
 
       return String(value)
@@ -136,6 +222,12 @@
     }
 
 
+    /*
+      ============================================================
+      DATE FORMAT
+      ============================================================
+    */
+
     function formatBookingDate(value) {
 
       if (!value) {
@@ -144,8 +236,14 @@
 
       const date = new Date(value);
 
-      if (Number.isNaN(date.getTime())) {
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
+
         return "Not scheduled";
+
       }
 
       return date.toLocaleString(
@@ -159,16 +257,81 @@
     }
 
 
-    function formatStatus(status = "pending") {
+    /*
+      ============================================================
+      CURRENCY
+      ============================================================
+    */
 
-      return String(status)
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, function(letter) {
-          return letter.toUpperCase();
-        });
+    function formatMoney(
+      amount,
+      currency = "INR"
+    ) {
+
+      const numericAmount =
+        Number(amount);
+
+      if (
+        !Number.isFinite(
+          numericAmount
+        )
+      ) {
+
+        return "Amount unavailable";
+
+      }
+
+      try {
+
+        return new Intl.NumberFormat(
+          "en-IN",
+          {
+            style: "currency",
+            currency: currency || "INR",
+            maximumFractionDigits: 2
+          }
+        ).format(
+          numericAmount
+        );
+
+      } catch {
+
+        return `₹${numericAmount.toFixed(2)}`;
+
+      }
 
     }
 
+
+    /*
+      ============================================================
+      STATUS FORMAT
+      ============================================================
+    */
+
+    function formatStatus(
+      status = "pending"
+    ) {
+
+      return String(status)
+        .replace(/_/g, " ")
+        .replace(
+          /\b\w/g,
+          function(letter) {
+
+            return letter.toUpperCase();
+
+          }
+        );
+
+    }
+
+
+    /*
+      ============================================================
+      MESSAGE
+      ============================================================
+    */
 
     function showBookingMessage(
       message,
@@ -176,36 +339,92 @@
     ) {
 
       const element =
-        document.querySelector("#bookingMessage");
+        document.querySelector(
+          "#bookingMessage"
+        );
 
-      if (!element) return;
+      if (!element) {
+        return;
+      }
 
       element.innerHTML = `
+
         <div class="notice">
-          ${escapeBookingHtml(message)}
+
+          ${escapeBookingHtml(
+            message || ""
+          )}
+
         </div>
+
       `;
 
       if (isError) {
-        console.error(message);
+
+        console.error(
+          message
+        );
+
       }
 
     }
 
 
-    function getWorkerName(booking) {
+    /*
+      ============================================================
+      SAFE API JSON
+      ============================================================
+    */
+
+    async function readApiResult(
+      response
+    ) {
+
+      let result = {};
+
+      try {
+
+        result =
+          await response.json();
+
+      } catch {
+
+        result = {};
+
+      }
+
+      return result;
+
+    }
+
+
+    /*
+      ============================================================
+      WORKER NAME
+      ============================================================
+    */
+
+    function getWorkerName(
+      booking
+    ) {
 
       if (!booking.workerId) {
+
         return "Worker not available";
+
       }
 
       if (
-        typeof booking.workerId === "object"
+        typeof booking.workerId ===
+        "object"
       ) {
+
         return (
           booking.workerId.name ||
+          booking.workerId.userId?.name ||
           "Worker"
         );
+
       }
 
       return "Worker";
@@ -213,19 +432,32 @@
     }
 
 
-    function getCustomerName(booking) {
+    /*
+      ============================================================
+      CUSTOMER NAME
+      ============================================================
+    */
+
+    function getCustomerName(
+      booking
+    ) {
 
       if (!booking.customerId) {
+
         return "Customer not available";
+
       }
 
       if (
-        typeof booking.customerId === "object"
+        typeof booking.customerId ===
+        "object"
       ) {
+
         return (
           booking.customerId.name ||
           "Customer"
         );
+
       }
 
       return "Customer";
@@ -233,16 +465,32 @@
     }
 
 
-    function getJobTitle(booking) {
+    /*
+      ============================================================
+      JOB TITLE
+      ============================================================
+    */
+
+    function getJobTitle(
+      booking
+    ) {
 
       if (!booking.jobId) {
         return "";
       }
 
       if (
-        typeof booking.jobId === "object"
+        typeof booking.jobId ===
+        "object"
       ) {
-        return booking.jobId.title || "";
+
+        return (
+          booking.jobId.title ||
+          booking.jobId.service ||
+          booking.jobId.name ||
+          ""
+        );
+
       }
 
       return "";
@@ -251,66 +499,303 @@
 
 
     /*
-      Secure worker workflow:
-
-      pending
-      ├─ accepted
-      └─ rejected
-
-      accepted
-      └─ confirmed
-
-      confirmed
-      └─ in_progress
-
-      in_progress
-      └─ completed
+      ============================================================
+      JOB BUDGET
+      ============================================================
     */
 
-    function getWorkerNextActions(status) {
+    function getBookingAmount(
+      booking
+    ) {
+
+      if (
+        booking.jobId &&
+        typeof booking.jobId ===
+        "object"
+      ) {
+
+        const budget =
+          Number(
+            booking.jobId.budget
+          );
+
+        if (
+          Number.isFinite(
+            budget
+          ) &&
+          budget >= 0
+        ) {
+
+          return budget;
+
+        }
+
+      }
+
+      if (
+        Number.isFinite(
+          Number(booking.amount)
+        )
+      ) {
+
+        return Number(
+          booking.amount
+        );
+
+      }
+
+      return null;
+
+    }
+
+
+    /*
+      ============================================================
+      PAYMENT BOOKING ID
+      ============================================================
+    */
+
+    function getPaymentBookingId(
+      payment
+    ) {
+
+      if (!payment) {
+        return "";
+      }
+
+      const booking =
+        payment.bookingId;
+
+      if (
+        booking &&
+        typeof booking === "object"
+      ) {
+
+        return String(
+          booking._id ||
+          booking.id ||
+          ""
+        );
+
+      }
+
+      return String(
+        booking || ""
+      );
+
+    }
+
+
+    /*
+      ============================================================
+      PAYMENT STATUS
+      ============================================================
+    */
+
+    function isPaymentSuccessful(
+      payment
+    ) {
+
+      if (!payment) {
+        return false;
+      }
+
+      const status =
+        String(
+          payment.status || ""
+        ).toLowerCase();
+
+      return [
+        "paid",
+        "captured",
+        "success",
+        "successful"
+      ].includes(
+        status
+      );
+
+    }
+
+
+    /*
+      ============================================================
+      FIND PAYMENT FOR BOOKING
+      ============================================================
+    */
+
+    function getPaymentForBooking(
+      bookingId
+    ) {
+
+      if (!bookingId) {
+        return null;
+      }
+
+      return (
+        userPayments.find(
+          function(payment) {
+
+            return (
+              getPaymentBookingId(
+                payment
+              ) ===
+              String(
+                bookingId
+              )
+            );
+
+          }
+        ) ||
+        null
+      );
+
+    }
+
+
+    /*
+      ============================================================
+      LOAD USER PAYMENTS
+      ============================================================
+    */
+
+    async function loadUserPayments() {
+
+      if (
+        !currentUser ||
+        currentUser.role !==
+          "customer"
+      ) {
+
+        userPayments = [];
+
+        return;
+
+      }
+
+
+      try {
+
+        const response =
+          await apiFetch(
+            "/payments"
+          );
+
+
+        const result =
+          await readApiResult(
+            response
+          );
+
+
+        if (
+          !response.ok ||
+          !result.success
+        ) {
+
+          userPayments = [];
+
+          return;
+
+        }
+
+
+        userPayments =
+          Array.isArray(
+            result.data
+          )
+            ? result.data
+            : [];
+
+
+      } catch (error) {
+
+        console.error(
+          "LOAD PAYMENTS ERROR:",
+          error
+        );
+
+        userPayments = [];
+
+      }
+
+    }
+
+
+    /*
+      ============================================================
+      WORKER NEXT ACTIONS
+      ============================================================
+    */
+
+    function getWorkerNextActions(
+      status
+    ) {
 
       const actions = {
+
         pending: [
+
           {
             value: "accepted",
             label: "Accept Booking"
           },
+
           {
             value: "rejected",
             label: "Reject Booking"
           }
+
         ],
 
         accepted: [
+
           {
             value: "confirmed",
             label: "Confirm Booking"
           }
+
         ],
 
         confirmed: [
+
           {
             value: "in_progress",
             label: "Start Work"
           }
+
         ],
 
         in_progress: [
+
           {
             value: "completed",
             label: "Complete Work"
           }
+
         ],
 
         completed: [],
+
         cancelled: [],
+
         rejected: []
+
       };
 
-      return actions[status] || [];
+
+      return (
+        actions[status] ||
+        []
+      );
 
     }
 
+
+    /*
+      ============================================================
+      WORKER ACTION BUTTONS
+      ============================================================
+    */
 
     function renderWorkerActions(
       bookingId,
@@ -318,39 +803,226 @@
     ) {
 
       const actions =
-        getWorkerNextActions(status);
+        getWorkerNextActions(
+          status
+        );
 
-      if (!actions.length) {
+
+      if (
+        !actions.length
+      ) {
 
         return `
+
           <p class="muted">
             No further action is available.
           </p>
+
         `;
 
       }
 
+
       return actions
-        .map(function(action) {
+        .map(
+          function(action) {
 
-          return `
-            <button
-              type="button"
-              class="btn btn-primary"
-              onclick="updateBookingStatus(
-                '${bookingId}',
-                '${action.value}'
-              )"
-            >
-              ${action.label}
-            </button>
-          `;
+            const safeBookingId =
+              escapeBookingHtml(
+                bookingId
+              );
 
-        })
+            const safeStatus =
+              escapeBookingHtml(
+                action.value
+              );
+
+
+            return `
+
+              <button
+                type="button"
+                class="btn btn-primary"
+                onclick="updateBookingStatus(
+                  '${safeBookingId}',
+                  '${safeStatus}'
+                )"
+              >
+
+                ${escapeBookingHtml(
+                  action.label
+                )}
+
+              </button>
+
+            `;
+
+          }
+        )
         .join("");
 
     }
 
+
+    /*
+      ============================================================
+      PAYMENT SECTION
+      ============================================================
+    */
+
+    function renderPaymentSection(
+      booking,
+      role,
+      status
+    ) {
+
+      if (
+        role !== "customer"
+      ) {
+
+        return "";
+
+      }
+
+
+      const bookingId =
+        booking._id ||
+        booking.id;
+
+
+      if (!bookingId) {
+        return "";
+      }
+
+
+      const payment =
+        getPaymentForBooking(
+          bookingId
+        );
+
+
+      const amount =
+        getBookingAmount(
+          booking
+        );
+
+
+      /*
+        Payment already completed.
+      */
+
+      if (
+        isPaymentSuccessful(
+          payment
+        )
+      ) {
+
+        return `
+
+          <div class="notice">
+
+            <b>
+              Payment Status:
+            </b>
+
+            Paid
+
+            ${
+              payment?.transactionId
+                ? `
+                  <br>
+                  <span class="muted">
+                    Transaction:
+                    ${escapeBookingHtml(
+                      payment.transactionId
+                    )}
+                  </span>
+                `
+                : ""
+            }
+
+          </div>
+
+        `;
+
+      }
+
+
+      /*
+        Payment is allowed only after
+        worker accepts or booking is confirmed.
+      */
+
+      if (
+        ![
+          "accepted",
+          "confirmed"
+        ].includes(
+          status
+        )
+      ) {
+
+        return "";
+
+      }
+
+
+      const amountText =
+        amount !== null
+          ? formatMoney(
+              amount,
+              payment?.currency ||
+                "INR"
+            )
+          : "Amount will be loaded securely";
+
+
+      return `
+
+        <div class="card">
+
+          <h4>
+            Payment
+          </h4>
+
+          <p>
+            <b>
+              Amount:
+            </b>
+
+            ${escapeBookingHtml(
+              amountText
+            )}
+          </p>
+
+          <p class="muted">
+            Secure payment powered by Razorpay.
+          </p>
+
+          <button
+            type="button"
+            class="btn btn-primary"
+            onclick="startRazorpayPayment(
+              '${escapeBookingHtml(
+                bookingId
+              )}'
+            )"
+          >
+            Pay Now
+          </button>
+
+        </div>
+
+      `;
+
+    }
+
+
+    /*
+      ============================================================
+      BOOKING CARD
+      ============================================================
+    */
 
     function renderBookingCard(
       booking,
@@ -358,94 +1030,193 @@
     ) {
 
       const bookingId =
-        booking._id || booking.id;
+        booking._id ||
+        booking.id;
+
+
+      if (!bookingId) {
+        return "";
+      }
+
 
       const status =
         String(
-          booking.status || "pending"
+          booking.status ||
+          "pending"
         ).toLowerCase();
 
+
       const role =
-        user?.role || "customer";
+        user?.role ||
+        "customer";
+
 
       const workerName =
         escapeBookingHtml(
-          getWorkerName(booking)
+          getWorkerName(
+            booking
+          )
         );
+
 
       const customerName =
         escapeBookingHtml(
-          getCustomerName(booking)
+          getCustomerName(
+            booking
+          )
         );
+
 
       const jobTitle =
         escapeBookingHtml(
-          getJobTitle(booking)
+          getJobTitle(
+            booking
+          )
         );
+
 
       const notes =
         escapeBookingHtml(
           booking.notes ||
+          booking.customerMessage ||
           "No additional notes."
         );
 
 
-      let personSection = "";
+      const amount =
+        getBookingAmount(
+          booking
+        );
 
-      if (role === "worker") {
+
+      let personSection =
+        "";
+
+
+      if (
+        role === "worker"
+      ) {
 
         personSection = `
+
           <p>
-            <b>Customer:</b>
+
+            <b>
+              Customer:
+            </b>
+
             ${customerName}
+
           </p>
+
         `;
 
-      } else if (role === "admin") {
+      } else if (
+        role === "admin"
+      ) {
 
         personSection = `
+
           <p>
-            <b>Customer:</b>
+
+            <b>
+              Customer:
+            </b>
+
             ${customerName}
+
           </p>
 
           <p>
-            <b>Worker:</b>
+
+            <b>
+              Worker:
+            </b>
+
             ${workerName}
+
           </p>
+
         `;
 
       } else {
 
         personSection = `
+
           <p>
-            <b>Worker:</b>
+
+            <b>
+              Worker:
+            </b>
+
             ${workerName}
+
           </p>
+
         `;
 
       }
 
 
-      let jobSection = "";
+      let jobSection =
+        "";
+
 
       if (jobTitle) {
 
         jobSection = `
+
           <p>
-            <b>Work:</b>
+
+            <b>
+              Work:
+            </b>
+
             ${jobTitle}
+
           </p>
+
         `;
 
       }
 
 
-      let actions = "";
+      let amountSection =
+        "";
+
+
+      if (
+        amount !== null
+      ) {
+
+        amountSection = `
+
+          <p>
+
+            <b>
+              Booking Amount:
+            </b>
+
+            ${escapeBookingHtml(
+              formatMoney(
+                amount,
+                "INR"
+              )
+            )}
+
+          </p>
+
+        `;
+
+      }
+
+
+      let actions =
+        "";
 
 
       /*
-        Customer can cancel only active bookings.
+        Customer cancellation.
       */
 
       if (
@@ -454,48 +1225,63 @@
           "completed",
           "cancelled",
           "rejected"
-        ].includes(status)
+        ].includes(
+          status
+        )
       ) {
 
         actions += `
+
           <button
             type="button"
             class="btn"
             onclick="cancelBooking(
-              '${bookingId}'
+              '${escapeBookingHtml(
+                bookingId
+              )}'
             )"
           >
+
             Cancel Booking
+
           </button>
+
         `;
 
       }
 
 
       /*
-        Worker sees only the next valid action.
+        Worker workflow.
       */
 
-      if (role === "worker") {
+      if (
+        role === "worker"
+      ) {
 
-        actions += renderWorkerActions(
-          bookingId,
-          status
-        );
+        actions +=
+          renderWorkerActions(
+            bookingId,
+            status
+          );
 
       }
 
 
       /*
-        Admin can update status.
+        Admin workflow.
       */
 
-      if (role === "admin") {
+      if (
+        role === "admin"
+      ) {
 
         actions += `
 
           <select
-            id="status-${bookingId}"
+            id="status-${escapeBookingHtml(
+              bookingId
+            )}"
           >
 
             <option value="pending">
@@ -504,6 +1290,10 @@
 
             <option value="accepted">
               Accepted
+            </option>
+
+            <option value="rejected">
+              Rejected
             </option>
 
             <option value="confirmed">
@@ -522,25 +1312,34 @@
               Cancelled
             </option>
 
-            <option value="rejected">
-              Rejected
-            </option>
-
           </select>
+
 
           <button
             type="button"
             class="btn btn-primary"
             onclick="updateAdminBookingStatus(
-              '${bookingId}'
+              '${escapeBookingHtml(
+                bookingId
+              )}'
             )"
           >
+
             Update Status
+
           </button>
 
         `;
 
       }
+
+
+      const paymentSection =
+        renderPaymentSection(
+          booking,
+          role,
+          status
+        );
 
 
       return `
@@ -554,9 +1353,13 @@
             </h3>
 
             <span class="tag">
+
               ${escapeBookingHtml(
-                formatStatus(status)
+                formatStatus(
+                  status
+                )
               )}
+
             </span>
 
           </div>
@@ -564,23 +1367,133 @@
 
           ${personSection}
 
+
           ${jobSection}
 
 
+          ${amountSection}
+
+
           <p>
-            <b>Preferred Date:</b>
+
+            <b>
+              Preferred Date:
+            </b>
+
             ${escapeBookingHtml(
               formatBookingDate(
                 booking.date
               )
             )}
+
           </p>
 
 
           <p>
-            <b>Notes:</b>
+
+            <b>
+              Notes:
+            </b>
+
             ${notes}
+
           </p>
+
+
+          ${
+            booking.workerMessage
+              ? `
+                <p>
+                  <b>
+                    Worker Message:
+                  </b>
+                  ${escapeBookingHtml(
+                    booking.workerMessage
+                  )}
+                </p>
+              `
+              : ""
+          }
+
+
+          ${
+            booking.rejectedAt
+              ? `
+                <p class="muted">
+                  Rejected:
+                  ${escapeBookingHtml(
+                    formatBookingDate(
+                      booking.rejectedAt
+                    )
+                  )}
+                </p>
+              `
+              : ""
+          }
+
+
+          ${
+            booking.acceptedAt
+              ? `
+                <p class="muted">
+                  Accepted:
+                  ${escapeBookingHtml(
+                    formatBookingDate(
+                      booking.acceptedAt
+                    )
+                  )}
+                </p>
+              `
+              : ""
+          }
+
+
+          ${
+            booking.confirmedAt
+              ? `
+                <p class="muted">
+                  Confirmed:
+                  ${escapeBookingHtml(
+                    formatBookingDate(
+                      booking.confirmedAt
+                    )
+                  )}
+                </p>
+              `
+              : ""
+          }
+
+
+          ${
+            booking.startedAt
+              ? `
+                <p class="muted">
+                  Work Started:
+                  ${escapeBookingHtml(
+                    formatBookingDate(
+                      booking.startedAt
+                    )
+                  )}
+                </p>
+              `
+              : ""
+          }
+
+
+          ${
+            booking.completedAt
+              ? `
+                <p class="muted">
+                  Completed:
+                  ${escapeBookingHtml(
+                    formatBookingDate(
+                      booking.completedAt
+                    )
+                  )}
+                </p>
+              `
+              : ""
+          }
 
 
           <p class="muted">
@@ -596,11 +1509,37 @@
           </p>
 
 
-          <div class="row">
+          ${
+            paymentSection
+              ? `
+                <div
+                  style="
+                    margin-top:16px;
+                  "
+                >
+                  ${paymentSection}
+                </div>
+              `
+              : ""
+          }
 
-            ${actions}
 
-          </div>
+          ${
+            actions
+              ? `
+                <div
+                  class="row"
+                  style="
+                    margin-top:16px;
+                  "
+                >
+
+                  ${actions}
+
+                </div>
+              `
+              : ""
+          }
 
         </div>
 
@@ -609,20 +1548,35 @@
     }
 
 
+    /*
+      ============================================================
+      LOAD BOOKINGS
+      ============================================================
+    */
+
     async function loadBookings() {
 
       const user =
-        typeof window.protect === "function"
-          ? protect()
+        typeof window.protect ===
+        "function"
+          ? window.protect()
           : null;
+
 
       if (!user) {
         return;
       }
 
 
+      currentUser =
+        user;
+
+
       const list =
-        document.querySelector("#bookingsList");
+        document.querySelector(
+          "#bookingsList"
+        );
+
 
       const subtitle =
         document.querySelector(
@@ -630,31 +1584,40 @@
         );
 
 
+      if (!list) {
+        return;
+      }
+
+
       list.innerHTML = `
+
         <div class="notice">
           Loading bookings...
         </div>
+
       `;
 
 
       try {
 
+        /*
+          Load payments first for
+          customer payment state.
+        */
+
+        await loadUserPayments();
+
+
         const response =
-          await apiFetch("/bookings");
+          await apiFetch(
+            "/bookings"
+          );
 
 
-        let result = {};
-
-        try {
-
-          result =
-            await response.json();
-
-        } catch {
-
-          result = {};
-
-        }
+        const result =
+          await readApiResult(
+            response
+          );
 
 
         if (
@@ -671,7 +1634,9 @@
 
 
         const bookings =
-          Array.isArray(result.data)
+          Array.isArray(
+            result.data
+          )
             ? result.data
             : [];
 
@@ -684,12 +1649,18 @@
         }
 
 
-        if (!bookings.length) {
+        if (
+          !bookings.length
+        ) {
 
           list.innerHTML = `
+
             <div class="notice">
+
               No bookings found yet.
+
             </div>
+
           `;
 
           return;
@@ -699,14 +1670,16 @@
 
         list.innerHTML =
           bookings
-            .map(function(booking) {
+            .map(
+              function(booking) {
 
-              return renderBookingCard(
-                booking,
-                user
-              );
+                return renderBookingCard(
+                  booking,
+                  user
+                );
 
-            })
+              }
+            )
             .join("");
 
 
@@ -727,6 +1700,7 @@
 
 
         list.innerHTML = `
+
           <div class="notice">
 
             ${escapeBookingHtml(
@@ -735,6 +1709,7 @@
             )}
 
           </div>
+
         `;
 
       }
@@ -742,14 +1717,33 @@
     }
 
 
+    /*
+      ============================================================
+      CANCEL BOOKING
+      ============================================================
+    */
+
     async function cancelBooking(
       bookingId
     ) {
+
+      if (!bookingId) {
+
+        showBookingMessage(
+          "Invalid booking ID.",
+          true
+        );
+
+        return;
+
+      }
+
 
       const confirmed =
         window.confirm(
           "Are you sure you want to cancel this booking?"
         );
+
 
       if (!confirmed) {
         return;
@@ -757,6 +1751,11 @@
 
 
       try {
+
+        showBookingMessage(
+          "Cancelling booking..."
+        );
+
 
         const response =
           await apiFetch(
@@ -769,18 +1768,10 @@
           );
 
 
-        let result = {};
-
-        try {
-
-          result =
-            await response.json();
-
-        } catch {
-
-          result = {};
-
-        }
+        const result =
+          await readApiResult(
+            response
+          );
 
 
         if (
@@ -801,7 +1792,8 @@
           "Booking cancelled successfully."
         );
 
-        loadBookings();
+
+        await loadBookings();
 
 
       } catch (error) {
@@ -823,10 +1815,28 @@
     }
 
 
+    /*
+      ============================================================
+      WORKER STATUS UPDATE
+      ============================================================
+    */
+
     async function updateBookingStatus(
       bookingId,
       status
     ) {
+
+      if (!bookingId) {
+
+        showBookingMessage(
+          "Invalid booking ID.",
+          true
+        );
+
+        return;
+
+      }
+
 
       if (!status) {
 
@@ -842,6 +1852,11 @@
 
       try {
 
+        showBookingMessage(
+          "Updating booking status..."
+        );
+
+
         const response =
           await apiFetch(
             `/bookings/${encodeURIComponent(
@@ -850,25 +1865,18 @@
             {
               method: "PATCH",
 
-              body: JSON.stringify({
-                status
-              })
+              body:
+                JSON.stringify({
+                  status
+                })
             }
           );
 
 
-        let result = {};
-
-        try {
-
-          result =
-            await response.json();
-
-        } catch {
-
-          result = {};
-
-        }
+        const result =
+          await readApiResult(
+            response
+          );
 
 
         if (
@@ -889,7 +1897,8 @@
           "Booking status updated successfully."
         );
 
-        loadBookings();
+
+        await loadBookings();
 
 
       } catch (error) {
@@ -911,19 +1920,20 @@
     }
 
 
+    /*
+      ============================================================
+      ADMIN STATUS UPDATE
+      ============================================================
+    */
+
     async function updateAdminBookingStatus(
       bookingId
     ) {
 
-      const select =
-        document.querySelector(
-          `#status-${bookingId}`
-        );
-
-      if (!select) {
+      if (!bookingId) {
 
         showBookingMessage(
-          "Status selector not found.",
+          "Invalid booking ID.",
           true
         );
 
@@ -932,38 +1942,566 @@
       }
 
 
-      await updateBookingStatus(
-        bookingId,
-        select.value
-      );
+      const select =
+        document.querySelector(
+          `#status-${CSS.escape(
+            bookingId
+          )}`
+        );
 
-    }
+
+      if (!select) {
+
+        showBookingMessage(
+          "Booking status selector not found.",
+          true
+        );
+
+        return;
+
+      }
 
 
-    document.addEventListener(
-      "DOMContentLoaded",
-      function() {
+      const status =
+        select.value;
 
-        const refreshButton =
-          document.querySelector(
-            "#refreshBookingsButton"
+
+      if (!status) {
+
+        showBookingMessage(
+          "Please select a booking status.",
+          true
+        );
+
+        return;
+
+      }
+
+
+      try {
+
+        showBookingMessage(
+          "Updating booking status..."
+        );
+
+
+        const response =
+          await apiFetch(
+            `/bookings/${encodeURIComponent(
+              bookingId
+            )}/status`,
+            {
+              method: "PATCH",
+
+              body:
+                JSON.stringify({
+                  status
+                })
+            }
           );
 
-        if (refreshButton) {
 
-          refreshButton.addEventListener(
-            "click",
-            loadBookings
+        const result =
+          await readApiResult(
+            response
+          );
+
+
+        if (
+          !response.ok ||
+          !result.success
+        ) {
+
+          throw new Error(
+            result.message ||
+            "Unable to update booking status."
           );
 
         }
 
 
-        loadBookings();
+        showBookingMessage(
+          result.message ||
+          "Booking status updated successfully."
+        );
+
+
+        await loadBookings();
+
+
+      } catch (error) {
+
+        console.error(
+          "ADMIN BOOKING STATUS ERROR:",
+          error
+        );
+
+
+        showBookingMessage(
+          error.message ||
+          "Unable to update booking status.",
+          true
+        );
 
       }
-    );
 
+    }
+
+
+    /*
+      ============================================================
+      RAZORPAY PAYMENT
+      ============================================================
+    */
+
+    async function startRazorpayPayment(
+      bookingId
+    ) {
+
+      if (!bookingId) {
+
+        showBookingMessage(
+          "Invalid booking ID.",
+          true
+        );
+
+        return;
+
+      }
+
+
+      if (paymentLoading) {
+
+        showBookingMessage(
+          "A payment is already being prepared."
+        );
+
+        return;
+
+      }
+
+
+      paymentLoading =
+        true;
+
+
+      try {
+
+        /*
+          --------------------------------------------------------
+          STEP 1
+          Load Razorpay public configuration
+          --------------------------------------------------------
+        */
+
+        showBookingMessage(
+          "Preparing secure payment..."
+        );
+
+
+        const configResponse =
+          await apiFetch(
+            "/payments/razorpay/config"
+          );
+
+
+        const configResult =
+          await readApiResult(
+            configResponse
+          );
+
+
+        if (
+          !configResponse.ok ||
+          !configResult.success
+        ) {
+
+          throw new Error(
+            configResult.message ||
+            "Unable to load Razorpay configuration."
+          );
+
+        }
+
+
+        const keyId =
+          configResult.data?.keyId;
+
+
+        const currency =
+          configResult.data?.currency ||
+          "INR";
+
+
+        if (!keyId) {
+
+          throw new Error(
+            "Razorpay public key is unavailable."
+          );
+
+        }
+
+
+        /*
+          --------------------------------------------------------
+          STEP 2
+          Make sure Razorpay Checkout loaded
+          --------------------------------------------------------
+        */
+
+        if (
+          typeof window.Razorpay !==
+          "function"
+        ) {
+
+          throw new Error(
+            "Razorpay Checkout failed to load."
+          );
+
+        }
+
+
+        /*
+          --------------------------------------------------------
+          STEP 3
+          Create secure order on backend
+          --------------------------------------------------------
+        */
+
+        showBookingMessage(
+          "Creating secure payment order..."
+        );
+
+
+        const orderResponse =
+          await apiFetch(
+            "/payments/razorpay/order",
+            {
+              method: "POST",
+
+              body:
+                JSON.stringify({
+                  bookingId
+                })
+            }
+          );
+
+
+        const orderResult =
+          await readApiResult(
+            orderResponse
+          );
+
+
+        if (
+          !orderResponse.ok ||
+          !orderResult.success
+        ) {
+
+          throw new Error(
+            orderResult.message ||
+            "Unable to create payment order."
+          );
+
+        }
+
+
+        const order =
+          orderResult.data?.order;
+
+
+        if (!order?.id) {
+
+          throw new Error(
+            "Invalid Razorpay order returned by server."
+          );
+
+        }
+
+
+        const orderAmount =
+          Number(
+            order.amount
+          );
+
+
+        if (
+          !Number.isFinite(
+            orderAmount
+          ) ||
+          orderAmount <= 0
+        ) {
+
+          throw new Error(
+            "Invalid payment amount returned by server."
+          );
+
+        }
+
+
+        /*
+          --------------------------------------------------------
+          STEP 4
+          Open Razorpay
+          --------------------------------------------------------
+        */
+
+        const options = {
+
+          key: keyId,
+
+          amount:
+            orderAmount,
+
+          currency:
+            order.currency ||
+            currency,
+
+          name:
+            "Smart Work Network",
+
+          description:
+            "Smart Work Network booking payment",
+
+          order_id:
+            order.id,
+
+
+          /*
+            ------------------------------------------------------
+            STEP 5
+            Razorpay success callback
+            ------------------------------------------------------
+          */
+
+          handler:
+            async function(
+              paymentResponse
+            ) {
+
+              try {
+
+                showBookingMessage(
+                  "Payment received. Verifying payment securely..."
+                );
+
+
+                if (
+                  !paymentResponse?.razorpay_order_id ||
+                  !paymentResponse?.razorpay_payment_id ||
+                  !paymentResponse?.razorpay_signature
+                ) {
+
+                  throw new Error(
+                    "Incomplete Razorpay payment response."
+                  );
+
+                }
+
+
+                /*
+                  ------------------------------------------------
+                  STEP 6
+                  Verify signature on backend
+                  ------------------------------------------------
+                */
+
+                const verifyResponse =
+                  await apiFetch(
+                    "/payments/razorpay/verify",
+                    {
+                      method: "POST",
+
+                      body:
+                        JSON.stringify({
+
+                          razorpay_order_id:
+                            paymentResponse
+                              .razorpay_order_id,
+
+                          razorpay_payment_id:
+                            paymentResponse
+                              .razorpay_payment_id,
+
+                          razorpay_signature:
+                            paymentResponse
+                              .razorpay_signature
+
+                        })
+                    }
+                  );
+
+
+                const verifyResult =
+                  await readApiResult(
+                    verifyResponse
+                  );
+
+
+                if (
+                  !verifyResponse.ok ||
+                  !verifyResult.success
+                ) {
+
+                  throw new Error(
+                    verifyResult.message ||
+                    "Payment verification failed."
+                  );
+
+                }
+
+
+                showBookingMessage(
+                  verifyResult.message ||
+                  "Payment successful and verified."
+                );
+
+
+                /*
+                  Reload payment + booking data.
+                */
+
+                await loadBookings();
+
+
+              } catch (error) {
+
+                console.error(
+                  "RAZORPAY VERIFY ERROR:",
+                  error
+                );
+
+
+                showBookingMessage(
+                  error.message ||
+                  "Payment verification failed.",
+                  true
+                );
+
+              }
+
+            },
+
+
+          /*
+            ------------------------------------------------------
+            PAYMENT MODAL CLOSED
+            ------------------------------------------------------
+          */
+
+          modal: {
+
+            ondismiss:
+              function() {
+
+                showBookingMessage(
+                  "Payment window closed."
+                );
+
+              }
+
+          },
+
+
+          /*
+            ------------------------------------------------------
+            PAYMENT THEME
+            ------------------------------------------------------
+          */
+
+          theme: {
+
+            color:
+              "#111827"
+
+          }
+
+        };
+
+
+        /*
+          --------------------------------------------------------
+          STEP 7
+          Create Razorpay instance
+          --------------------------------------------------------
+        */
+
+        const razorpay =
+          new window.Razorpay(
+            options
+          );
+
+
+        /*
+          --------------------------------------------------------
+          PAYMENT FAILED
+          --------------------------------------------------------
+        */
+
+        razorpay.on(
+          "payment.failed",
+          function(
+            response
+          ) {
+
+            console.error(
+              "RAZORPAY PAYMENT FAILED:",
+              response
+            );
+
+
+            showBookingMessage(
+              response?.error?.description ||
+              "Payment failed. Please try again.",
+              true
+            );
+
+          }
+        );
+
+
+        /*
+          --------------------------------------------------------
+          STEP 8
+          Open checkout
+          --------------------------------------------------------
+        */
+
+        razorpay.open();
+
+
+      } catch (error) {
+
+        console.error(
+          "RAZORPAY PAYMENT ERROR:",
+          error
+        );
+
+
+        showBookingMessage(
+          error.message ||
+          "Unable to start payment.",
+          true
+        );
+
+      } finally {
+
+        paymentLoading =
+          false;
+
+      }
+
+    }
+
+
+    /*
+      ============================================================
+      GLOBAL FUNCTIONS
+      ============================================================
+    */
+
+    window.startRazorpayPayment =
+      startRazorpayPayment;
 
     window.cancelBooking =
       cancelBooking;
@@ -974,8 +2512,48 @@
     window.updateAdminBookingStatus =
       updateAdminBookingStatus;
 
+
+    /*
+      ============================================================
+      REFRESH BUTTON
+      ============================================================
+    */
+
+    document.addEventListener(
+      "DOMContentLoaded",
+      function() {
+
+        const refreshButton =
+          document.querySelector(
+            "#refreshBookingsButton"
+          );
+
+
+        if (refreshButton) {
+
+          refreshButton.addEventListener(
+            "click",
+            function() {
+
+              loadBookings();
+
+            }
+          );
+
+        }
+
+
+        /*
+          Initial booking load.
+        */
+
+        loadBookings();
+
+      }
+    );
+
   </script>
 
 </body>
 
-  </html>
+</html>
