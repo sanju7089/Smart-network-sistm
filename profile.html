@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
@@ -9,7 +9,9 @@
     content="width=device-width, initial-scale=1"
   >
 
-  <title>Profile | Smart Work Network</title>
+  <title>
+    My Profile | Smart Work Network
+  </title>
 
   <link
     rel="stylesheet"
@@ -19,90 +21,418 @@
 
 <body>
 
-  <header class="header">
+<header class="header">
 
-    <div class="container nav">
+  <div class="container nav">
 
-      <a
-        class="brand"
-        href="index.html"
-      >
-        Smart Work Network
+    <a
+      class="brand"
+      href="index.html"
+    >
+      Smart Work Network
+    </a>
+
+    <nav class="navlinks">
+
+      <a href="services.html">
+        Services
       </a>
 
-      <nav class="navlinks">
+      <a href="find-help.html">
+        Find Help
+      </a>
 
-        <a href="services.html">
-          Services
-        </a>
+      <a href="workers.html">
+        Workers
+      </a>
 
-        <a href="find-help.html">
-          Find Help
-        </a>
+      <span data-auth></span>
 
-        <a href="workers.html">
-          Workers
-        </a>
+    </nav>
 
-        <span data-auth></span>
+  </div>
 
-      </nav>
+</header>
 
-    </div>
+<main>
 
-  </header>
+<section class="section">
 
+  <div
+    class="container"
+    style="max-width:700px"
+  >
 
-  <main>
+    <div class="card">
 
-    <section class="section">
+      <h1>
+        My Profile
+      </h1>
 
-      <div class="container">
-
-        <div class="card">
-
-          <h1>My Profile</h1>
-
-          <p class="lead">
-            User profile and settings are a separate page.
-          </p>
-
-        </div>
-
-      </div>
-
-    </section>
-
-  </main>
-
-
-  <footer class="footer">
-
-    <div class="container">
-
-      <b>Smart Work Network</b>
-
-      <p>
-        Services • Workers • Work opportunities
+      <p class="lead">
+        View and update your account details.
       </p>
 
-      <div class="row">
+      <div id="profileMessage"></div>
 
-        <a href="support.html">Support</a>
+      <form id="profileForm">
 
-        <a href="profile.html">Profile</a>
+        <label for="profileName">
+          Name
+        </label>
 
-        <a href="urgent-help.html">Urgent Help</a>
+        <input
+          id="profileName"
+          name="name"
+          type="text"
+          minlength="2"
+          maxlength="100"
+          required
+        >
 
-      </div>
+        <br>
+        <br>
+
+        <label for="profileEmail">
+          Email
+        </label>
+
+        <input
+          id="profileEmail"
+          type="email"
+          readonly
+        >
+
+        <br>
+        <br>
+
+        <label for="profilePhone">
+          Phone
+        </label>
+
+        <input
+          id="profilePhone"
+          name="phone"
+          type="tel"
+          maxlength="30"
+        >
+
+        <br>
+        <br>
+
+        <label for="profileLocation">
+          Location
+        </label>
+
+        <input
+          id="profileLocation"
+          name="location"
+          type="text"
+          maxlength="200"
+        >
+
+        <br>
+        <br>
+
+        <button
+          class="btn btn-primary"
+          type="submit"
+          id="saveProfileButton"
+        >
+          Save Profile
+        </button>
+
+      </form>
 
     </div>
 
-  </footer>
+  </div>
 
+</section>
 
-  <script src="js/app.js"></script>
+</main>
+
+<footer class="footer">
+
+  <div class="container">
+
+    <b>
+      Smart Work Network
+    </b>
+
+    <p>
+      Services • Workers • Work opportunities
+    </p>
+
+    <div class="row">
+
+      <a href="support.html">
+        Support
+      </a>
+
+      <a href="profile.html">
+        Profile
+      </a>
+
+      <a href="urgent-help.html">
+        Urgent Help
+      </a>
+
+    </div>
+
+  </div>
+
+</footer>
+
+<script src="js/app.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+
+function escapeProfileHtml(
+  value = ""
+) {
+  if (
+    typeof window.escapeHtml ===
+    "function"
+  ) {
+    return window.escapeHtml(value);
+  }
+
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function showProfileMessage(
+  message,
+  error = false
+) {
+  const element =
+    document.querySelector(
+      "#profileMessage"
+    );
+
+  if (!element) return;
+
+  element.innerHTML = `
+    <div class="notice">
+      ${escapeProfileHtml(message)}
+    </div>
+  `;
+
+  if (error) {
+    console.error(message);
+  }
+}
+
+async function loadProfile() {
+
+  const user =
+    typeof window.protect ===
+    "function"
+      ? protect()
+      : null;
+
+  if (!user) {
+    return;
+  }
+
+  try {
+
+    const response =
+      await apiFetch(
+        "/users/me"
+      );
+
+    let result = {};
+
+    try {
+      result =
+        await response.json();
+    } catch {
+      result = {};
+    }
+
+    if (
+      !response.ok ||
+      !result.success
+    ) {
+      throw new Error(
+        result.message ||
+        "Unable to load profile."
+      );
+    }
+
+    const profile =
+      result.data || {};
+
+    document.querySelector(
+      "#profileName"
+    ).value =
+      profile.name || "";
+
+    document.querySelector(
+      "#profileEmail"
+    ).value =
+      profile.email || "";
+
+    document.querySelector(
+      "#profilePhone"
+    ).value =
+      profile.phone || "";
+
+    document.querySelector(
+      "#profileLocation"
+    ).value =
+      profile.location || "";
+
+  } catch (error) {
+
+    showProfileMessage(
+      error.message ||
+      "Unable to load profile.",
+      true
+    );
+
+  }
+}
+
+async function saveProfile(
+  event
+) {
+
+  event.preventDefault();
+
+  const button =
+    document.querySelector(
+      "#saveProfileButton"
+    );
+
+  const name =
+    document.querySelector(
+      "#profileName"
+    ).value.trim();
+
+  const phone =
+    document.querySelector(
+      "#profilePhone"
+    ).value.trim();
+
+  const location =
+    document.querySelector(
+      "#profileLocation"
+    ).value.trim();
+
+  if (name.length < 2) {
+    showProfileMessage(
+      "Please enter a valid name.",
+      true
+    );
+
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+    button.textContent =
+      "Saving...";
+  }
+
+  try {
+
+    const response =
+      await apiFetch(
+        "/users/me",
+        {
+          method: "PATCH",
+
+          body:
+            JSON.stringify({
+              name,
+              phone,
+              location
+            })
+        }
+      );
+
+    let result = {};
+
+    try {
+      result =
+        await response.json();
+    } catch {
+      result = {};
+    }
+
+    if (
+      !response.ok ||
+      !result.success
+    ) {
+      throw new Error(
+        result.message ||
+        "Unable to update profile."
+      );
+    }
+
+    if (
+      typeof window.setCurrentUser ===
+      "function"
+    ) {
+      window.setCurrentUser(
+        result.data
+      );
+    }
+
+    showProfileMessage(
+      result.message ||
+      "Profile updated successfully."
+    );
+
+  } catch (error) {
+
+    showProfileMessage(
+      error.message ||
+      "Unable to update profile.",
+      true
+    );
+
+  } finally {
+
+    if (button) {
+      button.disabled = false;
+      button.textContent =
+        "Save Profile";
+    }
+
+  }
+}
+
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    const form =
+      document.querySelector(
+        "#profileForm"
+      );
+
+    if (form) {
+      form.addEventListener(
+        "submit",
+        saveProfile
+      );
+    }
+
+    loadProfile();
+
+  }
+);
+
+</script>
 
 </body>
-
 </html>
