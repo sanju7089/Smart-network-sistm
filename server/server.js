@@ -27,34 +27,35 @@ import jobRoutes from "./routes/jobs.js";
 import paymentRoutes from "./routes/payments.js";
 import userRoutes from "./routes/users.js";
 import workerRoutes from "./routes/workers.js";
+import supportRoutes from "./routes/support.js";
+import earningsRoutes from "./routes/earnings.js";
 
 dotenv.config();
 
 const app = express();
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT =
+  Number(process.env.PORT) || 3000;
 
 const isProduction =
   process.env.NODE_ENV === "production";
 
-const allowedOrigins = String(
-  process.env.ALLOWED_ORIGINS || ""
-)
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const allowedOrigins =
+  String(
+    process.env.ALLOWED_ORIGINS || ""
+  )
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
-if (isProduction && allowedOrigins.length === 0) {
+if (
+  isProduction &&
+  allowedOrigins.length === 0
+) {
   throw new Error(
     "ALLOWED_ORIGINS must be configured in production."
   );
 }
-
-/*
-========================================
-BASIC SECURITY
-========================================
-*/
 
 app.disable("x-powered-by");
 
@@ -66,30 +67,13 @@ app.use(
 
 app.use(securityHeaders);
 
-/*
-========================================
-CORS
-========================================
-*/
-
 app.use(
   cors({
     origin(origin, callback) {
-      /*
-       Server-to-server requests,
-       Razorpay webhook requests,
-       health checks and command-line
-       requests may not have an Origin.
-      */
       if (!origin) {
         return callback(null, true);
       }
 
-      /*
-       Development mode:
-       allow all origins only when
-       ALLOWED_ORIGINS is not configured.
-      */
       if (
         !isProduction &&
         allowedOrigins.length === 0
@@ -97,13 +81,16 @@ app.use(
         return callback(null, true);
       }
 
-      if (allowedOrigins.includes(origin)) {
+      if (
+        allowedOrigins.includes(origin)
+      ) {
         return callback(null, true);
       }
 
-      const error = new Error(
-        "Origin not allowed by CORS."
-      );
+      const error =
+        new Error(
+          "Origin not allowed by CORS."
+        );
 
       error.status = 403;
 
@@ -131,30 +118,18 @@ app.use(
 /*
 ========================================
 RAZORPAY WEBHOOK
-IMPORTANT:
-This route MUST come before
-express.json() because Razorpay
-signature verification requires
-the original raw request body.
+MUST BE BEFORE express.json()
 ========================================
 */
 
 app.post(
   "/api/payments/razorpay/webhook",
-
   express.raw({
     type: "application/json",
     limit: "1mb"
   }),
-
   razorpayWebhook
 );
-
-/*
-========================================
-REQUEST PARSING
-========================================
-*/
 
 app.use(
   express.json({
@@ -169,67 +144,60 @@ app.use(
   })
 );
 
-/*
-========================================
-REQUEST LOGGING
-========================================
-*/
-
 app.use(requestLogger);
 
-/*
-========================================
-ROOT API
-========================================
-*/
+app.get(
+  "/",
+  (req, res) => {
+    return res.status(200).json({
+      success: true,
+      message:
+        "Smart Work Network API is running",
+      version: "2.0.0",
+      timestamp:
+        new Date().toISOString()
+    });
+  }
+);
 
-app.get("/", (req, res) => {
-  return res.status(200).json({
-    success: true,
-    message: "Smart Work Network API is running",
-    version: "2.0.0",
-    timestamp: new Date().toISOString()
-  });
-});
+app.get(
+  "/api/health",
+  (req, res) => {
+    const database =
+      getDatabaseStatus();
 
-/*
-========================================
-HEALTH API
-========================================
-*/
+    const healthy =
+      database.status ===
+      "connected";
 
-app.get("/api/health", (req, res) => {
-  const database = getDatabaseStatus();
+    return res.status(
+      healthy ? 200 : 503
+    ).json({
+      success: healthy,
 
-  const isHealthy =
-    database.status === "connected";
-
-  return res.status(
-    isHealthy ? 200 : 503
-  ).json({
-    success: isHealthy,
-
-    status:
-      isHealthy
+      status: healthy
         ? "healthy"
         : "unhealthy",
 
-    application: "Smart Work Network API",
+      application:
+        "Smart Work Network API",
 
-    environment:
-      process.env.NODE_ENV ||
-      "development",
+      environment:
+        process.env.NODE_ENV ||
+        "development",
 
-    database,
+      database,
 
-    uptime: Math.floor(
-      process.uptime()
-    ),
+      uptime:
+        Math.floor(
+          process.uptime()
+        ),
 
-    timestamp:
-      new Date().toISOString()
-  });
-});
+      timestamp:
+        new Date().toISOString()
+    });
+  }
+);
 
 /*
 ========================================
@@ -237,41 +205,54 @@ API ROUTES
 ========================================
 */
 
-app.use("/api/auth", authRoutes);
+app.use(
+  "/api/auth",
+  authRoutes
+);
 
-app.use("/api/admin", adminRoutes);
+app.use(
+  "/api/admin",
+  adminRoutes
+);
 
-app.use("/api/bookings", bookingRoutes);
+app.use(
+  "/api/bookings",
+  bookingRoutes
+);
 
-app.use("/api/jobs", jobRoutes);
+app.use(
+  "/api/jobs",
+  jobRoutes
+);
 
-app.use("/api/payments", paymentRoutes);
+app.use(
+  "/api/payments",
+  paymentRoutes
+);
 
-app.use("/api/users", userRoutes);
+app.use(
+  "/api/users",
+  userRoutes
+);
 
-app.use("/api/workers", workerRoutes);
+app.use(
+  "/api/workers",
+  workerRoutes
+);
 
-/*
-========================================
-404 HANDLER
-========================================
-*/
+app.use(
+  "/api/support",
+  supportRoutes
+);
+
+app.use(
+  "/api/earnings",
+  earningsRoutes
+);
 
 app.use(notFound);
 
-/*
-========================================
-GLOBAL ERROR HANDLER
-========================================
-*/
-
 app.use(errorHandler);
-
-/*
-========================================
-SERVER
-========================================
-*/
 
 let server;
 let shuttingDown = false;
@@ -280,19 +261,22 @@ async function startServer() {
   try {
     await connectDatabase();
 
-    server = app.listen(PORT, () => {
-      console.log(
-        `Smart Work Network API running on port ${PORT}`
-      );
+    server =
+      app.listen(
+        PORT,
+        () => {
+          console.log(
+            `Smart Work Network API running on port ${PORT}`
+          );
 
-      console.log(
-        `Environment: ${
-          process.env.NODE_ENV ||
-          "development"
-        }`
+          console.log(
+            `Environment: ${
+              process.env.NODE_ENV ||
+              "development"
+            }`
+          );
+        }
       );
-    });
-
   } catch (error) {
     console.error(
       "Failed to start server:",
@@ -303,13 +287,9 @@ async function startServer() {
   }
 }
 
-/*
-========================================
-GRACEFUL SHUTDOWN
-========================================
-*/
-
-async function shutdown(signal) {
+async function shutdown(
+  signal
+) {
   if (shuttingDown) return;
 
   shuttingDown = true;
@@ -320,17 +300,21 @@ async function shutdown(signal) {
 
   try {
     if (server) {
-      await new Promise((resolve, reject) => {
-        server.close((error) => {
-          if (error) {
-            return reject(error);
-          }
+      await new Promise(
+        (resolve, reject) => {
+          server.close(
+            (error) => {
+              if (error) {
+                return reject(
+                  error
+                );
+              }
 
-          resolve();
-        });
-      });
-
-      console.log("HTTP server closed.");
+              resolve();
+            }
+          );
+        }
+      );
     }
 
     await disconnectDatabase();
@@ -340,7 +324,6 @@ async function shutdown(signal) {
     );
 
     process.exit(0);
-
   } catch (error) {
     console.error(
       "Graceful shutdown failed:",
@@ -351,13 +334,15 @@ async function shutdown(signal) {
   }
 }
 
-process.on("SIGTERM", () => {
-  shutdown("SIGTERM");
-});
+process.on(
+  "SIGTERM",
+  () => shutdown("SIGTERM")
+);
 
-process.on("SIGINT", () => {
-  shutdown("SIGINT");
-});
+process.on(
+  "SIGINT",
+  () => shutdown("SIGINT")
+);
 
 process.on(
   "unhandledRejection",
@@ -377,7 +362,9 @@ process.on(
       error
     );
 
-    shutdown("UNCAUGHT_EXCEPTION");
+    shutdown(
+      "UNCAUGHT_EXCEPTION"
+    );
   }
 );
 
