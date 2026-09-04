@@ -13,16 +13,54 @@ import {
   getAllPayments
 } from "../controllers/paymentController.js";
 
-const router =
-  express.Router();
+const router = express.Router();
 
-router.use(
-  requireAuth
+router.use(requireAuth);
+
+/*
+========================================
+RAZORPAY PUBLIC CONFIG
+========================================
+
+RAZORPAY_KEY_ID is safe to expose to the
+frontend. NEVER expose RAZORPAY_KEY_SECRET.
+========================================
+*/
+
+router.get(
+  "/razorpay/config",
+  (req, res) => {
+    const keyId = String(
+      process.env.RAZORPAY_KEY_ID || ""
+    ).trim();
+
+    const currency = String(
+      process.env.PAYMENT_CURRENCY || "INR"
+    )
+      .trim()
+      .toUpperCase();
+
+    if (!keyId) {
+      return res.status(500).json({
+        success: false,
+        message:
+          "Razorpay public key is not configured."
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        keyId,
+        currency
+      }
+    });
+  }
 );
 
 /*
 ========================================
-MY PAYMENTS
+PAYMENT HISTORY
 ========================================
 */
 
@@ -33,11 +71,8 @@ router.get(
 
 /*
 ========================================
-ADMIN PAYMENTS
+ADMIN PAYMENT HISTORY
 ========================================
-
-IMPORTANT:
-Admin-only protection.
 */
 
 router.get(
@@ -48,7 +83,7 @@ router.get(
 
 /*
 ========================================
-RAZORPAY ORDER
+CREATE RAZORPAY ORDER
 ========================================
 */
 
@@ -59,7 +94,7 @@ router.post(
 
 /*
 ========================================
-RAZORPAY PAYMENT VERIFICATION
+VERIFY RAZORPAY PAYMENT
 ========================================
 */
 
@@ -70,7 +105,7 @@ router.post(
 
 /*
 ========================================
-SINGLE PAYMENT
+PAYMENT BY ID
 ========================================
 */
 
