@@ -1,7 +1,8 @@
 import express from "express";
 
 import {
-  requireAuth
+  requireAuth,
+  optionalAuth
 } from "../middleware/authMiddleware.js";
 
 import {
@@ -15,23 +16,38 @@ import {
 const router = express.Router();
 
 /*
-  Public listing.
+========================================
+PUBLIC / OPTIONAL AUTH JOB LIST
+========================================
 
-  Authentication middleware optional
-  नहीं रखा गया है क्योंकि public users
-  को open jobs देखने हैं.
+Without token:
+    public open jobs
+
+With token + customerId:
+    authenticated customer jobs
 */
 
-router.get("/", getJobs);
+router.get(
+  "/",
+  optionalAuth,
+  getJobs
+);
 
 /*
-  Public open job details.
+========================================
+SINGLE JOB
+========================================
 */
 
-router.get("/:id", getJobById);
+router.get(
+  "/:id",
+  getJobById
+);
 
 /*
-  Protected operations.
+========================================
+CREATE JOB
+========================================
 */
 
 router.post(
@@ -40,11 +56,23 @@ router.post(
   createJob
 );
 
+/*
+========================================
+UPDATE JOB
+========================================
+*/
+
 router.patch(
   "/:id",
   requireAuth,
   updateJob
 );
+
+/*
+========================================
+DELETE JOB
+========================================
+*/
 
 router.delete(
   "/:id",
