@@ -1,6 +1,6 @@
+"use strict";
+
 const SWN_CONFIG = Object.freeze({
-  // Production backend only.
-  // Frontend never falls back to localhost.
   API_URL: "https://smart-network-sistm.onrender.com/api"
 });
 
@@ -11,23 +11,23 @@ const SWN = {
 
   api(path = "") {
     const base = SWN_CONFIG.API_URL.replace(/\/$/, "");
+    const cleanPath = String(path || "").trim();
 
-    const cleanPath = String(path || "");
+    if (!cleanPath) {
+      return base;
+    }
 
-    const endpoint = cleanPath.startsWith("/")
-      ? cleanPath
-      : `/${cleanPath}`;
-
-    return `${base}${endpoint}`;
+    return `${base}${
+      cleanPath.startsWith("/")
+        ? cleanPath
+        : `/${cleanPath}`
+    }`;
   },
 
   get(key, defaultValue = null) {
     try {
       const value = localStorage.getItem(key);
-
-      return value
-        ? JSON.parse(value)
-        : defaultValue;
+      return value ? JSON.parse(value) : defaultValue;
     } catch {
       return defaultValue;
     }
@@ -49,11 +49,11 @@ const SWN = {
         return window.getCurrentUser();
       }
 
-      const user =
+      const value =
         localStorage.getItem("swn_user");
 
-      return user
-        ? JSON.parse(user)
+      return value
+        ? JSON.parse(value)
         : null;
     } catch {
       return null;
@@ -68,61 +68,179 @@ const SWN = {
       return window.getAuthToken();
     }
 
-    return localStorage.getItem("swn_token");
+    return localStorage.getItem(
+      "swn_token"
+    );
   },
 
-  authHeaders(extraHeaders = {}) {
-    const headers = {
-      "Content-Type": "application/json",
-      ...extraHeaders
-    };
+  clearAuth() {
+    localStorage.removeItem(
+      "swn_token"
+    );
+
+    localStorage.removeItem(
+      "swn_user"
+    );
+  },
+
+  authHeaders(
+    extraHeaders = {},
+    hasBody = false
+  ) {
+    const headers = new Headers(
+      extraHeaders || {}
+    );
 
     const token = this.token();
 
-    if (token) {
-      headers.Authorization =
-        `Bearer ${token}`;
+    if (
+      hasBody &&
+      !headers.has("Content-Type")
+    ) {
+      headers.set(
+        "Content-Type",
+        "application/json"
+      );
     }
+
+    if (
+      token &&
+      !headers.has("Authorization")
+    ) {
+      headers.set(
+        "Authorization",
+        `Bearer ${token}`
+      );
+    }
+
+    headers.set(
+      "Accept",
+      "application/json"
+    );
 
     return headers;
   },
 
-  async request(path, options = {}) {
-    const response = await fetch(
-      this.api(path),
-      {
-        ...options,
+  async raw(path, options = {}) {
+    const requestOptions = {
+      ...options
+    };
 
-        headers: this.authHeaders(
-          options.headers || {}
-        )
-      }
-    );
+    const hasBody =
+      requestOptions.body !== undefined &&
+      requestOptions.body !== null;
 
-    let data = null;
+    const isFormData =
+      typeof FormData !== "undefined" &&
+      requestOptions.body instanceof FormData;
 
-    try {
-      const contentType =
-        response.headers.get(
-          "content-type"
-        ) || "";
+    if (isFormData) {
+      requestOptions.headers =
+        new Headers(
+          requestOptions.headers || {}
+        );
 
-      if (
-        contentType.includes(
-          "application/json"
-        )
-      ) {
-        data = await response.json();
-      }
-    } catch {
-      data = null;
+      requestOptions.headers.delete(
+        "Content-Type"
+      );
     }
 
+    requestOptions.headers =
+      this.authHeaders(
+        requestOptions.headers || {},
+        hasBody && !isFormData
+      );
+
+    let response;
+
+    try {
+      response = await fetch(
+        this.api(path),
+        requestOptions
+      );
+    } catch (error) {
+      const networkError = new Error(
+        "Unable to connect to the server. Please check your internet connection and try again."
+      );
+
+      networkError.cause = error;
+
+      throw networkError;
+    }
+
+    if (response.status === 401) {
+      this.clearAuth();
+    }
+
+    return response;
+  },
+
+  async parseResponse(response) {
+    if (!response) {
+      return null;
+    }
+
+    const contentType =
+      response.headers.get(
+        "content-type"
+      ) || "";
+
+    if (
+      contentType.includes(
+        "application/json"
+      )
+    ) {
+      try {
+        return await response.json();
+      } catch {
+        return null;
+      }
+    }
+
+    try {
+      const text =
+        await response.text();
+
+      return text
+        ? { message: text }
+        : null;
+    } catch {
+      return null;
+    }
+  },
+
+  async request(
+    path,
+    options = {}
+  ) {
+    const response =
+      await this.raw(
+        path,
+        options
+      );
+
+    const data =
+      await this.parseResponse(
+        response
+      );
+
     if (!response.ok) {
-      throw new Error(
+      const error = new Error(
         data?.message ||
+        data?.error ||
         `Request failed with status ${response.status}`
       );
+
+      error.status =
+        response.status;
+
+      error.response =
+        response;
+
+      error.data =
+        data;
+
+      throw error;
     }
 
     return data;
@@ -138,20 +256,16 @@ const SWN = {
       return;
     }
 
-    localStorage.removeItem(
-      "swn_token"
-    );
-
-    localStorage.removeItem(
-      "swn_user"
-    );
+    this.clearAuth();
 
     window.location.href =
       "login.html";
   },
 
   flash(message) {
-    alert(message);
+    alert(
+      String(message || "")
+    );
   }
 };
 
@@ -205,7 +319,8 @@ function authBox() {
     return;
   }
 
-  const user = SWN.user();
+  const user =
+    SWN.user();
 
   if (user) {
     element.innerHTML = `
@@ -215,9 +330,9 @@ function authBox() {
         )}
       </span>
 
-      <a
-        href="${dashboardUrl(user)}"
-      >
+      <a href="${dashboardUrl(
+        user
+      )}">
         Dashboard
       </a>
 
@@ -269,8 +384,11 @@ function redirectToCorrectDashboard(
 }
 
 function protect(role = null) {
-  const user = SWN.user();
-  const token = SWN.token();
+  const user =
+    SWN.user();
+
+  const token =
+    SWN.token();
 
   if (!user || !token) {
     window.location.href =
@@ -294,7 +412,8 @@ function protect(role = null) {
 }
 
 async function verifyAuth() {
-  const token = SWN.token();
+  const token =
+    SWN.token();
 
   if (!token) {
     return null;
@@ -315,13 +434,7 @@ async function verifyAuth() {
       error
     );
 
-    localStorage.removeItem(
-      "swn_token"
-    );
-
-    localStorage.removeItem(
-      "swn_user"
-    );
+    SWN.clearAuth();
 
     return null;
   }
@@ -332,9 +445,7 @@ document.addEventListener(
   async () => {
     authBox();
 
-    const token = SWN.token();
-
-    if (token) {
+    if (SWN.token()) {
       const user =
         await verifyAuth();
 
@@ -348,7 +459,8 @@ document.addEventListener(
 window.SWN_CONFIG =
   SWN_CONFIG;
 
-window.SWN = SWN;
+window.SWN =
+  SWN;
 
 window.protect =
   protect;
