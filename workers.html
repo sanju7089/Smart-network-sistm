@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
@@ -9,12 +9,215 @@
     content="width=device-width, initial-scale=1"
   >
 
-  <title>Workers | Smart Work Network</title>
+  <title>Find Workers | Smart Work Network</title>
+
+  <meta
+    name="description"
+    content="Find verified and available workers on Smart Work Network."
+  >
 
   <link
     rel="stylesheet"
     href="css/main.css"
   >
+
+  <style>
+    .workers-page {
+      padding: 28px 0 60px;
+    }
+
+    .workers-filters {
+      display: grid;
+      grid-template-columns:
+        minmax(180px, 2fr)
+        minmax(150px, 1fr)
+        minmax(150px, 1fr)
+        minmax(150px, 1fr)
+        minmax(150px, 1fr);
+      gap: 12px;
+      margin: 22px 0;
+      padding: 18px;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .workers-filter-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .workers-filter-field label {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .workers-filter-field input,
+    .workers-filter-field select {
+      width: 100%;
+      min-height: 44px;
+      box-sizing: border-box;
+      padding: 9px 12px;
+      border: 1px solid #d7dce2;
+      border-radius: 9px;
+      background: #fff;
+      font: inherit;
+    }
+
+    .workers-filter-actions {
+      display: flex;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .workers-filter-actions button {
+      min-height: 44px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 9px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+    }
+
+    .workers-search-button {
+      background: #111827;
+      color: #fff;
+    }
+
+    .workers-reset-button {
+      background: #eef2f7;
+      color: #111827;
+    }
+
+    .workers-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 18px 0;
+    }
+
+    .workers-list {
+      min-height: 120px;
+    }
+
+    .worker-card {
+      height: 100%;
+    }
+
+    .worker-card-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+
+    .worker-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: #eef2f7;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .worker-badge.verified {
+      background: #e8f7ed;
+      color: #176b35;
+    }
+
+    .worker-badge.available {
+      background: #e8f7ed;
+      color: #176b35;
+    }
+
+    .worker-badge.unavailable {
+      background: #fff0f0;
+      color: #a51d2d;
+    }
+
+    .worker-skills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 12px 0;
+    }
+
+    .worker-skill {
+      display: inline-flex;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .worker-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .worker-actions .btn {
+      text-decoration: none;
+    }
+
+    .worker-pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 28px;
+      flex-wrap: wrap;
+    }
+
+    .worker-pagination button {
+      min-height: 42px;
+      padding: 0 15px;
+      border: 0;
+      border-radius: 8px;
+      background: #111827;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .worker-pagination button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .worker-page-info {
+      font-weight: 700;
+    }
+
+    @media (max-width: 1000px) {
+      .workers-filters {
+        grid-template-columns:
+          repeat(2, minmax(0, 1fr));
+      }
+
+      .workers-filter-actions {
+        align-items: stretch;
+      }
+    }
+
+    @media (max-width: 650px) {
+      .workers-filters {
+        grid-template-columns: 1fr;
+      }
+
+      .workers-filter-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
 </head>
 
 <body>
@@ -53,33 +256,212 @@
   </header>
 
 
-  <main>
+  <main class="workers-page">
 
-    <div class="container page-head">
+    <div class="container">
 
-      <h1>
-        Matched Workers
-      </h1>
+      <div class="page-head">
 
-      <p class="lead">
-        Open a separate worker profile before booking.
-      </p>
+        <h1>
+          Find Workers
+        </h1>
 
-    </div>
-
-
-    <section class="section">
-
-      <div class="container">
-
-        <div
-          class="grid"
-          id="workersList"
-        ></div>
+        <p class="lead">
+          Search workers by service, location,
+          skills and availability.
+        </p>
 
       </div>
 
-    </section>
+
+      <form
+        id="workerSearchForm"
+        class="workers-filters"
+        novalidate
+      >
+
+        <div class="workers-filter-field">
+
+          <label for="workerSearch">
+            Search
+          </label>
+
+          <input
+            id="workerSearch"
+            name="search"
+            type="search"
+            maxlength="200"
+            placeholder="Name, service, skill or location"
+            autocomplete="off"
+          >
+
+        </div>
+
+
+        <div class="workers-filter-field">
+
+          <label for="workerService">
+            Service
+          </label>
+
+          <input
+            id="workerService"
+            name="service"
+            type="text"
+            maxlength="100"
+            placeholder="e.g. Plumber"
+          >
+
+        </div>
+
+
+        <div class="workers-filter-field">
+
+          <label for="workerLocation">
+            Location
+          </label>
+
+          <input
+            id="workerLocation"
+            name="location"
+            type="text"
+            maxlength="200"
+            placeholder="City or area"
+          >
+
+        </div>
+
+
+        <div class="workers-filter-field">
+
+          <label for="workerAvailability">
+            Availability
+          </label>
+
+          <select
+            id="workerAvailability"
+            name="available"
+          >
+            <option value="">
+              Available Workers
+            </option>
+
+            <option value="false">
+              Currently Unavailable
+            </option>
+          </select>
+
+        </div>
+
+
+        <div class="workers-filter-field">
+
+          <label for="workerVerified">
+            Verification
+          </label>
+
+          <select
+            id="workerVerified"
+            name="verified"
+          >
+            <option value="">
+              All Verification
+            </option>
+
+            <option value="true">
+              Verified Only
+            </option>
+
+            <option value="false">
+              Verification Pending
+            </option>
+          </select>
+
+        </div>
+
+
+        <div class="workers-filter-actions">
+
+          <button
+            type="submit"
+            class="workers-search-button"
+          >
+            Search
+          </button>
+
+          <button
+            type="button"
+            id="resetWorkerFilters"
+            class="workers-reset-button"
+          >
+            Reset
+          </button>
+
+        </div>
+
+      </form>
+
+
+      <div class="workers-summary">
+
+        <div>
+          <strong id="workersResultsTitle">
+            Workers
+          </strong>
+
+          <span
+            id="workersResultsSummary"
+            class="muted"
+          >
+            Loading workers...
+          </span>
+        </div>
+
+      </div>
+
+
+      <section
+        id="workersList"
+        class="grid workers-list"
+        aria-live="polite"
+      >
+        <div class="notice">
+          Loading workers...
+        </div>
+      </section>
+
+
+      <nav
+        id="workerPagination"
+        class="worker-pagination"
+        aria-label="Worker pagination"
+        hidden
+      >
+
+        <button
+          type="button"
+          id="workerPrevious"
+        >
+          Previous
+        </button>
+
+        <span
+          id="workerPageInfo"
+          class="worker-page-info"
+        >
+          Page 1
+        </span>
+
+        <button
+          type="button"
+          id="workerNext"
+        >
+          Next
+        </button>
+
+      </nav>
+
+    </div>
 
   </main>
 
@@ -123,4 +505,4 @@
 
 </body>
 
-          </html>
+</html>
