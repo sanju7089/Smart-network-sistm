@@ -31,6 +31,44 @@ function isMeaningful(value) {
   );
 }
 
+function normalizeSkills(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((skill) =>
+        normalizeText(skill, 80)
+      )
+      .filter(Boolean)
+      .slice(0, 30);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((skill) =>
+        normalizeText(skill, 80)
+      )
+      .filter(Boolean)
+      .slice(0, 30);
+  }
+
+  return [];
+}
+
+function uniqueSkills(skills) {
+  const seen = new Set();
+
+  return skills.filter((skill) => {
+    const key = skill.toLowerCase();
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
 function calculateProfileCompleted(worker) {
   return Boolean(
     isMeaningful(worker.name) &&
@@ -62,19 +100,24 @@ function parsePositiveInteger(
     return fallback;
   }
 
-  return Math.min(number, maximum);
+  return Math.min(
+    number,
+    maximum
+  );
 }
 
 function publicWorkerFields() {
   return [
     "name",
     "service",
+    "skills",
     "location",
     "phone",
     "experience",
     "bio",
     "verified",
     "profileCompleted",
+    "isAvailable",
     "createdAt",
     "updatedAt"
   ].join(" ");
@@ -86,12 +129,16 @@ GET PUBLIC WORKERS
 ========================================
 */
 
-export async function getWorkers(req, res) {
+export async function getWorkers(
+  req,
+  res
+) {
   try {
     const {
       service,
       location,
       verified,
+      available,
       search,
       page,
       limit
@@ -99,14 +146,9 @@ export async function getWorkers(req, res) {
 
     const filter = {
       isActive: true,
-      profileCompleted: true
+      profileCompleted: true,
+      isAvailable: true
     };
-
-    if (
-      verified === "true"
-    ) {
-      filter.verified = true;
-    }
 
     if (
       verified !== undefined &&
@@ -121,9 +163,35 @@ export async function getWorkers(req, res) {
     }
 
     if (
+      available !== undefined &&
+      available !== "true" &&
+      available !== "false"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Available must be true or false."
+      });
+    }
+
+    if (
+      verified === "true"
+    ) {
+      filter.verified = true;
+    }
+
+    if (
       verified === "false"
     ) {
       filter.verified = false;
+    }
+
+    /*
+      Public worker discovery defaults
+      to available workers only.
+    */
+    if (available === "false") {
+      filter.isAvailable = false;
     }
 
     if (service) {
@@ -132,7 +200,8 @@ export async function getWorkers(req, res) {
 
       if (value) {
         filter.service = {
-          $regex: escapeRegex(value),
+          $regex:
+            escapeRegex(value),
           $options: "i"
         };
       }
@@ -144,7 +213,8 @@ export async function getWorkers(req, res) {
 
       if (value) {
         filter.location = {
-          $regex: escapeRegex(value),
+          $regex:
+            escapeRegex(value),
           $options: "i"
         };
       }
@@ -179,6 +249,12 @@ export async function getWorkers(req, res) {
           },
           {
             bio: {
+              $regex: safeSearch,
+              $options: "i"
+            }
+          },
+          {
+            skills: {
               $regex: safeSearch,
               $options: "i"
             }
@@ -251,7 +327,6 @@ export async function getWorkers(req, res) {
 
       data: workers
     });
-
   } catch (error) {
     console.error(
       "GET WORKERS ERROR:",
@@ -272,7 +347,10 @@ GET PUBLIC WORKER BY ID
 ========================================
 */
 
-export async function getWorkerById(req, res) {
+export async function getWorkerById(
+  req,
+  res
+) {
   try {
     const { id } = req.params;
 
@@ -306,7 +384,6 @@ export async function getWorkerById(req, res) {
       success: true,
       data: worker
     });
-
   } catch (error) {
     console.error(
       "GET WORKER ERROR:",
@@ -332,6 +409,17 @@ export async function getMyWorkerProfile(
   res
 ) {
   try {
+    if (
+      req.user.role !== "worker" &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Only workers can access a worker profile."
+      });
+    }
+
     const worker =
       await Worker.findOne({
         userId: req.user.id
@@ -349,7 +437,6 @@ export async function getMyWorkerProfile(
       success: true,
       data: worker
     });
-
   } catch (error) {
     console.error(
       "GET MY WORKER PROFILE ERROR:",
@@ -402,10 +489,12 @@ export async function createWorkerProfile(
     const {
       name,
       service,
+      skills,
       location,
       phone,
       experience,
-      bio
+      bio,
+      isAvailable
     } = req.body || {};
 
     const cleanName =
@@ -413,6 +502,11 @@ export async function createWorkerProfile(
 
     const cleanService =
       normalizeText(service, 100);
+
+    const cleanSkills =
+      uniqueSkills(
+        normalizeSkills(skills)
+      );
 
     const cleanLocation =
       normalizeText(location, 200);
@@ -455,27 +549,35 @@ export async function createWorkerProfile(
       });
     }
 
-    const worker = await Worker.create({
-      userId: req.user.id,
+    const worker =
+      await Worker.create({
+        userId: req.user.id,
 
-      name: cleanName,
-      service: cleanService,
-      location: cleanLocation,
-      phone: cleanPhone,
-      experience: cleanExperience,
-      bio: cleanBio,
+        name: cleanName,
+        service: cleanService,
+        skills: cleanSkills,
+        location: cleanLocation,
+        phone: cleanPhone,
+        experience: cleanExperience,
+        bio: cleanBio,
 
-      verified: false,
-      isActive: true,
+        verified: false,
+        isActive: true,
 
-      profileCompleted:
-        calculateProfileCompleted({
-          name: cleanName,
-          service: cleanService,
-          location: cleanLocation,
-          phone: cleanPhone
-        })
-    });
+        isAvailable:
+          typeof isAvailable ===
+          "boolean"
+            ? isAvailable
+            : true,
+
+        profileCompleted:
+          calculateProfileCompleted({
+            name: cleanName,
+            service: cleanService,
+            location: cleanLocation,
+            phone: cleanPhone
+          })
+      });
 
     return res.status(201).json({
       success: true,
@@ -483,7 +585,6 @@ export async function createWorkerProfile(
         "Worker profile created successfully.",
       data: worker
     });
-
   } catch (error) {
     if (error?.code === 11000) {
       return res.status(409).json({
@@ -572,7 +673,8 @@ export async function updateWorkerProfile(
       )
     ) {
       if (
-        req.body?.[field] !== undefined
+        req.body?.[field] !==
+        undefined
       ) {
         updates[field] =
           normalizeText(
@@ -582,12 +684,47 @@ export async function updateWorkerProfile(
       }
     }
 
+    if (
+      req.body?.skills !==
+      undefined
+    ) {
+      updates.skills =
+        uniqueSkills(
+          normalizeSkills(
+            req.body.skills
+          )
+        );
+    }
+
+    /*
+      Availability belongs to the
+      worker and can be changed by
+      the owner.
+    */
+    if (
+      req.body?.isAvailable !==
+      undefined
+    ) {
+      if (
+        typeof req.body.isAvailable !==
+        "boolean"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "isAvailable must be true or false."
+        });
+      }
+
+      updates.isAvailable =
+        req.body.isAvailable;
+    }
+
     /*
       Admin-only fields.
-      Workers cannot verify or disable
-      themselves.
+      Worker cannot verify or
+      deactivate themselves.
     */
-
     if (
       req.user.role === "admin"
     ) {
@@ -609,7 +746,8 @@ export async function updateWorkerProfile(
     }
 
     if (
-      Object.keys(updates).length === 0
+      Object.keys(updates).length ===
+      0
     ) {
       return res.status(400).json({
         success: false,
@@ -660,7 +798,6 @@ export async function updateWorkerProfile(
           : "Worker profile updated. Please complete all required details.",
       data: worker
     });
-
   } catch (error) {
     console.error(
       "UPDATE WORKER PROFILE ERROR:",
@@ -671,6 +808,82 @@ export async function updateWorkerProfile(
       success: false,
       message:
         "Unable to update worker profile."
+    });
+  }
+}
+
+/*
+========================================
+UPDATE MY AVAILABILITY
+========================================
+*/
+
+export async function updateMyAvailability(
+  req,
+  res
+) {
+  try {
+    if (
+      req.user.role !== "worker"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Only workers can change availability."
+      });
+    }
+
+    if (
+      typeof req.body?.isAvailable !==
+      "boolean"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "isAvailable must be true or false."
+      });
+    }
+
+    const worker =
+      await Worker.findOne({
+        userId: req.user.id
+      });
+
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "Worker profile not found."
+      });
+    }
+
+    worker.isAvailable =
+      req.body.isAvailable;
+
+    await worker.save();
+
+    return res.status(200).json({
+      success: true,
+      message:
+        worker.isAvailable
+          ? "You are now available for new bookings."
+          : "You are now unavailable for new bookings.",
+      data: {
+        id: worker._id,
+        isAvailable:
+          worker.isAvailable
+      }
+    });
+  } catch (error) {
+    console.error(
+      "UPDATE WORKER AVAILABILITY ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Unable to update worker availability."
     });
   }
 }
