@@ -1,36 +1,52 @@
+"use strict";
+
 function showMessage(message) {
-  if (window.SWN && typeof SWN.flash === "function") {
+  if (
+    window.SWN &&
+    typeof SWN.flash ===
+      "function"
+  ) {
     SWN.flash(message);
   } else {
-    alert(message);
+    alert(String(message || ""));
   }
 }
 
 function getApiUrl(path) {
-  if (!window.SWN || typeof SWN.api !== "function") {
-    throw new Error("API configuration is not available.");
+  if (
+    !window.SWN ||
+    typeof SWN.api !==
+      "function"
+  ) {
+    throw new Error(
+      "API configuration is not available."
+    );
   }
 
   return SWN.api(path);
 }
 
 function saveAuth(token, user) {
-  localStorage.setItem("swn_token", token);
+  if (!token || !user) {
+    return;
+  }
 
-  // Password कभी localStorage में save नहीं होगा
+  localStorage.setItem(
+    "swn_token",
+    token
+  );
+
   localStorage.setItem(
     "swn_user",
     JSON.stringify(user)
   );
 }
 
-/*
- * Update the currently logged-in user in localStorage.
- * This keeps the frontend auth state synchronized
- * after profile changes.
- */
 function setCurrentUser(user) {
-  if (!user || typeof user !== "object") {
+  if (
+    !user ||
+    typeof user !== "object"
+  ) {
     return null;
   }
 
@@ -43,220 +59,300 @@ function setCurrentUser(user) {
 }
 
 function redirectByRole(user) {
+  if (!user) {
+    window.location.href =
+      "login.html";
+    return;
+  }
+
   if (user.role === "admin") {
-    window.location.href = "admin.html";
+    window.location.href =
+      "admin.html";
     return;
   }
 
   if (user.role === "worker") {
-    window.location.href = "worker-dashboard.html";
+    window.location.href =
+      "worker-dashboard.html";
     return;
   }
 
-  window.location.href = "customer-dashboard.html";
-}
-
-async function readJson(response) {
-  try {
-    return await response.json();
-  } catch {
-    return {};
-  }
+  window.location.href =
+    "customer-dashboard.html";
 }
 
 async function signup() {
   try {
-    const form = document.querySelector("#signupForm");
+    const form =
+      document.querySelector(
+        "#signupForm"
+      );
 
     if (!form) {
-      showMessage("Signup form not found.");
+      showMessage(
+        "Signup form not found."
+      );
       return;
     }
 
-    const data = Object.fromEntries(new FormData(form));
+    const data =
+      Object.fromEntries(
+        new FormData(form)
+      );
 
-    if (!data.name || !data.email || !data.password) {
+    if (
+      !data.name ||
+      !data.email ||
+      !data.password
+    ) {
       showMessage(
         "Name, email and password are required."
       );
       return;
     }
 
-    const response = await fetch(
-      getApiUrl("/auth/register"),
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          name: data.name.trim(),
-          email: data.email.trim(),
-          password: data.password,
-          role: data.role || "customer",
-          phone: data.phone || "",
-          location: data.location || ""
-        })
-      }
-    );
+    const result =
+      await SWN.request(
+        "/auth/register",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            name:
+              String(data.name)
+                .trim(),
 
-    const result = await readJson(response);
+            email:
+              String(data.email)
+                .trim(),
 
-    if (!response.ok || !result.success) {
+            password:
+              data.password,
+
+            role:
+              data.role ||
+              "customer",
+
+            phone:
+              String(
+                data.phone || ""
+              ).trim(),
+
+            location:
+              String(
+                data.location || ""
+              ).trim()
+          })
+        }
+      );
+
+    if (
+      !result ||
+      !result.success
+    ) {
       showMessage(
-        result.message ||
+        result?.message ||
         "Unable to create account."
       );
       return;
     }
 
-    if (!result.token || !result.user) {
+    if (
+      !result.token ||
+      !result.user
+    ) {
       showMessage(
         "Account was created, but authentication data is incomplete."
       );
       return;
     }
 
-    saveAuth(result.token, result.user);
+    saveAuth(
+      result.token,
+      result.user
+    );
 
     showMessage(
       result.message ||
       "Account created successfully."
     );
 
-    redirectByRole(result.user);
+    redirectByRole(
+      result.user
+    );
   } catch (error) {
-    console.error("SIGNUP ERROR:", error);
+    console.error(
+      "SIGNUP ERROR:",
+      error
+    );
 
     showMessage(
-      error.message ===
-      "Production API URL is not configured yet."
-        ? "Server configuration is not complete yet."
-        : "Unable to connect to the server."
+      error.message ||
+      "Unable to connect to the server."
     );
   }
 }
 
 async function login() {
   try {
-    const form = document.querySelector("#loginForm");
+    const form =
+      document.querySelector(
+        "#loginForm"
+      );
 
     if (!form) {
-      showMessage("Login form not found.");
+      showMessage(
+        "Login form not found."
+      );
       return;
     }
 
-    const data = Object.fromEntries(new FormData(form));
+    const data =
+      Object.fromEntries(
+        new FormData(form)
+      );
 
-    if (!data.email || !data.password) {
+    if (
+      !data.email ||
+      !data.password
+    ) {
       showMessage(
         "Email and password are required."
       );
       return;
     }
 
-    const response = await fetch(
-      getApiUrl("/auth/login"),
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          email: data.email.trim(),
-          password: data.password
-        })
-      }
-    );
+    const result =
+      await SWN.request(
+        "/auth/login",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            email:
+              String(data.email)
+                .trim(),
 
-    const result = await readJson(response);
+            password:
+              data.password
+          })
+        }
+      );
 
-    if (!response.ok || !result.success) {
+    if (
+      !result ||
+      !result.success
+    ) {
       showMessage(
-        result.message ||
+        result?.message ||
         "Invalid email or password."
       );
       return;
     }
 
-    if (!result.token || !result.user) {
+    if (
+      !result.token ||
+      !result.user
+    ) {
       showMessage(
         "Login response is incomplete."
       );
       return;
     }
 
-    saveAuth(result.token, result.user);
+    saveAuth(
+      result.token,
+      result.user
+    );
 
     showMessage(
       result.message ||
       "Login successful."
     );
 
-    redirectByRole(result.user);
+    redirectByRole(
+      result.user
+    );
   } catch (error) {
-    console.error("LOGIN ERROR:", error);
+    console.error(
+      "LOGIN ERROR:",
+      error
+    );
 
     showMessage(
-      error.message ===
-      "Production API URL is not configured yet."
-        ? "Server configuration is not complete yet."
-        : "Unable to connect to the server."
+      error.message ||
+      "Unable to connect to the server."
     );
   }
 }
 
 function logout() {
-  localStorage.removeItem("swn_token");
-  localStorage.removeItem("swn_user");
+  if (
+    window.SWN &&
+    typeof SWN.clearAuth ===
+      "function"
+  ) {
+    SWN.clearAuth();
+  } else {
+    localStorage.removeItem(
+      "swn_token"
+    );
 
-  window.location.href = "login.html";
+    localStorage.removeItem(
+      "swn_user"
+    );
+  }
+
+  window.location.href =
+    "login.html";
 }
 
 function getAuthToken() {
-  return localStorage.getItem("swn_token");
+  return localStorage.getItem(
+    "swn_token"
+  );
 }
 
 function getCurrentUser() {
   try {
-    const user = localStorage.getItem("swn_user");
+    const user =
+      localStorage.getItem(
+        "swn_user"
+      );
 
-    return user ? JSON.parse(user) : null;
+    return user
+      ? JSON.parse(user)
+      : null;
   } catch {
     return null;
   }
 }
 
 async function refreshCurrentUser() {
-  const token = getAuthToken();
+  const token =
+    getAuthToken();
 
   if (!token) {
     return null;
   }
 
   try {
-    const response = await fetch(
-      getApiUrl("/auth/me"),
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
+    const result =
+      await SWN.request(
+        "/auth/me"
+      );
+
+    if (
+      !result ||
+      !result.success ||
+      !result.user
+    ) {
+      logout();
+      return null;
+    }
+
+    saveAuth(
+      token,
+      result.user
     );
-
-    const result = await readJson(response);
-
-    if (!response.ok || !result.success) {
-      logout();
-      return null;
-    }
-
-    if (!result.user) {
-      logout();
-      return null;
-    }
-
-    saveAuth(token, result.user);
 
     return result.user;
   } catch (error) {
@@ -265,49 +361,129 @@ async function refreshCurrentUser() {
       error
     );
 
-    return getCurrentUser();
+    if (
+      error.status === 401
+    ) {
+      logout();
+      return null;
+    }
+
+    throw error;
   }
 }
 
-async function apiFetch(path, options = {}) {
-  const token = getAuthToken();
+/*
+ * Raw Response API helper.
+ *
+ * Existing pages such as:
+ * profile.html
+ * checkout.html
+ * earnings.js
+ *
+ * use response.ok and response.json(),
+ * so this function intentionally returns
+ * the native fetch Response.
+ */
+async function apiFetch(
+  path,
+  options = {}
+) {
+  if (
+    window.SWN &&
+    typeof SWN.raw ===
+      "function"
+  ) {
+    return SWN.raw(
+      path,
+      options
+    );
+  }
 
-  const headers = {
-    ...(options.headers || {})
-  };
+  const token =
+    getAuthToken();
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  const headers =
+    new Headers(
+      options.headers || {}
+    );
+
+  const hasBody =
+    options.body !== undefined &&
+    options.body !== null;
+
+  if (
+    hasBody &&
+    !headers.has(
+      "Content-Type"
+    )
+  ) {
+    headers.set(
+      "Content-Type",
+      "application/json"
+    );
   }
 
   if (
-    options.body &&
-    !headers["Content-Type"]
+    token &&
+    !headers.has(
+      "Authorization"
+    )
   ) {
-    headers["Content-Type"] = "application/json";
+    headers.set(
+      "Authorization",
+      `Bearer ${token}`
+    );
   }
 
-  const response = await fetch(
-    getApiUrl(path),
-    {
-      ...options,
-      headers
-    }
+  headers.set(
+    "Accept",
+    "application/json"
   );
 
-  if (response.status === 401) {
-    localStorage.removeItem("swn_token");
-    localStorage.removeItem("swn_user");
+  const response =
+    await fetch(
+      getApiUrl(path),
+      {
+        ...options,
+        headers
+      }
+    );
+
+  if (
+    response.status === 401
+  ) {
+    localStorage.removeItem(
+      "swn_token"
+    );
+
+    localStorage.removeItem(
+      "swn_user"
+    );
   }
 
   return response;
 }
 
-window.signup = signup;
-window.login = login;
-window.logout = logout;
-window.getAuthToken = getAuthToken;
-window.getCurrentUser = getCurrentUser;
-window.setCurrentUser = setCurrentUser;
-window.refreshCurrentUser = refreshCurrentUser;
-window.apiFetch = apiFetch;
+window.signup =
+  signup;
+
+window.login =
+  login;
+
+window.logout =
+  logout;
+
+window.getAuthToken =
+  getAuthToken;
+
+window.getCurrentUser =
+  getCurrentUser;
+
+window.setCurrentUser =
+  setCurrentUser;
+
+window.refreshCurrentUser =
+  refreshCurrentUser;
+
+window.apiFetch =
+  apiFetch;
