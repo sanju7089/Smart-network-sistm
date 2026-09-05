@@ -17,14 +17,15 @@ const router = express.Router();
 
 /*
 ========================================
-PUBLIC / OPTIONAL AUTH JOB LIST
+JOB LIST
 ========================================
 
 Without token:
-    public open jobs
+    Only public OPEN jobs.
 
 With token + customerId:
-    authenticated customer jobs
+    Only that authenticated customer's
+    own jobs, or admin jobs access.
 */
 
 router.get(
@@ -33,16 +34,23 @@ router.get(
   getJobs
 );
 
+
 /*
 ========================================
 SINGLE JOB
 ========================================
+
+Optional authentication is important
+because the controller allows the owner
+or admin to view non-open jobs.
 */
 
 router.get(
   "/:id",
+  optionalAuth,
   getJobById
 );
+
 
 /*
 ========================================
@@ -56,10 +64,16 @@ router.post(
   createJob
 );
 
+
 /*
 ========================================
 UPDATE JOB
 ========================================
+
+Authentication is required.
+
+The controller performs the actual
+owner/admin authorization check.
 */
 
 router.patch(
@@ -68,10 +82,18 @@ router.patch(
   updateJob
 );
 
+
 /*
 ========================================
 DELETE JOB
 ========================================
+
+Authentication is required.
+
+The controller performs the actual
+owner/admin authorization check and
+blocks deletion when an active booking
+exists.
 */
 
 router.delete(
@@ -79,5 +101,6 @@ router.delete(
   requireAuth,
   deleteJob
 );
+
 
 export default router;
