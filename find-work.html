@@ -1,100 +1,293 @@
 <!doctype html>
-<html lang="en">
 
-<head>
-  <meta charset="utf-8">
+<html lang="en"><head>
+  <meta charset="utf-8"><meta
+name="viewport"
+content="width=device-width, initial-scale=1"
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
+«»
 
-  <title>Find Work | Smart Work Network</title>
-
-  <link
+  <title>Find Work | Smart Work Network</title>  <link
     rel="stylesheet"
     href="css/main.css"
   >
-</head>
+</head><body>  <header class="header"><div class="container nav">
 
-<body>
+  <a
+    class="brand"
+    href="index.html"
+  >
+    Smart Work Network
+  </a>
 
-  <header class="header">
+  <nav class="navlinks">
 
-    <div class="container nav">
+    <a href="services.html">
+      Services
+    </a>
 
-      <a
-        class="brand"
-        href="index.html"
+    <a href="find-help.html">
+      Find Help
+    </a>
+
+    <a href="workers.html">
+      Workers
+    </a>
+
+    <span data-auth></span>
+
+  </nav>
+
+</div>
+
+  </header>  <main><section class="section">
+
+  <div class="container">
+
+    <h1>Find Work</h1>
+
+    <p class="lead">
+      Search and browse available work requests.
+    </p>
+
+
+    <!--
+    ========================================
+    SEARCH + FILTERS
+    ========================================
+    -->
+
+    <div
+      class="card"
+      style="
+        margin-bottom:20px;
+      "
+    >
+
+      <form
+        id="workSearchForm"
+        class="form"
+        autocomplete="off"
       >
-        Smart Work Network
-      </a>
 
-      <nav class="navlinks">
+        <div>
 
-        <a href="services.html">
-          Services
-        </a>
+          <label
+            for="workSearch"
+          >
+            Search Work
+          </label>
 
-        <a href="find-help.html">
-          Find Help
-        </a>
+          <input
+            id="workSearch"
+            name="search"
+            type="search"
+            maxlength="200"
+            placeholder="Search by title, service, location..."
+            autocomplete="off"
+          >
 
-        <a href="workers.html">
-          Workers
-        </a>
+        </div>
 
-        <span data-auth></span>
 
-      </nav>
+        <div
+          style="
+            display:grid;
+            grid-template-columns:
+              repeat(
+                auto-fit,
+                minmax(180px,1fr)
+              );
+            gap:14px;
+          "
+        >
+
+          <div>
+
+            <label
+              for="workCategory"
+            >
+              Category
+            </label>
+
+            <input
+              id="workCategory"
+              name="category"
+              type="text"
+              maxlength="100"
+              placeholder="e.g. Plumbing"
+            >
+
+          </div>
+
+
+          <div>
+
+            <label
+              for="workService"
+            >
+              Service
+            </label>
+
+            <input
+              id="workService"
+              name="service"
+              type="text"
+              maxlength="150"
+              placeholder="e.g. Home Repair"
+            >
+
+          </div>
+
+
+          <div>
+
+            <label
+              for="workLocation"
+            >
+              Location
+            </label>
+
+            <input
+              id="workLocation"
+              name="location"
+              type="text"
+              maxlength="200"
+              placeholder="e.g. Bhopal"
+            >
+
+          </div>
+
+        </div>
+
+
+        <div
+          class="row"
+          style="
+            margin-top:4px;
+          "
+        >
+
+          <button
+            type="submit"
+            class="btn btn-primary"
+          >
+            Search Work
+          </button>
+
+          <button
+            type="button"
+            id="resetWorkFilters"
+            class="btn btn-light"
+          >
+            Reset
+          </button>
+
+        </div>
+
+      </form>
 
     </div>
 
-  </header>
 
+    <!--
+    ========================================
+    RESULTS SUMMARY
+    ========================================
+    -->
 
-  <main>
+    <div
+      class="row between"
+      style="
+        margin-bottom:14px;
+      "
+    >
 
-    <section class="section">
+      <div>
 
-      <div class="container">
+        <strong id="workResultsTitle">
+          Available Work
+        </strong>
 
-        <h1>Find Work</h1>
-
-        <p class="lead">
-          Browse available work requests.
+        <p
+          id="workResultsSummary"
+          class="muted"
+          style="
+            margin:4px 0 0;
+          "
+        >
+          Loading work requests...
         </p>
-
-        <div
-          id="jobsList"
-        ></div>
 
       </div>
 
-    </section>
-
-  </main>
+    </div>
 
 
-  <footer class="footer">
+    <!--
+    ========================================
+    JOB LIST
+    ========================================
+    -->
 
-    <div class="container">
+    <div
+      id="jobsList"
+      class="list"
+    ></div>
 
-      <b>Smart Work Network</b>
 
-      <p>
-        Services • Workers • Work opportunities
-      </p>
+    <!--
+    ========================================
+    PAGINATION
+    ========================================
+    -->
+
+    <div
+      id="workPagination"
+      class="row between"
+      style="
+        margin-top:20px;
+        display:none;
+      "
+    >
+
+      <button
+        type="button"
+        id="workPrevious"
+        class="btn btn-light"
+      >
+        ← Previous
+      </button>
+
+      <span
+        id="workPageInfo"
+        class="muted"
+      >
+        Page 1
+      </span>
+
+      <button
+        type="button"
+        id="workNext"
+        class="btn btn-primary"
+      >
+        Next →
+      </button>
 
     </div>
 
-  </footer>
+  </div>
 
+</section>
 
-  <script src="js/auth.js"></script>
-  <script src="js/app.js"></script>
-  <script src="js/work.js"></script>
+  </main>  <footer class="footer"><div class="container">
 
-</body>
+  <b>Smart Work Network</b>
 
-</html>
+  <p>
+    Services • Workers • Work opportunities
+  </p>
+
+</div>
+
+</footer>  <script src="js/auth.js"></script>  <script src="js/app.js"></script>  <script src="js/work.js"></script></body></html>
