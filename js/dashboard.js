@@ -1,456 +1,520 @@
+"use strict";
+
 function getData(result) {
-if (!result) {
-return [];
-}
+  if (!result || typeof result !== "object") {
+    return {};
+  }
 
-if (Array.isArray(result)) {
-return result;
-}
+  if (result.data && typeof result.data === "object") {
+    return result.data;
+  }
 
-if (Array.isArray(result.data)) {
-return result.data;
-}
-
-return [];
+  return result;
 }
 
 function escapeDashboardHtml(value = "") {
-if (typeof window.escapeHtml === "function") {
-return window.escapeHtml(value);
-}
+  if (typeof window.escapeHtml === "function") {
+    return window.escapeHtml(value);
+  }
 
-return String(value)
-.replace(/&/g, "&")
-.replace(/</g, "<")
-.replace(/>/g, ">")
-.replace(/"/g, """)
-.replace(/'/g, "'");
+  const div = document.createElement("div");
+  div.textContent = String(value);
+  return div.innerHTML;
 }
 
 async function fetchApiData(path) {
-if (typeof window.apiFetch !== "function") {
-throw new Error("API system is not loaded.");
-}
+  try {
+    if (typeof window.apiFetch === "function") {
+      return await window.apiFetch(path);
+    }
 
-const response = await window.apiFetch(path);
+    if (typeof window.SWN !== "undefined" && typeof window.SWN.request === "function") {
+      return await window.SWN.request(path);
+    }
 
-let result = {};
-
-try {
-result = await response.json();
-} catch {
-result = {};
-}
-
-if (!response.ok || result.success === false) {
-throw new Error(
-result.message || "API request failed: ${path}"
-);
-}
-
-return result;
+    throw new Error("API client is not available");
+  } catch (error) {
+    return {
+      ok: false,
+      success: false,
+      message: error?.message || `API request failed: ${path}`,
+      error
+    };
+  }
 }
 
 function showDashboardError(element, message) {
-element.innerHTML = "<div class="notice"> ${escapeDashboardHtml(message)} </div>";
+  if (!element) {
+    return;
+  }
+
+  element.innerHTML = `
+    <div class="dashboard-error" role="alert">
+      <h3>Something went wrong</h3>
+      <p>${escapeDashboardHtml(message || "Unable to load dashboard data.")}</p>
+      <button type="button" onclick="window.location.reload()">Retry</button>
+    </div>
+  `;
 }
 
 function formatNumber(value) {
-return Number(value || 0).toLocaleString("en-IN");
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) {
+    return "0";
+  }
+
+  return new Intl.NumberFormat("en-IN").format(number);
 }
 
 function getJobStatus(job) {
-return String(job?.status || "open").toLowerCase();
+  const status = String(job?.status || "").toLowerCase();
+
+  if (status === "completed") {
+    return "Completed";
+  }
+
+  if (status === "in_progress" || status === "in-progress") {
+    return "In Progress";
+  }
+
+  if (status === "cancelled" || status === "canceled") {
+    return "Cancelled";
+  }
+
+  if (status === "closed") {
+    return "Closed";
+  }
+
+  if (status === "accepted") {
+    return "Accepted";
+  }
+
+  return "Open";
 }
 
 function getBookingStatus(booking) {
-return String(booking?.status || "pending").toLowerCase();
+  const status = String(booking?.status || "").toLowerCase();
+
+  if (status === "completed") {
+    return "Completed";
+  }
+
+  if (status === "in_progress" || status === "in-progress") {
+    return "In Progress";
+  }
+
+  if (status === "confirmed") {
+    return "Confirmed";
+  }
+
+  if (status === "accepted") {
+    return "Accepted";
+  }
+
+  if (status === "rejected") {
+    return "Rejected";
+  }
+
+  if (status === "cancelled" || status === "canceled") {
+    return "Cancelled";
+  }
+
+  return "Pending";
 }
 
 function createStatusCard(label, count) {
-return "<div class="card"> <div class="stat"> ${formatNumber(count)} </div> <p>${escapeDashboardHtml(label)}</p> </div>";
+  return `
+    <div class="dashboard-status-card">
+      <div class="dashboard-status-card__label">
+        ${escapeDashboardHtml(label)}
+      </div>
+      <div class="dashboard-status-card__count">
+        ${formatNumber(count)}
+      </div>
+    </div>
+  `;
 }
 
 async function loadCustomerDashboard(element, user) {
-const customerId =
-user?.id ||
-user?._id ||
-user?.userId;
+  if (!element) {
+    return;
+  }
 
-if (!customerId) {
-throw new Error(
-"Customer account information is missing."
-);
-}
+  const customerId = user?.id || user?._id || user?.userId;
 
-const [
-jobsResult,
-bookingsResult
-] = await Promise.all([
-fetchApiData(
-"/jobs?customerId=${encodeURIComponent(customerId)}"
-),
-fetchApiData("/bookings")
-]);
+  if (!customerId) {
+    showDashboardError(element, "Your account information is incomplete.");
+    return;
+  }
 
-const jobs = getData(jobsResult);
-const bookings = getData(bookingsResult);
+  element.innerHTML = `
+    <div class="dashboard-loading">
+      Loading your dashboard...
+    </div>
+  `;
 
-const activeJobs = jobs.filter((job) =>
-["open", "active"].includes(
-getJobStatus(job)
-)
-);
+  const result = await fetchApiData(
+    `/jobs?customerId=${encodeURIComponent(customerId)}`
+  );
 
-const closedJobs = jobs.filter((job) =>
-[
-"closed",
-"completed",
-"cancelled"
-].includes(
-getJobStatus(job)
-)
-);
+  if (!result || result.ok === false || result.success === false) {
+    showDashboardError(
+      element,
+      result?.message || "Unable to load your jobs."
+    );
+    return;
+  }
 
-const activeBookings = bookings.filter(
-(booking) =>
-![
-"completed",
-"cancelled",
-"rejected"
-].includes(
-getBookingStatus(booking)
-)
-);
+  const data = getData(result);
 
-const completedBookings =
-bookings.filter(
-(booking) =>
-getBookingStatus(booking) ===
-"completed"
-);
+  const jobs = Array.isArray(data)
+    ? data
+    : Array.isArray(data.jobs)
+      ? data.jobs
+      : [];
 
-element.innerHTML = `
-<div class="row between">
-<div>
-<h1>Customer Dashboard</h1>
+  const openJobs = jobs.filter(
+    (job) => String(job?.status || "").toLowerCase() === "open"
+  );
 
-    <p class="lead">
-      Manage your work requests and bookings.
-    </p>
-  </div>
+  const activeJobs = jobs.filter((job) => {
+    const status = String(job?.status || "").toLowerCase();
 
-  <a
-    class="btn btn-primary"
-    href="post-work.html"
-  >
-    Post New Work
-  </a>
-</div>
+    return [
+      "open",
+      "accepted",
+      "in_progress",
+      "in-progress",
+      "confirmed"
+    ].includes(status);
+  });
 
-<div class="grid2">
-  ${createStatusCard(
-    "My Work Requests",
-    jobs.length
-  )}
+  const completedJobs = jobs.filter(
+    (job) => String(job?.status || "").toLowerCase() === "completed"
+  );
 
-  ${createStatusCard(
-    "Active Work",
-    activeJobs.length
-  )}
+  element.innerHTML = `
+    <section class="dashboard-summary">
+      ${createStatusCard("Total Jobs", jobs.length)}
+      ${createStatusCard("Open Jobs", openJobs.length)}
+      ${createStatusCard("Active Jobs", activeJobs.length)}
+      ${createStatusCard("Completed", completedJobs.length)}
+    </section>
 
-  ${createStatusCard(
-    "Active Bookings",
-    activeBookings.length
-  )}
-
-  ${createStatusCard(
-    "Completed Bookings",
-    completedBookings.length
-  )}
-</div>
-
-<br>
-
-<div class="row">
-  <a
-    class="btn"
-    href="bookings.html"
-  >
-    View My Bookings
-  </a>
-
-  <a
-    class="btn"
-    href="find-work.html"
-  >
-    View Work Requests
-  </a>
-</div>
-
-${
-  closedJobs.length
-    ? `
-      <br>
-
-      <div class="notice">
-        ${formatNumber(closedJobs.length)}
-        closed/completed work request(s).
+    <section class="dashboard-section">
+      <div class="dashboard-section__header">
+        <h2>My Jobs</h2>
+        <a href="post-job.html">Post New Job</a>
       </div>
-    `
-    : ""
-}
 
-`;
+      <div class="dashboard-job-list">
+        ${
+          jobs.length
+            ? jobs
+                .map(
+                  (job) => `
+                    <article class="dashboard-job-card">
+                      <h3>${escapeDashboardHtml(job?.title || "Untitled Job")}</h3>
+                      <p>
+                        ${escapeDashboardHtml(
+                          job?.description || "No description available."
+                        )}
+                      </p>
+                      <div class="dashboard-job-meta">
+                        <span>
+                          Status: ${escapeDashboardHtml(getJobStatus(job))}
+                        </span>
+                        ${
+                          job?.budget !== undefined && job?.budget !== null
+                            ? `<span>Budget: ₹${escapeDashboardHtml(job.budget)}</span>`
+                            : ""
+                        }
+                      </div>
+                    </article>
+                  `
+                )
+                .join("")
+            : `
+              <div class="dashboard-empty">
+                <p>You have not posted any jobs yet.</p>
+                <a href="post-job.html">Post Your First Job</a>
+              </div>
+            `
+        }
+      </div>
+    </section>
+  `;
 }
 
 async function loadWorkerDashboard(element) {
-const [
-jobsResult,
-bookingsResult,
-profileResult
-] = await Promise.all([
-fetchApiData("/jobs?status=open"),
-fetchApiData("/bookings"),
-fetchApiData("/workers/me/profile")
-]);
+  if (!element) {
+    return;
+  }
 
-const jobs = getData(jobsResult);
-const bookings = getData(bookingsResult);
-const worker = profileResult?.data || null;
+  element.innerHTML = `
+    <div class="dashboard-loading">
+      Loading worker dashboard...
+    </div>
+  `;
 
-const pendingBookings =
-bookings.filter(
-(booking) =>
-getBookingStatus(booking) ===
-"pending"
-);
+  const [jobsResult, bookingsResult, profileResult] =
+    await Promise.all([
+      fetchApiData("/jobs?status=open"),
+      fetchApiData("/bookings"),
+      fetchApiData("/workers/me/profile")
+    ]);
 
-const activeBookings =
-bookings.filter(
-(booking) =>
-[
-"accepted",
-"confirmed",
-"in_progress"
-].includes(
-getBookingStatus(booking)
-)
-);
+  const jobsData = getData(jobsResult);
+  const bookingsData = getData(bookingsResult);
+  const profileData = getData(profileResult);
 
-const completedBookings =
-bookings.filter(
-(booking) =>
-getBookingStatus(booking) ===
-"completed"
-);
+  const jobs = Array.isArray(jobsData)
+    ? jobsData
+    : Array.isArray(jobsData.jobs)
+      ? jobsData.jobs
+      : [];
 
-const profileCompleted =
-Boolean(
-worker?.profileCompleted
-);
+  const bookings = Array.isArray(bookingsData)
+    ? bookingsData
+    : Array.isArray(bookingsData.bookings)
+      ? bookingsData.bookings
+      : [];
 
-element.innerHTML = `
-<div class="row between">
-<div>
-<h1>Worker Dashboard</h1>
+  const profile =
+    profileData?.worker ||
+    profileData?.profile ||
+    profileData;
 
-    <p class="lead">
-      Manage available work and your bookings.
-    </p>
-  </div>
+  const activeBookings = bookings.filter((booking) => {
+    const status = String(booking?.status || "").toLowerCase();
 
-  <a
-    class="btn btn-primary"
-    href="find-work.html"
-  >
-    Find Work
-  </a>
-</div>
+    return [
+      "pending",
+      "accepted",
+      "confirmed",
+      "in_progress",
+      "in-progress"
+    ].includes(status);
+  });
 
-${
-  !profileCompleted
-    ? `
-      <div class="notice">
-        <h3>
-          ⚠️ Complete Your Worker Profile
-        </h3>
+  const completedBookings = bookings.filter(
+    (booking) =>
+      String(booking?.status || "").toLowerCase() === "completed"
+  );
 
-        <p>
-          Your profile is not complete yet.
-          Complete your service, location and
-          contact details before appearing in
-          the public Workers List.
-        </p>
+  const profileCompleted = Boolean(
+    profile?.profileCompleted
+  );
 
-        <a
-          class="btn btn-primary"
-          href="profile.html"
-        >
-          Complete My Profile
-        </a>
+  element.innerHTML = `
+    <section class="dashboard-summary">
+      ${createStatusCard("Available Jobs", jobs.length)}
+      ${createStatusCard("My Bookings", bookings.length)}
+      ${createStatusCard("Active Work", activeBookings.length)}
+      ${createStatusCard("Completed", completedBookings.length)}
+    </section>
+
+    <section class="dashboard-section">
+      <div class="dashboard-section__header">
+        <h2>Worker Profile</h2>
+        <a href="worker-profile.html?edit=1">Edit My Profile</a>
       </div>
 
-      <br>
-    `
-    : `
-      <div class="notice">
-        ✅ Your worker profile is complete
-        and available for customers.
+      <div class="dashboard-profile-status">
+        ${
+          profileCompleted
+            ? `
+              <p>Your worker profile is complete.</p>
+            `
+            : `
+              <p>Your worker profile is incomplete.</p>
+              <a href="worker-profile.html?edit=1">
+                Complete My Profile
+              </a>
+            `
+        }
+      </div>
+    </section>
+
+    <section class="dashboard-section">
+      <div class="dashboard-section__header">
+        <h2>Available Jobs</h2>
+        <a href="jobs.html">View All Jobs</a>
       </div>
 
-      <br>
-    `
+      <div class="dashboard-job-list">
+        ${
+          jobs.length
+            ? jobs
+                .slice(0, 10)
+                .map(
+                  (job) => `
+                    <article class="dashboard-job-card">
+                      <h3>${escapeDashboardHtml(job?.title || "Untitled Job")}</h3>
+                      <p>
+                        ${escapeDashboardHtml(
+                          job?.description || "No description available."
+                        )}
+                      </p>
+                      <div class="dashboard-job-meta">
+                        ${
+                          job?.budget !== undefined &&
+                          job?.budget !== null
+                            ? `<span>Budget: ₹${escapeDashboardHtml(job.budget)}</span>`
+                            : ""
+                        }
+
+                        ${
+                          job?.location
+                            ? `<span>Location: ${escapeDashboardHtml(
+                                job.location
+                              )}</span>`
+                            : ""
+                        }
+                      </div>
+
+                      ${
+                        job?.id || job?._id
+                          ? `
+                            <a href="job.html?id=${encodeURIComponent(
+                              job.id || job._id
+                            )}">
+                              View Job
+                            </a>
+                          `
+                          : ""
+                      }
+                    </article>
+                  `
+                )
+                .join("")
+            : `
+              <div class="dashboard-empty">
+                <p>No open jobs are currently available.</p>
+              </div>
+            `
+        }
+      </div>
+    </section>
+
+    <section class="dashboard-section">
+      <div class="dashboard-section__header">
+        <h2>Recent Bookings</h2>
+        <a href="bookings.html">View Bookings</a>
+      </div>
+
+      <div class="dashboard-booking-list">
+        ${
+          bookings.length
+            ? bookings
+                .slice(0, 10)
+                .map(
+                  (booking) => `
+                    <article class="dashboard-booking-card">
+                      <h3>
+                        ${escapeDashboardHtml(
+                          booking?.job?.title ||
+                            booking?.jobTitle ||
+                            "Booking"
+                        )}
+                      </h3>
+
+                      <p>
+                        Status:
+                        ${escapeDashboardHtml(
+                          getBookingStatus(booking)
+                        )}
+                      </p>
+                    </article>
+                  `
+                )
+                .join("")
+            : `
+              <div class="dashboard-empty">
+                <p>No bookings found.</p>
+              </div>
+            `
+        }
+      </div>
+    </section>
+  `;
 }
 
-<div class="grid2">
-  ${createStatusCard(
-    "Available Requests",
-    jobs.length
-  )}
+async function initializeDashboard() {
+  const element = document.getElementById("dashboardContent");
 
-  ${createStatusCard(
-    "Pending Requests",
-    pendingBookings.length
-  )}
+  if (!element) {
+    return;
+  }
 
-  ${createStatusCard(
-    "Active Bookings",
-    activeBookings.length
-  )}
+  let user = null;
 
-  ${createStatusCard(
-    "Completed Work",
-    completedBookings.length
-  )}
-</div>
+  if (typeof window.SWN !== "undefined" && typeof window.SWN.user === "function") {
+    user = window.SWN.user();
+  }
 
-<br>
+  if (!user && typeof window.getCurrentUser === "function") {
+    user = window.getCurrentUser();
+  }
 
-<div class="row">
-  <a
-    class="btn btn-primary"
-    href="bookings.html"
-  >
-    Manage My Bookings
-  </a>
+  if (!user) {
+    try {
+      const result = await fetchApiData("/auth/me");
 
-  <a
-    class="btn"
-    href="find-work.html"
-  >
-    Explore Available Work
-  </a>
+      if (result && result.ok !== false && result.success !== false) {
+        const data = getData(result);
 
-  <a
-    class="btn"
-    href="worker-profile.html?edit=1"
-  >
-    Edit My Profile
-  </a>
-</div>
+        user =
+          data?.user ||
+          data?.data?.user ||
+          data;
+      }
+    } catch (error) {
+      user = null;
+    }
+  }
 
-<br>
+  if (!user) {
+    showDashboardError(
+      element,
+      "Please log in to access your dashboard."
+    );
+    return;
+  }
 
-<div class="notice">
-  Your earnings can be viewed from the
-  Earnings section after completed work
-  and successful payments.
-</div>
+  const role = String(
+    user?.role ||
+      user?.userType ||
+      user?.accountType ||
+      ""
+  ).toLowerCase();
 
-`;
-}
+  if (role === "worker") {
+    await loadWorkerDashboard(element);
+    return;
+  }
 
-function initializeDashboard() {
-const element =
-document.querySelector(
-"#dashboardContent"
-);
+  if (role === "customer" || role === "user") {
+    await loadCustomerDashboard(element, user);
+    return;
+  }
 
-if (!element) {
-return;
-}
-
-if (typeof window.protect !== "function") {
-showDashboardError(
-element,
-"Authentication system is not loaded."
-);
-return;
-}
-
-const user = window.protect();
-
-if (!user) {
-return;
-}
-
-const role =
-String(user.role || "").toLowerCase();
-
-if (role === "customer") {
-loadCustomerDashboard(
-element,
-user
-).catch((error) => {
-console.error(
-"CUSTOMER DASHBOARD ERROR:",
-error
-);
+  if (role === "admin") {
+    window.location.href = "admin.html";
+    return;
+  }
 
   showDashboardError(
     element,
-    error.message ||
-      "Unable to load customer dashboard."
+    "Your account role is not supported by this dashboard."
   );
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initializeDashboard();
 });
 
-return;
-
-}
-
-if (role === "worker") {
-loadWorkerDashboard(
-element
-).catch((error) => {
-console.error(
-"WORKER DASHBOARD ERROR:",
-error
-);
-
-  showDashboardError(
-    element,
-    error.message ||
-      "Unable to load worker dashboard."
-  );
-});
-
-return;
-
-}
-
-if (role === "admin") {
-window.location.href =
-"admin.html";
-return;
-}
-
-showDashboardError(
-element,
-"Your account role is not supported."
-);
-}
-
-document.addEventListener(
-"DOMContentLoaded",
-initializeDashboard
-);
-
-window.initializeDashboard =
-initializeDashboard;
-
-window.loadCustomerDashboard =
-loadCustomerDashboard;
-
-window.loadWorkerDashboard =
-loadWorkerDashboard;
+window.initializeDashboard = initializeDashboard;
+window.loadCustomerDashboard = loadCustomerDashboard;
+window.loadWorkerDashboard = loadWorkerDashboard;
