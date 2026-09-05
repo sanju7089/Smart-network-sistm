@@ -1,109 +1,808 @@
-<!doctype html>
-<html>
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Worker Profile - Smart Work Network</title>
 
   <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
+    name="description"
+    content="View and manage worker profile on Smart Work Network."
   >
 
-  <title>Worker Profile | Smart Work Network</title>
+  <link rel="stylesheet" href="css/style.css">
 
-  <link
-    rel="stylesheet"
-    href="css/main.css"
-  >
+  <style>
+    .worker-profile-page {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 24px 16px 60px;
+    }
+
+    .worker-profile-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+      margin-bottom: 24px;
+    }
+
+    .worker-profile-card h1,
+    .worker-profile-card h2 {
+      margin-top: 0;
+    }
+
+    .worker-profile-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .worker-profile-field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .worker-profile-field.full-width {
+      grid-column: 1 / -1;
+    }
+
+    .worker-profile-field label {
+      font-weight: 600;
+    }
+
+    .worker-profile-field input,
+    .worker-profile-field textarea,
+    .worker-profile-field select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 14px;
+      border: 1px solid #d7dce2;
+      border-radius: 10px;
+      font: inherit;
+      background: #fff;
+    }
+
+    .worker-profile-field textarea {
+      min-height: 130px;
+      resize: vertical;
+    }
+
+    .worker-profile-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 22px;
+    }
+
+    .worker-profile-actions button,
+    .worker-profile-actions a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 18px;
+      border-radius: 10px;
+      border: 0;
+      text-decoration: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .worker-profile-actions button {
+      background: #111827;
+      color: #fff;
+    }
+
+    .worker-profile-actions button:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .worker-profile-actions a {
+      background: #eef2f7;
+      color: #111827;
+    }
+
+    .worker-profile-message {
+      display: none;
+      padding: 12px 14px;
+      border-radius: 10px;
+      margin-bottom: 18px;
+    }
+
+    .worker-profile-message.show {
+      display: block;
+    }
+
+    .worker-profile-message.success {
+      background: #eaf8ef;
+      color: #176b35;
+    }
+
+    .worker-profile-message.error {
+      background: #fff0f0;
+      color: #a51d2d;
+    }
+
+    .worker-profile-loading,
+    .worker-profile-empty {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .worker-profile-detail-row {
+      display: flex;
+      gap: 10px;
+      padding: 12px 0;
+      border-bottom: 1px solid #edf0f3;
+    }
+
+    .worker-profile-detail-row:last-child {
+      border-bottom: 0;
+    }
+
+    .worker-profile-detail-label {
+      min-width: 140px;
+      font-weight: 600;
+    }
+
+    .worker-profile-detail-value {
+      flex: 1;
+      word-break: break-word;
+    }
+
+    .worker-profile-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #eef2f7;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .worker-profile-badge.verified {
+      background: #e8f7ed;
+      color: #176b35;
+    }
+
+    .worker-profile-error {
+      background: #fff0f0;
+      color: #a51d2d;
+      padding: 14px;
+      border-radius: 10px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 700px) {
+      .worker-profile-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .worker-profile-field.full-width {
+        grid-column: auto;
+      }
+
+      .worker-profile-detail-row {
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .worker-profile-detail-label {
+        min-width: 0;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-  <header class="header">
+  <main class="worker-profile-page">
 
-    <div class="container nav">
+    <div id="workerProfileMessage" class="worker-profile-message"></div>
 
-      <a
-        class="brand"
-        href="index.html"
-      >
-        Smart Work Network
-      </a>
+    <section id="workerEditSection" class="worker-profile-card" hidden>
+      <h1>Edit Worker Profile</h1>
 
-      <nav class="navlinks">
+      <p>
+        Update your worker information below. Your changes will be saved to
+        your Smart Work Network worker profile.
+      </p>
 
-        <a href="services.html">
-          Services
-        </a>
+      <form id="workerProfileForm" novalidate>
 
-        <a href="find-help.html">
-          Find Help
-        </a>
+        <div class="worker-profile-grid">
 
-        <a href="workers.html">
-          Workers
-        </a>
+          <div class="worker-profile-field">
+            <label for="workerName">Name</label>
+            <input
+              id="workerName"
+              name="name"
+              type="text"
+              maxlength="100"
+              autocomplete="name"
+              required
+            >
+          </div>
 
-        <span data-auth></span>
+          <div class="worker-profile-field">
+            <label for="workerService">Service</label>
+            <input
+              id="workerService"
+              name="service"
+              type="text"
+              maxlength="100"
+              placeholder="e.g. Electrician, Plumber, Driver"
+              required
+            >
+          </div>
 
-      </nav>
+          <div class="worker-profile-field">
+            <label for="workerLocation">Location</label>
+            <input
+              id="workerLocation"
+              name="location"
+              type="text"
+              maxlength="150"
+              autocomplete="address-level2"
+              required
+            >
+          </div>
 
-    </div>
+          <div class="worker-profile-field">
+            <label for="workerPhone">Phone</label>
+            <input
+              id="workerPhone"
+              name="phone"
+              type="tel"
+              maxlength="20"
+              autocomplete="tel"
+              required
+            >
+          </div>
 
-  </header>
+          <div class="worker-profile-field">
+            <label for="workerExperience">Experience</label>
+            <input
+              id="workerExperience"
+              name="experience"
+              type="text"
+              maxlength="100"
+              placeholder="e.g. 5 years"
+            >
+          </div>
 
+          <div class="worker-profile-field full-width">
+            <label for="workerBio">Bio</label>
+            <textarea
+              id="workerBio"
+              name="bio"
+              maxlength="1000"
+              placeholder="Tell customers about your experience and services."
+            ></textarea>
+          </div>
 
-  <main>
+        </div>
 
-    <section class="section">
+        <div class="worker-profile-actions">
+          <button id="saveWorkerProfileButton" type="submit">
+            Save Profile
+          </button>
 
-      <div
-        class="container"
-        id="workerDetail"
-      ></div>
+          <a href="worker-dashboard.html">
+            Back to Dashboard
+          </a>
+        </div>
+
+      </form>
+    </section>
+
+    <section id="workerDetailSection" class="worker-profile-card">
+
+      <div id="workerDetail" class="worker-profile-loading">
+        Loading worker profile...
+      </div>
 
     </section>
 
   </main>
 
-
-  <footer class="footer">
-
-    <div class="container">
-
-      <b>
-        Smart Work Network
-      </b>
-
-      <p>
-        Services • Workers • Work opportunities
-      </p>
-
-      <div class="row">
-
-        <a href="support.html">
-          Support
-        </a>
-
-        <a href="profile.html">
-          Profile
-        </a>
-
-        <a href="urgent-help.html">
-          Urgent Help
-        </a>
-
-      </div>
-
-    </div>
-
-  </footer>
-
-
+  <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
 
-  <script src="js/workers.js"></script>
+  <script>
+    "use strict";
+
+    (() => {
+      const messageElement =
+        document.getElementById("workerProfileMessage");
+
+      const editSection =
+        document.getElementById("workerEditSection");
+
+      const detailSection =
+        document.getElementById("workerDetailSection");
+
+      const detailElement =
+        document.getElementById("workerDetail");
+
+      const form =
+        document.getElementById("workerProfileForm");
+
+      const saveButton =
+        document.getElementById("saveWorkerProfileButton");
+
+      const params = new URLSearchParams(window.location.search);
+
+      const editMode =
+        params.get("edit") === "1" ||
+        params.get("edit") === "true";
+
+      const workerId =
+        params.get("id");
+
+      let currentWorker = null;
+
+      function escapeValue(value) {
+        if (typeof window.escapeHtml === "function") {
+          return window.escapeHtml(value ?? "");
+        }
+
+        const div = document.createElement("div");
+        div.textContent = String(value ?? "");
+        return div.innerHTML;
+      }
+
+      function showMessage(message, type) {
+        if (!messageElement) {
+          return;
+        }
+
+        messageElement.textContent = message || "";
+        messageElement.className =
+          `worker-profile-message show ${type || ""}`;
+      }
+
+      function clearMessage() {
+        if (!messageElement) {
+          return;
+        }
+
+        messageElement.textContent = "";
+        messageElement.className =
+          "worker-profile-message";
+      }
+
+      async function apiRequest(path, options = {}) {
+        if (typeof window.apiFetch === "function") {
+          return window.apiFetch(path, options);
+        }
+
+        if (
+          typeof window.SWN !== "undefined" &&
+          typeof window.SWN.request === "function"
+        ) {
+          return window.SWN.request(path, options);
+        }
+
+        throw new Error("API client is not available.");
+      }
+
+      function getResponseData(result) {
+        if (!result || typeof result !== "object") {
+          return {};
+        }
+
+        if (
+          result.data &&
+          typeof result.data === "object"
+        ) {
+          return result.data;
+        }
+
+        return result;
+      }
+
+      function getWorkerFromResponse(result) {
+        const data = getResponseData(result);
+
+        return (
+          data.worker ||
+          data.profile ||
+          data.data?.worker ||
+          data.data?.profile ||
+          data
+        );
+      }
+
+      function getWorkerId(worker) {
+        return (
+          worker?.id ||
+          worker?._id ||
+          worker?.workerId ||
+          ""
+        );
+      }
+
+      function populateForm(worker) {
+        if (!worker || !form) {
+          return;
+        }
+
+        document.getElementById("workerName").value =
+          worker.name || "";
+
+        document.getElementById("workerService").value =
+          worker.service || "";
+
+        document.getElementById("workerLocation").value =
+          worker.location || "";
+
+        document.getElementById("workerPhone").value =
+          worker.phone || "";
+
+        document.getElementById("workerExperience").value =
+          worker.experience || "";
+
+        document.getElementById("workerBio").value =
+          worker.bio || "";
+      }
+
+      function renderWorkerDetail(worker) {
+        if (!detailElement) {
+          return;
+        }
+
+        if (!worker) {
+          detailElement.innerHTML = `
+            <div class="worker-profile-empty">
+              <h2>Worker Profile Not Found</h2>
+              <p>
+                The requested worker profile could not be found.
+              </p>
+            </div>
+          `;
+          return;
+        }
+
+        const verified =
+          worker.verified === true ||
+          worker.isVerified === true;
+
+        detailElement.innerHTML = `
+          <h1>
+            ${escapeValue(worker.name || "Worker Profile")}
+          </h1>
+
+          ${
+            verified
+              ? `
+                <p>
+                  <span class="worker-profile-badge verified">
+                    Verified Worker
+                  </span>
+                </p>
+              `
+              : ""
+          }
+
+          <div class="worker-profile-detail-row">
+            <div class="worker-profile-detail-label">
+              Service
+            </div>
+            <div class="worker-profile-detail-value">
+              ${escapeValue(worker.service || "Not specified")}
+            </div>
+          </div>
+
+          <div class="worker-profile-detail-row">
+            <div class="worker-profile-detail-label">
+              Location
+            </div>
+            <div class="worker-profile-detail-value">
+              ${escapeValue(worker.location || "Not specified")}
+            </div>
+          </div>
+
+          <div class="worker-profile-detail-row">
+            <div class="worker-profile-detail-label">
+              Phone
+            </div>
+            <div class="worker-profile-detail-value">
+              ${escapeValue(worker.phone || "Not specified")}
+            </div>
+          </div>
+
+          <div class="worker-profile-detail-row">
+            <div class="worker-profile-detail-label">
+              Experience
+            </div>
+            <div class="worker-profile-detail-value">
+              ${escapeValue(worker.experience || "Not specified")}
+            </div>
+          </div>
+
+          <div class="worker-profile-detail-row">
+            <div class="worker-profile-detail-label">
+              About
+            </div>
+            <div class="worker-profile-detail-value">
+              ${escapeValue(worker.bio || "No bio available.")}
+            </div>
+          </div>
+
+          <div class="worker-profile-actions">
+            ${
+              getWorkerId(worker)
+                ? `
+                  <a href="checkout.html?workerId=${encodeURIComponent(
+                    getWorkerId(worker)
+                  )}">
+                    Hire Worker
+                  </a>
+                `
+                : ""
+            }
+          </div>
+        `;
+      }
+
+      async function loadEditProfile() {
+        if (!editSection) {
+          return;
+        }
+
+        clearMessage();
+
+        editSection.hidden = false;
+
+        if (detailSection) {
+          detailSection.hidden = true;
+        }
+
+        try {
+          const result =
+            await apiRequest("/workers/me/profile");
+
+          if (
+            !result ||
+            result.ok === false ||
+            result.success === false
+          ) {
+            throw new Error(
+              result?.message ||
+              "Unable to load your worker profile."
+            );
+          }
+
+          const worker =
+            getWorkerFromResponse(result);
+
+          if (!worker || !getWorkerId(worker)) {
+            throw new Error(
+              "Worker profile was not found."
+            );
+          }
+
+          currentWorker = worker;
+          populateForm(worker);
+
+        } catch (error) {
+          showMessage(
+            error?.message ||
+            "Unable to load worker profile.",
+            "error"
+          );
+        }
+      }
+
+      async function loadPublicProfile() {
+        if (editSection) {
+          editSection.hidden = true;
+        }
+
+        if (detailSection) {
+          detailSection.hidden = false;
+        }
+
+        if (!workerId) {
+          renderWorkerDetail(null);
+          return;
+        }
+
+        try {
+          const result =
+            await apiRequest(
+              `/workers/${encodeURIComponent(workerId)}`
+            );
+
+          if (
+            !result ||
+            result.ok === false ||
+            result.success === false
+          ) {
+            throw new Error(
+              result?.message ||
+              "Unable to load worker profile."
+            );
+          }
+
+          const worker =
+            getWorkerFromResponse(result);
+
+          currentWorker = worker;
+          renderWorkerDetail(worker);
+
+        } catch (error) {
+          detailElement.innerHTML = `
+            <div class="worker-profile-error">
+              ${escapeValue(
+                error?.message ||
+                "Unable to load worker profile."
+              )}
+            </div>
+          `;
+        }
+      }
+
+      async function saveProfile(event) {
+        event.preventDefault();
+
+        if (!currentWorker) {
+          showMessage(
+            "Worker profile is not loaded yet.",
+            "error"
+          );
+          return;
+        }
+
+        const id = getWorkerId(currentWorker);
+
+        if (!id) {
+          showMessage(
+            "Worker profile ID is missing.",
+            "error"
+          );
+          return;
+        }
+
+        const name =
+          document.getElementById("workerName").value.trim();
+
+        const service =
+          document.getElementById("workerService").value.trim();
+
+        const location =
+          document.getElementById("workerLocation").value.trim();
+
+        const phone =
+          document.getElementById("workerPhone").value.trim();
+
+        const experience =
+          document.getElementById("workerExperience").value.trim();
+
+        const bio =
+          document.getElementById("workerBio").value.trim();
+
+        if (!name || !service || !location || !phone) {
+          showMessage(
+            "Name, service, location and phone are required.",
+            "error"
+          );
+          return;
+        }
+
+        const payload = {
+          name,
+          service,
+          location,
+          phone,
+          experience,
+          bio
+        };
+
+        saveButton.disabled = true;
+        saveButton.textContent = "Saving...";
+        clearMessage();
+
+        try {
+          const result =
+            await apiRequest(
+              `/workers/${encodeURIComponent(id)}`,
+              {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+              }
+            );
+
+          if (
+            !result ||
+            result.ok === false ||
+            result.success === false
+          ) {
+            throw new Error(
+              result?.message ||
+              "Unable to save worker profile."
+            );
+          }
+
+          const updatedWorker =
+            getWorkerFromResponse(result);
+
+          currentWorker =
+            updatedWorker &&
+            getWorkerId(updatedWorker)
+              ? updatedWorker
+              : {
+                  ...currentWorker,
+                  ...payload
+                };
+
+          showMessage(
+            "Worker profile updated successfully.",
+            "success"
+          );
+
+          populateForm(currentWorker);
+
+          setTimeout(() => {
+            window.location.href =
+              "worker-dashboard.html";
+          }, 800);
+
+        } catch (error) {
+          showMessage(
+            error?.message ||
+            "Unable to save worker profile.",
+            "error"
+          );
+
+        } finally {
+          saveButton.disabled = false;
+          saveButton.textContent = "Save Profile";
+        }
+      }
+
+      async function initialize() {
+        if (typeof window.protect === "function") {
+          const protectedUser =
+            window.protect(["worker"]);
+
+          if (protectedUser === false) {
+            return;
+          }
+        }
+
+        if (editMode) {
+          await loadEditProfile();
+          return;
+        }
+
+        await loadPublicProfile();
+      }
+
+      if (form) {
+        form.addEventListener(
+          "submit",
+          saveProfile
+        );
+      }
+
+      document.addEventListener(
+        "DOMContentLoaded",
+        initialize
+      );
+
+      window.loadWorkerProfile =
+        initialize;
+    })();
+  </script>
 
 </body>
-
 </html>
