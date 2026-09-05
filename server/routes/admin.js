@@ -7,22 +7,23 @@ import {
 
 import {
   getDashboard,
+  getAdminUsers,
   getAdminJobs,
-  getAdminWorkers
+  getAdminWorkers,
+  getAdminBookings,
+  getAdminPayments,
+  getAdminReport
 } from "../controllers/adminController.js";
 
 const router = express.Router();
 
 router.use(requireAuth);
-
 router.use(requireRole("admin"));
 
 router.get("/", (req, res) => {
   return res.status(200).json({
     success: true,
-
     message: "Admin API is working.",
-
     admin: {
       id: req.user.id,
       email: req.user.email,
@@ -37,6 +38,11 @@ router.get(
 );
 
 router.get(
+  "/users",
+  getAdminUsers
+);
+
+router.get(
   "/jobs",
   getAdminJobs
 );
@@ -44,6 +50,21 @@ router.get(
 router.get(
   "/workers",
   getAdminWorkers
+);
+
+router.get(
+  "/bookings",
+  getAdminBookings
+);
+
+router.get(
+  "/payments",
+  getAdminPayments
+);
+
+router.get(
+  "/reports",
+  getAdminReport
 );
 
 export default router;
