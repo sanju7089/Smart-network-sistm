@@ -11,7 +11,10 @@ function isValidId(id) {
   return mongoose.Types.ObjectId.isValid(id);
 }
 
-function normalizeText(value, maxLength = 2000) {
+function normalizeText(
+  value,
+  maxLength = 2000
+) {
   return String(value ?? "")
     .trim()
     .slice(0, maxLength);
@@ -22,7 +25,8 @@ function parsePositiveInteger(
   fallback,
   maximum
 ) {
-  const number = Number.parseInt(value, 10);
+  const number =
+    Number.parseInt(value, 10);
 
   if (
     !Number.isFinite(number) ||
@@ -31,7 +35,10 @@ function parsePositiveInteger(
     return fallback;
   }
 
-  return Math.min(number, maximum);
+  return Math.min(
+    number,
+    maximum
+  );
 }
 
 function isAdmin(req) {
@@ -304,9 +311,30 @@ export async function createBooking(
       });
     }
 
+    /*
+    ========================================
+    WORKER AVAILABILITY SECURITY CHECK
+    ========================================
+
+    isActive:
+      Admin/account level activation.
+
+    profileCompleted:
+      Worker must have a valid completed profile.
+
+    isAvailable:
+      Worker-controlled ON/OFF switch for
+      accepting NEW bookings.
+
+    All three are checked on the server.
+    Frontend status cannot bypass this check.
+    ========================================
+    */
+
     if (
       !worker.isActive ||
-      !worker.profileCompleted
+      !worker.profileCompleted ||
+      worker.isAvailable !== true
     ) {
       return res.status(409).json({
         success: false,
@@ -323,6 +351,12 @@ export async function createBooking(
       });
     }
 
+    /*
+    ========================================
+    JOB OWNERSHIP CHECK
+    ========================================
+    */
+
     if (
       !isAdmin(req) &&
       String(job.customerId) !==
@@ -335,6 +369,12 @@ export async function createBooking(
       });
     }
 
+    /*
+    ========================================
+    PREVENT SELF BOOKING
+    ========================================
+    */
+
     if (
       String(worker.userId) ===
       String(job.customerId)
@@ -345,6 +385,12 @@ export async function createBooking(
           "You cannot book your own worker profile."
       });
     }
+
+    /*
+    ========================================
+    DUPLICATE BOOKING CHECK
+    ========================================
+    */
 
     const existingBooking =
       await Booking.findOne({
@@ -374,10 +420,12 @@ export async function createBooking(
         workerId,
         status: "pending",
         date: preferredDate,
+
         notes: normalizeText(
           notes,
           2000
         ),
+
         customerMessage:
           finalCustomerMessage
       });
@@ -499,7 +547,8 @@ export async function getBookings(
         });
       }
 
-      filter.workerId = worker._id;
+      filter.workerId =
+        worker._id;
 
       if (status) {
         const requestedStatus =
@@ -560,14 +609,17 @@ export async function getBookings(
         })
         .skip(skip)
         .limit(pageLimit)
+
         .populate(
           "jobId",
           "title description category service location budget status customerId"
         )
+
         .populate(
           "customerId",
           "name email phone location"
         )
+
         .populate(
           "workerId",
           "name service location phone verified"
@@ -600,9 +652,11 @@ export async function getBookings(
           currentPage > 1
       },
 
-      count: bookings.length,
+      count:
+        bookings.length,
 
-      data: bookings
+      data:
+        bookings
     });
 
   } catch (error) {
@@ -630,7 +684,8 @@ export async function getBookingById(
   res
 ) {
   try {
-    const { id } = req.params;
+    const { id } =
+      req.params;
 
     if (!isValidId(id)) {
       return res.status(400).json({
@@ -642,14 +697,17 @@ export async function getBookingById(
 
     const booking =
       await Booking.findById(id)
+
         .populate(
           "jobId",
           "title description category service location budget status customerId"
         )
+
         .populate(
           "customerId",
           "name email phone location"
         )
+
         .populate(
           "workerId",
           "name service location phone verified userId"
@@ -693,7 +751,8 @@ export async function getBookingById(
 
     return res.status(200).json({
       success: true,
-      data: bookingData
+      data:
+        bookingData
     });
 
   } catch (error) {
@@ -721,7 +780,8 @@ export async function updateBookingStatus(
   res
 ) {
   try {
-    const { id } = req.params;
+    const { id } =
+      req.params;
 
     const requestedStatus =
       normalizeText(
@@ -852,7 +912,8 @@ export async function updateBookingStatus(
       success: true,
       message:
         "Booking status updated successfully.",
-      data: booking
+      data:
+        booking
     });
 
   } catch (error) {
@@ -880,7 +941,8 @@ export async function cancelBooking(
   res
 ) {
   try {
-    const { id } = req.params;
+    const { id } =
+      req.params;
 
     if (!isValidId(id)) {
       return res.status(400).json({
@@ -926,7 +988,9 @@ export async function cancelBooking(
         "cancelled",
         "in_progress",
         "rejected"
-      ].includes(booking.status)
+      ].includes(
+        booking.status
+      )
     ) {
       return res.status(409).json({
         success: false,
@@ -950,7 +1014,8 @@ export async function cancelBooking(
       success: true,
       message:
         "Booking cancelled successfully.",
-      data: booking
+      data:
+        booking
     });
 
   } catch (error) {
