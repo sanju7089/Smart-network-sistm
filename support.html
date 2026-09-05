@@ -2,7 +2,6 @@
 <html lang="en">
 
 <head>
-
   <meta charset="utf-8">
 
   <meta
@@ -18,7 +17,6 @@
     rel="stylesheet"
     href="css/main.css"
   >
-
 </head>
 
 <body>
@@ -178,349 +176,345 @@
 <script src="js/auth.js"></script>
 
 <script>
+  "use strict";
 
-function escapeSupportHtml(
-  value = ""
-) {
-  if (
-    typeof window.escapeHtml ===
-    "function"
-  ) {
-    return window.escapeHtml(value);
-  }
+  (() => {
 
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function showSupportMessage(
-  message,
-  error = false
-) {
-  const element =
-    document.querySelector(
-      "#supportMessage"
-    );
-
-  if (!element) return;
-
-  element.innerHTML = `
-    <div class="notice">
-      ${escapeSupportHtml(message)}
-    </div>
-  `;
-
-  if (error) {
-    console.error(message);
-  }
-}
-
-function formatTicketDate(
-  value
-) {
-  if (!value) {
-    return "Unknown";
-  }
-
-  const date =
-    new Date(value);
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return "Unknown";
-  }
-
-  return date.toLocaleString(
-    "en-IN",
-    {
-      dateStyle: "medium",
-      timeStyle: "short"
-    }
-  );
-}
-
-function renderTickets(
-  tickets
-) {
-
-  const list =
-    document.querySelector(
-      "#ticketList"
-    );
-
-  if (!list) return;
-
-  if (!tickets.length) {
-
-    list.innerHTML = `
-      <div class="notice">
-        No support tickets found.
-      </div>
-    `;
-
-    return;
-  }
-
-  list.innerHTML =
-    tickets
-      .map(
-        (ticket) => `
-          <div class="card">
-
-            <div class="row between">
-
-              <h3>
-                ${escapeSupportHtml(
-                  ticket.subject
-                )}
-              </h3>
-
-              <span class="tag">
-                ${escapeSupportHtml(
-                  ticket.status
-                )}
-              </span>
-
-            </div>
-
-            <p>
-              ${escapeSupportHtml(
-                ticket.message
-              )}
-            </p>
-
-            ${
-              ticket.adminReply
-                ? `
-                  <div class="notice">
-
-                    <b>
-                      Support Reply
-                    </b>
-
-                    <p>
-                      ${escapeSupportHtml(
-                        ticket.adminReply
-                      )}
-                    </p>
-
-                  </div>
-                `
-                : ""
-            }
-
-            <p class="muted">
-              Created:
-              ${escapeSupportHtml(
-                formatTicketDate(
-                  ticket.createdAt
-                )
-              )}
-            </p>
-
-          </div>
-        `
-      )
-      .join("");
-}
-
-async function loadTickets() {
-
-  const user =
-    typeof window.protect ===
-    "function"
-      ? protect()
-      : null;
-
-  if (!user) {
-    return;
-  }
-
-  try {
-
-    const response =
-      await apiFetch(
-        "/support"
-      );
-
-    let result = {};
-
-    try {
-      result =
-        await response.json();
-    } catch {
-      result = {};
-    }
-
-    if (
-      !response.ok ||
-      !result.success
+    function escapeSupportHtml(
+      value = ""
     ) {
-      throw new Error(
-        result.message ||
-        "Unable to load support tickets."
-      );
+      if (
+        typeof window.escapeHtml ===
+        "function"
+      ) {
+        return window.escapeHtml(
+          value
+        );
+      }
+
+      const div =
+        document.createElement(
+          "div"
+        );
+
+      div.textContent =
+        String(value);
+
+      return div.innerHTML;
     }
 
-    renderTickets(
-      Array.isArray(result.data)
-        ? result.data
-        : []
-    );
+    function showSupportMessage(
+      message,
+      error = false
+    ) {
+      const element =
+        document.querySelector(
+          "#supportMessage"
+        );
 
-  } catch (error) {
+      if (!element) {
+        return;
+      }
 
-    const list =
-      document.querySelector(
-        "#ticketList"
-      );
-
-    if (list) {
-      list.innerHTML = `
+      element.innerHTML = `
         <div class="notice">
           ${escapeSupportHtml(
-            error.message ||
-            "Unable to load tickets."
+            message
           )}
         </div>
       `;
+
+      if (error) {
+        console.error(message);
+      }
     }
 
-  }
-}
+    function formatTicketDate(
+      value
+    ) {
+      if (!value) {
+        return "Unknown";
+      }
 
-async function createTicket(
-  event
-) {
+      const date =
+        new Date(value);
 
-  event.preventDefault();
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
+        return "Unknown";
+      }
 
-  const subject =
-    document.querySelector(
-      "#supportSubject"
-    ).value.trim();
-
-  const message =
-    document.querySelector(
-      "#supportBody"
-    ).value.trim();
-
-  const button =
-    document.querySelector(
-      "#supportSubmit"
-    );
-
-  if (
-    subject.length < 3 ||
-    message.length < 3
-  ) {
-    showSupportMessage(
-      "Please enter a valid subject and message.",
-      true
-    );
-
-    return;
-  }
-
-  if (button) {
-    button.disabled = true;
-    button.textContent =
-      "Submitting...";
-  }
-
-  try {
-
-    const response =
-      await apiFetch(
-        "/support",
+      return date.toLocaleString(
+        "en-IN",
         {
-          method: "POST",
-
-          body:
-            JSON.stringify({
-              subject,
-              message
-            })
+          dateStyle: "medium",
+          timeStyle: "short"
         }
       );
-
-    let result = {};
-
-    try {
-      result =
-        await response.json();
-    } catch {
-      result = {};
     }
 
-    if (
-      !response.ok ||
-      !result.success
+    function renderTickets(
+      tickets
     ) {
-      throw new Error(
-        result.message ||
-        "Unable to create support ticket."
-      );
+      const list =
+        document.querySelector(
+          "#ticketList"
+        );
+
+      if (!list) {
+        return;
+      }
+
+      if (!tickets.length) {
+        list.innerHTML = `
+          <div class="notice">
+            No support tickets found.
+          </div>
+        `;
+
+        return;
+      }
+
+      list.innerHTML =
+        tickets
+          .map(
+            (ticket) => `
+              <div class="card">
+
+                <div class="row between">
+
+                  <h3>
+                    ${escapeSupportHtml(
+                      ticket.subject
+                    )}
+                  </h3>
+
+                  <span class="tag">
+                    ${escapeSupportHtml(
+                      ticket.status
+                    )}
+                  </span>
+
+                </div>
+
+                <p>
+                  ${escapeSupportHtml(
+                    ticket.message
+                  )}
+                </p>
+
+                ${
+                  ticket.adminReply
+                    ? `
+                      <div class="notice">
+
+                        <b>
+                          Support Reply
+                        </b>
+
+                        <p>
+                          ${escapeSupportHtml(
+                            ticket.adminReply
+                          )}
+                        </p>
+
+                      </div>
+                    `
+                    : ""
+                }
+
+                <p class="muted">
+                  Created:
+                  ${escapeSupportHtml(
+                    formatTicketDate(
+                      ticket.createdAt
+                    )
+                  )}
+                </p>
+
+              </div>
+            `
+          )
+          .join("");
     }
 
-    showSupportMessage(
-      result.message ||
-      "Support ticket created successfully."
+    async function loadTickets() {
+
+      const user =
+        typeof window.protect ===
+        "function"
+          ? window.protect()
+          : null;
+
+      if (!user) {
+        return;
+      }
+
+      try {
+
+        const result =
+          await window.SWN.request(
+            "/support"
+          );
+
+        if (
+          !result ||
+          !result.success
+        ) {
+          throw new Error(
+            result?.message ||
+            "Unable to load support tickets."
+          );
+        }
+
+        renderTickets(
+          Array.isArray(
+            result.data
+          )
+            ? result.data
+            : []
+        );
+
+      } catch (error) {
+
+        const list =
+          document.querySelector(
+            "#ticketList"
+          );
+
+        if (list) {
+          list.innerHTML = `
+            <div class="notice">
+              ${escapeSupportHtml(
+                error?.message ||
+                "Unable to load tickets."
+              )}
+            </div>
+          `;
+        }
+      }
+    }
+
+    async function createTicket(
+      event
+    ) {
+
+      event.preventDefault();
+
+      const subject =
+        document.querySelector(
+          "#supportSubject"
+        ).value.trim();
+
+      const message =
+        document.querySelector(
+          "#supportBody"
+        ).value.trim();
+
+      const button =
+        document.querySelector(
+          "#supportSubmit"
+        );
+
+      if (
+        subject.length < 3 ||
+        message.length < 3
+      ) {
+        showSupportMessage(
+          "Please enter a valid subject and message.",
+          true
+        );
+
+        return;
+      }
+
+      if (button) {
+        button.disabled = true;
+        button.textContent =
+          "Submitting...";
+      }
+
+      try {
+
+        const result =
+          await window.SWN.request(
+            "/support",
+            {
+              method: "POST",
+
+              body:
+                JSON.stringify({
+                  subject,
+                  message
+                })
+            }
+          );
+
+        if (
+          !result ||
+          !result.success
+        ) {
+          throw new Error(
+            result?.message ||
+            "Unable to create support ticket."
+          );
+        }
+
+        showSupportMessage(
+          result.message ||
+          "Support ticket created successfully."
+        );
+
+        document
+          .querySelector(
+            "#supportForm"
+          )
+          .reset();
+
+        await loadTickets();
+
+      } catch (error) {
+
+        showSupportMessage(
+          error?.message ||
+          "Unable to create support ticket.",
+          true
+        );
+
+      } finally {
+
+        if (button) {
+          button.disabled = false;
+          button.textContent =
+            "Submit Ticket";
+        }
+      }
+    }
+
+    document.addEventListener(
+      "DOMContentLoaded",
+      () => {
+
+        const form =
+          document.querySelector(
+            "#supportForm"
+          );
+
+        if (form) {
+          form.addEventListener(
+            "submit",
+            createTicket
+          );
+        }
+
+        loadTickets();
+      }
     );
 
-    document.querySelector(
-      "#supportForm"
-    ).reset();
-
-    loadTickets();
-
-  } catch (error) {
-
-    showSupportMessage(
-      error.message ||
-      "Unable to create support ticket.",
-      true
-    );
-
-  } finally {
-
-    if (button) {
-      button.disabled = false;
-      button.textContent =
-        "Submit Ticket";
-    }
-
-  }
-}
-
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
-
-    const form =
-      document.querySelector(
-        "#supportForm"
-      );
-
-    if (form) {
-      form.addEventListener(
-        "submit",
-        createTicket
-      );
-    }
-
-    loadTickets();
-
-  }
-);
-
+  })();
 </script>
 
 </body>
