@@ -28,25 +28,34 @@ function getRequiredEnv(name) {
 }
 
 function getCurrency() {
-  return String(
-    process.env.PAYMENT_CURRENCY ||
-      "INR"
+  const currency = String(
+    process.env.PAYMENT_CURRENCY || "INR"
   )
     .trim()
     .toUpperCase();
+
+  if (!/^[A-Z]{3}$/.test(currency)) {
+    const error = new Error(
+      "PAYMENT_CURRENCY must be a valid 3-letter currency code."
+    );
+
+    error.statusCode = 500;
+
+    throw error;
+  }
+
+  return currency;
 }
 
 function getRazorpayClient() {
   return new Razorpay({
-    key_id:
-      getRequiredEnv(
-        "RAZORPAY_KEY_ID"
-      ),
+    key_id: getRequiredEnv(
+      "RAZORPAY_KEY_ID"
+    ),
 
-    key_secret:
-      getRequiredEnv(
-        "RAZORPAY_KEY_SECRET"
-      )
+    key_secret: getRequiredEnv(
+      "RAZORPAY_KEY_SECRET"
+    )
   });
 }
 
@@ -63,17 +72,15 @@ function safeTimingCompare(
   received,
   expected
 ) {
-  const receivedBuffer =
-    Buffer.from(
-      String(received || ""),
-      "utf8"
-    );
+  const receivedBuffer = Buffer.from(
+    String(received || ""),
+    "utf8"
+  );
 
-  const expectedBuffer =
-    Buffer.from(
-      String(expected || ""),
-      "utf8"
-    );
+  const expectedBuffer = Buffer.from(
+    String(expected || ""),
+    "utf8"
+  );
 
   if (
     receivedBuffer.length !==
@@ -89,10 +96,7 @@ function safeTimingCompare(
 }
 
 function isAdmin(req) {
-  return (
-    req.user?.role ===
-    "admin"
-  );
+  return req.user?.role === "admin";
 }
 
 function isCustomer(
@@ -100,11 +104,8 @@ function isCustomer(
   booking
 ) {
   return (
-    req.user?.role ===
-      "customer" &&
-    String(
-      booking.customerId
-    ) ===
+    req.user?.role === "customer" &&
+    String(booking.customerId) ===
       String(req.user.id)
   );
 }
@@ -124,8 +125,9 @@ function canAccessBooking(
 }
 
 function toPaise(amount) {
-  const numericAmount =
-    Number(amount);
+  const numericAmount = Number(
+    amount
+  );
 
   if (
     !Number.isFinite(
@@ -136,10 +138,9 @@ function toPaise(amount) {
     return null;
   }
 
-  const paise =
-    Math.round(
-      numericAmount * 100
-    );
+  const paise = Math.round(
+    numericAmount * 100
+  );
 
   if (
     !Number.isSafeInteger(
@@ -156,17 +157,15 @@ function toPaise(amount) {
 function makeReceipt(
   bookingId
 ) {
-  const clean =
-    String(
-      bookingId || ""
-    ).replace(
-      /[^a-zA-Z0-9_-]/g,
-      ""
-    );
+  const clean = String(
+    bookingId || ""
+  ).replace(
+    /[^a-zA-Z0-9_-]/g,
+    ""
+  );
 
-  const suffix =
-    Date.now()
-      .toString(36);
+  const suffix = Date.now()
+    .toString(36);
 
   return `SWN-${clean}-${suffix}`
     .slice(0, 40);
@@ -208,6 +207,36 @@ async function populatePayment(
     );
 }
 
+function isDuplicateKeyError(
+  error
+) {
+  return (
+    error?.code === 11000 ||
+    error?.name ===
+      "MongoServerError" &&
+      error?.code === 11000
+  );
+}
+
+async function findActiveRazorpayPayment(
+  booking
+) {
+  return Payment.findOne({
+    bookingId: booking._id,
+    userId: booking.customerId,
+    method: "razorpay",
+    status: {
+      $in: [
+        "created",
+        "pending",
+        "processing"
+      ]
+    }
+  }).sort({
+    createdAt: -1
+  });
+}
+
 /*
 ========================================
 CREATE RAZORPAY ORDER
@@ -218,10 +247,19 @@ export async function createRazorpayOrder(
   req,
   res
 ) {
+  let reservation = null;
+  let razorpayOrderCreated = false;
+
   try {
     const {
       bookingId
     } = req.body || {};
+
+    /*
+    ----------------------------------------
+    1. BOOKING ID VALIDATION
+    ----------------------------------------
+    */
 
     if (
       !isValidId(bookingId)
@@ -232,6 +270,12 @@ export async function createRazorpayOrder(
           "Valid booking ID is required."
       });
     }
+
+    /*
+    ----------------------------------------
+    2. LOAD BOOKING
+    ----------------------------------------
+    */
 
     const booking =
       await Booking.findById(
@@ -249,6 +293,12 @@ export async function createRazorpayOrder(
       });
     }
 
+    /*
+    ----------------------------------------
+    3. OWNERSHIP / ADMIN ACCESS
+    ----------------------------------------
+    */
+
     if (
       !canAccessBooking(
         req,
@@ -261,6 +311,15 @@ export async function createRazorpayOrder(
           "You do not have permission to pay for this booking."
       });
     }
+
+    /*
+    ----------------------------------------
+    4. BOOKING STATUS
+    ----------------------------------------
+    Payment is allowed only after
+    worker acceptance / confirmation.
+    ----------------------------------------
+    */
 
     if (
       ![
@@ -277,10 +336,34 @@ export async function createRazorpayOrder(
       });
     }
 
-    const budget =
-      Number(
-        booking.jobId?.budget
-      );
+    /*
+    ----------------------------------------
+    5. JOB MUST EXIST
+    ----------------------------------------
+    */
+
+    if (
+      !booking.jobId
+    ) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "The job associated with this booking was not found."
+      });
+    }
+
+    /*
+    ----------------------------------------
+    6. SERVER-SIDE AMOUNT
+    ----------------------------------------
+    NEVER TRUST amount FROM FRONTEND.
+    Amount always comes from Job.budget.
+    ----------------------------------------
+    */
+
+    const budget = Number(
+      booking.jobId.budget
+    );
 
     const amount =
       toPaise(budget);
@@ -295,54 +378,87 @@ export async function createRazorpayOrder(
       });
     }
 
+    /*
+    ----------------------------------------
+    7. CURRENCY
+    ----------------------------------------
+    */
+
     const currency =
       getCurrency();
 
     /*
-      Reuse an existing active order
-      for idempotency.
+    ----------------------------------------
+    8. FIRST CHECK
+    ----------------------------------------
+    This handles normal repeated clicks.
+    ----------------------------------------
     */
 
     const existingPayment =
-      await Payment.findOne({
-        bookingId:
-          booking._id,
-        userId:
-          booking.customerId,
-        method:
-          "razorpay",
-        status: {
-          $in: [
-            "created",
-            "pending",
-            "processing"
-          ]
-        },
-        razorpayOrderId: {
-          $ne: null
-        }
-      }).sort({
-        createdAt: -1
-      });
+      await findActiveRazorpayPayment(
+        booking
+      );
 
     if (
       existingPayment
     ) {
+      /*
+      If an active DB reservation exists but
+      Razorpay order is not attached yet,
+      another request is currently creating
+      the order.
+      */
+
+      if (
+        !existingPayment.razorpayOrderId
+      ) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "A payment order is currently being created. Please try again shortly."
+        });
+      }
+
+      /*
+      Protect against stale/mismatched
+      amount or currency.
+      */
+
+      if (
+        Number(
+          existingPayment.amount
+        ) !== amount ||
+        String(
+          existingPayment.currency
+        ).toUpperCase() !==
+          currency
+      ) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "An active payment order exists with different payment details. Please contact support."
+        });
+      }
+
       return res.status(200).json({
         success: true,
         message:
           "Existing Razorpay order returned.",
+
         data: {
           payment:
             sanitizePayment(
               existingPayment
             ),
+
           order: {
             id:
-              existingPayment
-                .razorpayOrderId,
+              existingPayment.razorpayOrderId,
+
             amount:
               existingPayment.amount,
+
             currency:
               existingPayment.currency
           }
@@ -350,12 +466,113 @@ export async function createRazorpayOrder(
       });
     }
 
+    /*
+    ----------------------------------------
+    9. ATOMIC DATABASE RESERVATION
+    ----------------------------------------
+    Create the payment reservation BEFORE
+    calling Razorpay.
+
+    The unique partial index on
+    bookingId + method prevents two
+    simultaneous requests from reserving
+    the same booking.
+    ----------------------------------------
+    */
+
+    try {
+      reservation =
+        await Payment.create({
+          userId:
+            booking.customerId,
+
+          bookingId:
+            booking._id,
+
+          amount,
+
+          currency,
+
+          method:
+            "razorpay",
+
+          status:
+            "processing",
+
+          razorpayOrderId:
+            null,
+
+          notes:
+            "Smart Work Network Razorpay payment"
+        });
+    } catch (error) {
+      if (
+        isDuplicateKeyError(
+          error
+        )
+      ) {
+        const duplicate =
+          await findActiveRazorpayPayment(
+            booking
+          );
+
+        if (
+          duplicate?.razorpayOrderId
+        ) {
+          return res.status(200).json({
+            success: true,
+            message:
+              "Existing Razorpay order returned.",
+
+            data: {
+              payment:
+                sanitizePayment(
+                  duplicate
+                ),
+
+              order: {
+                id:
+                  duplicate.razorpayOrderId,
+
+                amount:
+                  duplicate.amount,
+
+                currency:
+                  duplicate.currency
+              }
+            }
+          });
+        }
+
+        return res.status(409).json({
+          success: false,
+          message:
+            "A payment order is already being created. Please try again shortly."
+        });
+      }
+
+      throw error;
+    }
+
+    /*
+    ----------------------------------------
+    10. RAZORPAY CONFIGURATION
+    ----------------------------------------
+    */
+
     const razorpay =
       getRazorpayClient();
+
+    /*
+    ----------------------------------------
+    11. CREATE RAZORPAY ORDER
+    ----------------------------------------
+    */
 
     const order =
       await razorpay.orders.create({
         amount,
+
         currency,
 
         receipt:
@@ -368,6 +585,7 @@ export async function createRazorpayOrder(
             String(
               booking._id
             ),
+
           customerId:
             String(
               booking.customerId
@@ -383,47 +601,48 @@ export async function createRazorpayOrder(
       );
     }
 
-    const payment =
-      await Payment.create({
-        userId:
-          booking.customerId,
+    razorpayOrderCreated =
+      true;
 
-        bookingId:
-          booking._id,
+    /*
+    ----------------------------------------
+    12. ATTACH RAZORPAY ORDER TO RESERVATION
+    ----------------------------------------
+    */
 
-        amount,
+    reservation.razorpayOrderId =
+      String(order.id);
 
-        currency,
+    reservation.status =
+      "created";
 
-        method:
-          "razorpay",
+    await reservation.save();
 
-        status:
-          "created",
-
-        razorpayOrderId:
-          order.id,
-
-        notes:
-          "Smart Work Network Razorpay payment"
-      });
+    /*
+    ----------------------------------------
+    13. FINAL RESPONSE
+    ----------------------------------------
+    */
 
     return res.status(201).json({
       success: true,
+
       message:
         "Razorpay order created successfully.",
 
       data: {
         payment:
           sanitizePayment(
-            payment
+            reservation
           ),
 
         order: {
           id:
             order.id,
+
           amount:
             order.amount,
+
           currency:
             order.currency
         }
@@ -435,6 +654,60 @@ export async function createRazorpayOrder(
       "CREATE RAZORPAY ORDER ERROR:",
       error
     );
+
+    /*
+    ----------------------------------------
+    ROLLBACK DATABASE RESERVATION
+    ----------------------------------------
+    If Razorpay failed BEFORE an order was
+    created, release the reservation so a
+    later retry can create a new order.
+
+    If Razorpay DID create an order but the
+    database update failed, do not blindly
+    create another order. The reservation is
+    retained for safety.
+    ----------------------------------------
+    */
+
+    if (
+      reservation?._id
+    ) {
+      try {
+        if (
+          !razorpayOrderCreated
+        ) {
+          await Payment.findOneAndUpdate(
+            {
+              _id:
+                reservation._id,
+
+              status:
+                "processing",
+
+              razorpayOrderId:
+                null
+            },
+            {
+              $set: {
+                status:
+                  "failed",
+
+                failedAt:
+                  new Date()
+              }
+            }
+          );
+        }
+      } catch (
+        rollbackError
+      ) {
+        console.error(
+          "PAYMENT RESERVATION ROLLBACK ERROR:",
+          rollbackError
+        );
+      }
+    }
 
     return res.status(
       error.statusCode || 500
@@ -521,6 +794,47 @@ export async function verifyRazorpayPayment(
       });
     }
 
+    /*
+    ----------------------------------------
+    IDEMPOTENCY
+    ----------------------------------------
+    */
+
+    if (
+      payment.status ===
+        "paid" &&
+      String(
+        payment.gatewayPaymentId
+      ) ===
+        String(
+          razorpay_payment_id
+        )
+    ) {
+      return res.status(200).json({
+        success: true,
+        message:
+          "Payment was already verified.",
+
+        data: {
+          payment:
+            sanitizePayment(
+              payment
+            ),
+
+          booking: {
+            id:
+              booking._id,
+
+            status:
+              booking.status,
+
+            confirmedAt:
+              booking.confirmedAt
+          }
+        }
+      });
+    }
+
     const secret =
       getRequiredEnv(
         "RAZORPAY_KEY_SECRET"
@@ -559,6 +873,27 @@ export async function verifyRazorpayPayment(
       });
     }
 
+    /*
+    ----------------------------------------
+    VERIFY PAYMENT ORDER MATCH
+    ----------------------------------------
+    */
+
+    if (
+      String(
+        payment.razorpayOrderId
+      ) !==
+      String(
+        razorpay_order_id
+      )
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Razorpay order mismatch."
+      });
+    }
+
     payment.gatewayPaymentId =
       String(
         razorpay_payment_id
@@ -578,9 +913,16 @@ export async function verifyRazorpayPayment(
       "paid";
 
     payment.paidAt =
+      payment.paidAt ||
       new Date();
 
     await payment.save();
+
+    /*
+    ----------------------------------------
+    CONFIRM BOOKING AFTER PAYMENT
+    ----------------------------------------
+    */
 
     if (
       booking.status ===
@@ -609,8 +951,10 @@ export async function verifyRazorpayPayment(
         booking: {
           id:
             booking._id,
+
           status:
             booking.status,
+
           confirmedAt:
             booking.confirmedAt
         }
@@ -756,8 +1100,9 @@ export async function getPaymentById(
   res
 ) {
   try {
-    const { id } =
-      req.params;
+    const {
+      id
+    } = req.params;
 
     if (
       !isValidId(id)
@@ -1055,29 +1400,78 @@ export async function razorpayWebhook(
           )
         : null;
 
-    if (!orderId) {
+    /*
+    ----------------------------------------
+    REFUND EVENTS CAN HAVE REFUND ENTITY
+    WITHOUT PAYMENT ENTITY.
+    ----------------------------------------
+    */
+
+    const refundEntity =
+      payload?.payload?.refund
+        ?.entity;
+
+    const refundPaymentId =
+      refundEntity?.payment_id
+        ? String(
+            refundEntity.payment_id
+          )
+        : null;
+
+    const resolvedOrderId =
+      orderId;
+
+    if (
+      !resolvedOrderId &&
+      !refundPaymentId
+    ) {
       return res.status(200).json({
         success: true,
         message:
-          "Webhook received without a payment order."
+          "Webhook received without a payment reference."
       });
     }
 
-    const payment =
-      await Payment.findOne({
-        razorpayOrderId:
-          orderId
-      }).select(
-        "+processedWebhookEvents +gatewaySignature"
-      );
+    let payment = null;
+
+    if (
+      resolvedOrderId
+    ) {
+      payment =
+        await Payment.findOne({
+          razorpayOrderId:
+            resolvedOrderId
+        }).select(
+          "+processedWebhookEvents +gatewaySignature"
+        );
+    }
+
+    if (
+      !payment &&
+      refundPaymentId
+    ) {
+      payment =
+        await Payment.findOne({
+          gatewayPaymentId:
+            refundPaymentId
+        }).select(
+          "+processedWebhookEvents +gatewaySignature"
+        );
+    }
 
     if (!payment) {
       return res.status(200).json({
         success: true,
         message:
-          "Webhook received for an unknown order."
+          "Webhook received for an unknown payment."
       });
     }
+
+    /*
+    ----------------------------------------
+    WEBHOOK IDEMPOTENCY
+    ----------------------------------------
+    */
 
     if (
       eventId &&
@@ -1092,6 +1486,12 @@ export async function razorpayWebhook(
       });
     }
 
+    /*
+    ----------------------------------------
+    PAYMENT CAPTURED / AUTHORIZED
+    ----------------------------------------
+    */
+
     if (
       event ===
         "payment.captured" ||
@@ -1105,7 +1505,9 @@ export async function razorpayWebhook(
         payment.paidAt ||
         new Date();
 
-      if (paymentId) {
+      if (
+        paymentId
+      ) {
         payment.gatewayPaymentId =
           paymentId;
 
@@ -1113,7 +1515,9 @@ export async function razorpayWebhook(
           paymentId;
       }
 
-      if (eventId) {
+      if (
+        eventId
+      ) {
         payment.processedWebhookEvents =
           [
             ...(payment.processedWebhookEvents ||
@@ -1144,23 +1548,45 @@ export async function razorpayWebhook(
         await booking.save();
       }
 
+    /*
+    ----------------------------------------
+    PAYMENT FAILED
+    ----------------------------------------
+    */
+
     } else if (
       event ===
       "payment.failed"
     ) {
-      payment.status =
-        "failed";
+      /*
+      Do not overwrite a successful payment
+      with a late failed webhook.
+      */
 
-      payment.failedAt =
-        payment.failedAt ||
-        new Date();
+      if (
+        payment.status !==
+          "paid" &&
+        payment.status !==
+          "refunded"
+      ) {
+        payment.status =
+          "failed";
 
-      if (paymentId) {
-        payment.gatewayPaymentId =
-          paymentId;
+        payment.failedAt =
+          payment.failedAt ||
+          new Date();
+
+        if (
+          paymentId
+        ) {
+          payment.gatewayPaymentId =
+            paymentId;
+        }
       }
 
-      if (eventId) {
+      if (
+        eventId
+      ) {
         payment.processedWebhookEvents =
           [
             ...(payment.processedWebhookEvents ||
@@ -1170,6 +1596,12 @@ export async function razorpayWebhook(
       }
 
       await payment.save();
+
+    /*
+    ----------------------------------------
+    REFUND PROCESSED
+    ----------------------------------------
+    */
 
     } else if (
       event ===
@@ -1181,10 +1613,6 @@ export async function razorpayWebhook(
       payment.refundedAt =
         payment.refundedAt ||
         new Date();
-
-      const refundEntity =
-        payload?.payload?.refund
-          ?.entity;
 
       if (
         refundEntity?.id
@@ -1205,7 +1633,9 @@ export async function razorpayWebhook(
           ) || 0;
       }
 
-      if (eventId) {
+      if (
+        eventId
+      ) {
         payment.processedWebhookEvents =
           [
             ...(payment.processedWebhookEvents ||
@@ -1215,6 +1645,12 @@ export async function razorpayWebhook(
       }
 
       await payment.save();
+
+    /*
+    ----------------------------------------
+    OTHER VALID WEBHOOK EVENTS
+    ----------------------------------------
+    */
 
     } else if (
       eventId
