@@ -1,7 +1,8 @@
 import express from "express";
 
 import {
-  requireAuth
+  requireAuth,
+  requireRole
 } from "../middleware/authMiddleware.js";
 
 import {
@@ -9,7 +10,8 @@ import {
   getWorkerById,
   getMyWorkerProfile,
   createWorkerProfile,
-  updateWorkerProfile
+  updateWorkerProfile,
+  updateMyAvailability
 } from "../controllers/workerController.js";
 
 const router = express.Router();
@@ -29,21 +31,36 @@ router.get(
 ========================================
 PROTECTED PERSONAL PROFILE
 IMPORTANT:
-This route must come before /:id
+These routes must come before /:id
 ========================================
 */
 
 router.get(
   "/me/profile",
   requireAuth,
+  requireRole("worker"),
   getMyWorkerProfile
 );
 
 router.post(
   "/profile",
   requireAuth,
+  requireRole("worker"),
   createWorkerProfile
 );
+
+router.patch(
+  "/me/availability",
+  requireAuth,
+  requireRole("worker"),
+  updateMyAvailability
+);
+
+/*
+========================================
+UPDATE WORKER
+========================================
+*/
 
 router.patch(
   "/:id",
