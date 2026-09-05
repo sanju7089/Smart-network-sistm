@@ -20,12 +20,6 @@ const PAYMENT_HISTORY_STATUSES = [
 
 const MAX_HISTORY_LIMIT = 100;
 
-function formatAmount(paise) {
-return Number(
-paise || 0
-) / 100;
-}
-
 function toSafeNumber(value) {
 const number = Number(value);
 
@@ -34,10 +28,11 @@ return Number.isFinite(number)
 : 0;
 }
 
-function normalizePagination(
-page,
-limit
-) {
+function formatAmount(paise) {
+return toSafeNumber(paise) / 100;
+}
+
+function normalizePagination(page, limit) {
 const parsedPage = Number(page);
 const parsedLimit = Number(limit);
 
@@ -65,69 +60,46 @@ safeLimit
 };
 }
 
-function serializeBooking(
-booking
-) {
+function serializeBooking(booking) {
 if (!booking) {
 return null;
 }
 
 return {
 id: booking._id,
-
-status:
-  booking.status,
-
-date:
-  booking.date,
-
+status: booking.status,
+date: booking.date,
 completedAt:
-  booking.completedAt,
+booking.completedAt || null,
 
-job:
-  booking.jobId
-    ? {
-        id:
-          booking.jobId._id,
-
-        title:
-          booking.jobId.title,
-
-        category:
-          booking.jobId.category,
-
-        service:
-          booking.jobId.service,
-
-        location:
-          booking.jobId.location,
-
-        budget:
-          booking.jobId.budget
-      }
-    : null
+job: booking.jobId
+  ? {
+      id: booking.jobId._id,
+      title: booking.jobId.title,
+      category:
+        booking.jobId.category,
+      service:
+        booking.jobId.service,
+      location:
+        booking.jobId.location,
+      budget:
+        booking.jobId.budget
+    }
+  : null
 
 };
 }
 
-function serializePayment(
-payment
-) {
+function serializePayment(payment) {
 if (!payment) {
 return null;
 }
 
 const amount =
-toSafeNumber(
-payment.amount
-);
-
-const booking =
-payment.bookingId;
+toSafeNumber(payment.amount);
 
 return {
-id:
-payment._id,
+id: payment._id,
 
 transactionId:
   payment.transactionId ||
@@ -144,9 +116,7 @@ razorpayOrderId:
   null,
 
 amount:
-  formatAmount(
-    amount
-  ),
+  formatAmount(amount),
 
 amountPaise:
   amount,
@@ -175,7 +145,9 @@ refundId:
   null,
 
 refundAmount:
-  payment.refundAmount
+  toSafeNumber(
+    payment.refundAmount
+  ) > 0
     ? formatAmount(
         payment.refundAmount
       )
@@ -183,7 +155,7 @@ refundAmount:
 
 booking:
   serializeBooking(
-    booking
+    payment.bookingId
   )
 
 };
@@ -193,19 +165,7 @@ booking:
 
 GET MY WORKER EARNINGS
 
-Rules:
-
-1. Only authenticated workers can access this endpoint.
-2. Earnings are based on server-side Payment records.
-3. A payment belongs to a worker through:
-   Payment -> Booking -> Worker
-4. Only currently paid payments count as active earnings.
-5. Refunded payments do not count as available earnings.
-6. Available earnings means:
-   paid payment + completed booking.
-7. Paid but unfinished work is pending work amount.
-8. Transaction history includes paid and refunded transactions.
-   */
+*/
 
 router.get(
 "/me",
@@ -225,8 +185,7 @@ limit
 
   const worker =
     await Worker.findOne({
-      userId:
-        req.user.id
+      userId: req.user.id
     })
       .select(
         "_id name service"
@@ -241,19 +200,13 @@ limit
     });
   }
 
-  /*
-  --------------------------------------------------
-  STEP 1: Find only this worker's bookings.
-  --------------------------------------------------
-  */
-
   const workerBookings =
     await Booking.find({
       workerId:
         worker._id
     })
       .select(
-        "_id workerId jobId status date completedAt"
+        "_id workerId jobId status date completedAt createdAt"
       )
       .populate(
         "jobId",
@@ -270,12 +223,6 @@ limit
         booking._id
     );
 
-  /*
-  --------------------------------------------------
-  No bookings = zero earnings.
-  --------------------------------------------------
-  */
-
   if (!bookingIds.length) {
     return res.status(200).json({
       success: true,
@@ -284,10 +231,8 @@ limit
         worker: {
           id:
             worker._id,
-
           name:
             worker.name,
-
           service:
             worker.service
         },
@@ -295,36 +240,27 @@ limit
         currency: "INR",
 
         grossPaise: 0,
-
         grossAmount: 0,
 
         completedPaise: 0,
-
         completedAmount: 0,
 
         pendingWorkPaise: 0,
-
         pendingWorkAmount: 0,
 
         availablePaise: 0,
-
         availableAmount: 0,
 
         totalPaidBookings: 0,
-
         completedPaidBookings: 0,
-
         completedBookingCount: 0,
 
         pagination: {
           page:
             pagination.page,
-
           limit:
             pagination.limit,
-
           total: 0,
-
           totalPages: 0
         },
 
@@ -332,13 +268,6 @@ limit
       }
     });
   }
-
-  /*
-  --------------------------------------------------
-  STEP 2: Load payment records connected to those
-          worker bookings.
-  --------------------------------------------------
-  */
 
   const allWorkerPayments =
     await Payment.find({
@@ -390,13 +319,6 @@ limit
       })
       .lean();
 
-  /*
-  --------------------------------------------------
-  STEP 3: Keep only payments whose populated booking
-          actually belongs to this worker.
-  --------------------------------------------------
-  */
-
   const workerPayments =
     allWorkerPayments.filter(
       (payment) => {
@@ -417,24 +339,67 @@ limit
 
   /*
   --------------------------------------------------
-  STEP 4: Active paid transactions.
-  Refunded transactions are historical records and
-  must NOT be counted as currently earned money.
+  FINANCIAL SAFETY
+
+  One booking should represent one earning.
+
+  If historical/legacy data contains more than one
+  paid/refunded payment for the same booking, use
+  only the newest payment record for earnings.
+
+  This prevents accidental double counting.
   --------------------------------------------------
   */
 
-  const paidPayments =
-    workerPayments.filter(
-      (payment) =>
-        payment.status ===
-        "paid"
+  const latestPaymentByBooking =
+    new Map();
+
+  for (
+    const payment of workerPayments
+  ) {
+    const booking =
+      payment.bookingId;
+
+    const bookingKey =
+      booking?._id
+        ? String(
+            booking._id
+          )
+        : null;
+
+    if (!bookingKey) {
+      continue;
+    }
+
+    if (
+      !latestPaymentByBooking.has(
+        bookingKey
+      )
+    ) {
+      latestPaymentByBooking.set(
+        bookingKey,
+        payment
+      );
+    }
+  }
+
+  const accountingPayments =
+    Array.from(
+      latestPaymentByBooking.values()
     );
 
   /*
   --------------------------------------------------
-  STEP 5: Gross currently paid earnings.
+  CURRENTLY PAID PAYMENTS
   --------------------------------------------------
   */
+
+  const paidPayments =
+    accountingPayments.filter(
+      (payment) =>
+        payment.status ===
+        "paid"
+    );
 
   const grossPaise =
     paidPayments.reduce(
@@ -451,7 +416,7 @@ limit
 
   /*
   --------------------------------------------------
-  STEP 6: Paid payments where the work is completed.
+  COMPLETED + PAID
   --------------------------------------------------
   */
 
@@ -478,7 +443,7 @@ limit
 
   /*
   --------------------------------------------------
-  STEP 7: Paid but work is not completed yet.
+  PAID BUT WORK NOT COMPLETED
   --------------------------------------------------
   */
 
@@ -505,14 +470,20 @@ limit
 
   /*
   --------------------------------------------------
-  STEP 8: Available earnings.
-  
-  Available earnings are completed + paid earnings.
-  
-  There is currently no separate worker payout/
-  withdrawal ledger in the system, so this represents
-  money earned and available based on completed,
-  successfully paid bookings.
+  AVAILABLE EARNINGS
+
+  No payout/withdrawal ledger exists yet.
+
+  Therefore available earnings currently means:
+
+  completed booking
+  +
+  successful paid payment
+  -
+  refunded payment
+
+  Since refunded records are excluded above,
+  completedPaise is the current available amount.
   --------------------------------------------------
   */
 
@@ -521,12 +492,18 @@ limit
 
   /*
   --------------------------------------------------
-  STEP 9: Paginate transaction history.
+  TRANSACTION HISTORY
+
+  Show paid/refunded transactions while keeping
+  the accounting result protected from duplicates.
   --------------------------------------------------
   */
 
+  const history =
+    accountingPayments;
+
   const historyTotal =
-    workerPayments.length;
+    history.length;
 
   const totalPages =
     historyTotal > 0
@@ -536,18 +513,12 @@ limit
         )
       : 0;
 
-  const history =
-    workerPayments.slice(
+  const paginatedHistory =
+    history.slice(
       pagination.skip,
       pagination.skip +
         pagination.limit
     );
-
-  /*
-  --------------------------------------------------
-  STEP 10: Return complete worker earnings data.
-  --------------------------------------------------
-  */
 
   return res.status(200).json({
     success: true,
@@ -565,10 +536,6 @@ limit
       },
 
       currency: "INR",
-
-      /*
-      Existing compatibility fields.
-      */
 
       grossPaise,
 
@@ -591,16 +558,6 @@ limit
           pendingWorkPaise
         ),
 
-      totalPaidBookings:
-        paidPayments.length,
-
-      completedPaidBookings:
-        completedPayments.length,
-
-      /*
-      New STEP 18 fields.
-      */
-
       availablePaise,
 
       availableAmount:
@@ -608,12 +565,14 @@ limit
           availablePaise
         ),
 
-      completedBookingCount:
+      totalPaidBookings:
+        paidPayments.length,
+
+      completedPaidBookings:
         completedPayments.length,
 
-      /*
-      Transaction history.
-      */
+      completedBookingCount:
+        completedPayments.length,
 
       pagination: {
         page:
@@ -629,11 +588,12 @@ limit
       },
 
       payments:
-        history.map(
+        paginatedHistory.map(
           serializePayment
         )
     }
   });
+
 } catch (error) {
   console.error(
     "GET WORKER EARNINGS ERROR:",
@@ -700,6 +660,7 @@ status: "paid"
         payments.length
     }
   });
+
 } catch (error) {
   console.error(
     "GET ADMIN EARNINGS ERROR:",
