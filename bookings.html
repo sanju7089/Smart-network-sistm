@@ -1,155 +1,124 @@
 <!doctype html>
-<html lang="en">
 
-<head>
-  <meta charset="utf-8">
+<html lang="en"><head>
+  <meta charset="utf-8"><meta
+name="viewport"
+content="width=device-width, initial-scale=1"
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
+«»
 
-  <title>My Bookings | Smart Work Network</title>
-
-  <link
+  <title>My Bookings | Smart Work Network</title>  <link
     rel="stylesheet"
     href="css/main.css"
+  >  <!-- Razorpay Checkout -->  <script src="https://checkout.razorpay.com/v1/checkout.js"></script></head><body>  <header class="header"><div class="container nav">
+
+  <a
+    class="brand"
+    href="index.html"
   >
+    Smart Work Network
+  </a>
 
-  <!-- Razorpay Checkout -->
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-</head>
+  <nav class="navlinks">
 
-<body>
+    <a href="services.html">
+      Services
+    </a>
 
-  <header class="header">
+    <a href="find-help.html">
+      Find Help
+    </a>
 
-    <div class="container nav">
+    <a href="workers.html">
+      Workers
+    </a>
 
-      <a
-        class="brand"
-        href="index.html"
-      >
-        Smart Work Network
-      </a>
+    <span data-auth></span>
 
-      <nav class="navlinks">
+  </nav>
 
-        <a href="services.html">
-          Services
-        </a>
+</div>
 
-        <a href="find-help.html">
-          Find Help
-        </a>
+  </header>  <main><section class="section">
 
-        <a href="workers.html">
-          Workers
-        </a>
+  <div class="container">
 
-        <span data-auth></span>
+    <div class="row between">
 
-      </nav>
+      <div>
 
-    </div>
+        <h1>
+          My Bookings
+        </h1>
 
-  </header>
-
-
-  <main>
-
-    <section class="section">
-
-      <div class="container">
-
-        <div class="row between">
-
-          <div>
-
-            <h1>
-              My Bookings
-            </h1>
-
-            <p
-              class="lead"
-              id="bookingSubtitle"
-            >
-              Loading your bookings...
-            </p>
-
-          </div>
-
-
-          <button
-            type="button"
-            class="btn"
-            id="refreshBookingsButton"
-          >
-            Refresh
-          </button>
-
-        </div>
-
-
-        <div id="bookingMessage"></div>
-
-
-        <div
-          id="bookingsList"
-          class="grid"
+        <p
+          class="lead"
+          id="bookingSubtitle"
         >
-
-          <div class="notice">
-            Loading bookings...
-          </div>
-
-        </div>
+          Loading your bookings...
+        </p>
 
       </div>
 
-    </section>
 
-  </main>
+      <button
+        type="button"
+        class="btn"
+        id="refreshBookingsButton"
+      >
+        Refresh
+      </button>
+
+    </div>
 
 
-  <footer class="footer">
+    <div id="bookingMessage"></div>
 
-    <div class="container">
 
-      <b>
-        Smart Work Network
-      </b>
+    <div
+      id="bookingsList"
+      class="grid"
+    >
 
-      <p>
-        Services • Workers • Work opportunities
-      </p>
-
-      <div class="row">
-
-        <a href="support.html">
-          Support
-        </a>
-
-        <a href="profile.html">
-          Profile
-        </a>
-
-        <a href="urgent-help.html">
-          Urgent Help
-        </a>
-
+      <div class="notice">
+        Loading bookings...
       </div>
 
     </div>
 
-  </footer>
+  </div>
 
+</section>
 
-  <script src="js/app.js"></script>
-  <script src="js/auth.js"></script>
+  </main>  <footer class="footer"><div class="container">
 
+  <b>
+    Smart Work Network
+  </b>
 
-  <script>
+  <p>
+    Services • Workers • Work opportunities
+  </p>
+
+  <div class="row">
+
+    <a href="support.html">
+      Support
+    </a>
+
+    <a href="profile.html">
+      Profile
+    </a>
+
+    <a href="urgent-help.html">
+      Urgent Help
+    </a>
+
+  </div>
+
+</div>
+
+  </footer>  <script src="js/app.js"></script>  <script src="js/auth.js"></script>  <script>
 
     /*
       ============================================================
@@ -161,16 +130,28 @@
 
       pending
         ├── accepted
-        └── rejected
+        ├── rejected
+        └── cancelled
 
       accepted
-        └── confirmed
+        ├── confirmed
+        └── cancelled
 
       confirmed
-        └── in_progress
+        ├── in_progress
+        └── cancelled
 
       in_progress
         └── completed
+
+      completed
+        └── terminal
+
+      rejected
+        └── terminal
+
+      cancelled
+        └── terminal
 
 
       Payment workflow:
@@ -793,6 +774,41 @@
 
     /*
       ============================================================
+      WORKER CANCELLATION RULE
+      ============================================================
+
+      Worker can cancel only:
+
+      pending
+      accepted
+      confirmed
+
+      Worker cannot cancel:
+
+      rejected
+      in_progress
+      completed
+      cancelled
+    */
+
+    function canWorkerCancelBooking(
+      status
+    ) {
+
+      return [
+        "pending",
+        "accepted",
+        "confirmed"
+      ].includes(
+        String(status || "")
+          .toLowerCase()
+      );
+
+    }
+
+
+    /*
+      ============================================================
       WORKER ACTION BUTTONS
       ============================================================
     */
@@ -808,9 +824,92 @@
         );
 
 
+      let html = "";
+
+
+      if (actions.length) {
+
+        html += actions
+          .map(
+            function(action) {
+
+              const safeBookingId =
+                escapeBookingHtml(
+                  bookingId
+                );
+
+              const safeStatus =
+                escapeBookingHtml(
+                  action.value
+                );
+
+
+              return `
+
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  onclick="updateBookingStatus(
+                    '${safeBookingId}',
+                    '${safeStatus}'
+                  )"
+                >
+
+                  ${escapeBookingHtml(
+                    action.label
+                  )}
+
+                </button>
+
+              `;
+
+            }
+          )
+          .join("");
+
+      }
+
+
+      /*
+        Worker cancellation is deliberately
+        rendered separately from status update.
+
+        This is important because the backend
+        cancellation endpoint performs refund logic.
+      */
+
       if (
-        !actions.length
+        canWorkerCancelBooking(
+          status
+        )
       ) {
+
+        const safeBookingId =
+          escapeBookingHtml(
+            bookingId
+          );
+
+
+        html += `
+
+          <button
+            type="button"
+            class="btn"
+            onclick="cancelBooking(
+              '${safeBookingId}'
+            )"
+          >
+
+            Cancel Booking
+
+          </button>
+
+        `;
+
+      }
+
+
+      if (!html) {
 
         return `
 
@@ -823,43 +922,7 @@
       }
 
 
-      return actions
-        .map(
-          function(action) {
-
-            const safeBookingId =
-              escapeBookingHtml(
-                bookingId
-              );
-
-            const safeStatus =
-              escapeBookingHtml(
-                action.value
-              );
-
-
-            return `
-
-              <button
-                type="button"
-                class="btn btn-primary"
-                onclick="updateBookingStatus(
-                  '${safeBookingId}',
-                  '${safeStatus}'
-                )"
-              >
-
-                ${escapeBookingHtml(
-                  action.label
-                )}
-
-              </button>
-
-            `;
-
-          }
-        )
-        .join("");
+      return html;
 
     }
 
@@ -1217,14 +1280,27 @@
 
       /*
         Customer cancellation.
+
+        Customer can cancel:
+
+        pending
+        accepted
+        confirmed
+
+        Customer cannot cancel:
+
+        rejected
+        in_progress
+        completed
+        cancelled
       */
 
       if (
         role === "customer" &&
-        ![
-          "completed",
-          "cancelled",
-          "rejected"
+        [
+          "pending",
+          "accepted",
+          "confirmed"
         ].includes(
           status
         )
@@ -1252,7 +1328,7 @@
 
 
       /*
-        Worker workflow.
+        Worker workflow + cancellation.
       */
 
       if (
@@ -1270,6 +1346,11 @@
 
       /*
         Admin workflow.
+
+        Admin status update remains available
+        exactly as before. Cancellation itself
+        should be performed through the backend
+        cancellation endpoint when required.
       */
 
       if (
@@ -1488,6 +1569,22 @@
                   ${escapeBookingHtml(
                     formatBookingDate(
                       booking.completedAt
+                    )
+                  )}
+                </p>
+              `
+              : ""
+          }
+
+
+          ${
+            booking.cancelledAt
+              ? `
+                <p class="muted">
+                  Cancelled:
+                  ${escapeBookingHtml(
+                    formatBookingDate(
+                      booking.cancelledAt
                     )
                   )}
                 </p>
@@ -1721,6 +1818,20 @@
       ============================================================
       CANCEL BOOKING
       ============================================================
+
+      IMPORTANT:
+
+      Cancellation does NOT use:
+
+      PATCH /bookings/:id/status
+
+      It uses:
+
+      PATCH /bookings/:id/cancel
+
+      This ensures the backend cancellation
+      and Razorpay refund logic remains
+      authoritative.
     */
 
     async function cancelBooking(
@@ -1741,7 +1852,7 @@
 
       const confirmed =
         window.confirm(
-          "Are you sure you want to cancel this booking?"
+          "Are you sure you want to cancel this booking? If a payment has already been completed, the server will process the applicable refund."
         );
 
 
@@ -1753,7 +1864,7 @@
       try {
 
         showBookingMessage(
-          "Cancelling booking..."
+          "Cancelling booking securely..."
         );
 
 
@@ -1787,9 +1898,86 @@
         }
 
 
-        showBookingMessage(
+        /*
+          Backend remains the source of truth.
+
+          The backend may return refund
+          information such as:
+
+          refunded
+          refundId
+          refundAmount
+        */
+
+        const refund =
+          result.refund ||
+          result.data?.refund ||
+          null;
+
+
+        let successMessage =
           result.message ||
-          "Booking cancelled successfully."
+          "Booking cancelled successfully.";
+
+
+        if (
+          refund &&
+          (
+            refund.refunded === true ||
+            refund.status === "refunded"
+          )
+        ) {
+
+          const refundAmount =
+            Number(
+              refund.refundAmount ??
+              refund.amount
+            );
+
+
+          if (
+            Number.isFinite(
+              refundAmount
+            ) &&
+            refundAmount > 0
+          ) {
+
+            successMessage +=
+              ` Refund processed: ${formatMoney(
+                refundAmount / 100,
+                "INR"
+              )}.`;
+
+          } else {
+
+            successMessage +=
+              " Payment refund has been processed.";
+
+          }
+
+        } else if (
+          refund &&
+          refund.alreadyRefunded === true
+        ) {
+
+          successMessage +=
+            " The payment was already refunded.";
+
+        } else if (
+          refund &&
+          refund.refundId
+        ) {
+
+          successMessage +=
+            ` Refund ID: ${String(
+              refund.refundId
+            )}.`;
+
+        }
+
+
+        showBookingMessage(
+          successMessage
         );
 
 
@@ -1804,9 +1992,17 @@
         );
 
 
+        /*
+          If refund fails, backend should
+          keep the booking unchanged.
+
+          Therefore we do NOT locally mark
+          the booking as cancelled.
+        */
+
         showBookingMessage(
           error.message ||
-          "Unable to cancel booking.",
+          "Unable to cancel booking. The booking was not cancelled.",
           true
         );
 
@@ -1843,6 +2039,28 @@
         showBookingMessage(
           "Invalid booking status.",
           true
+        );
+
+        return;
+
+      }
+
+
+      /*
+        Cancellation must always use
+        the dedicated cancellation endpoint.
+
+        This prevents accidental bypass
+        of refund handling.
+      */
+
+      if (
+        String(status).toLowerCase() ===
+        "cancelled"
+      ) {
+
+        await cancelBooking(
+          bookingId
         );
 
         return;
@@ -1971,6 +2189,28 @@
         showBookingMessage(
           "Please select a booking status.",
           true
+        );
+
+        return;
+
+      }
+
+
+      /*
+        Never send cancelled through the
+        generic status endpoint.
+
+        Dedicated cancellation endpoint
+        is required for refund handling.
+      */
+
+      if (
+        String(status).toLowerCase() ===
+        "cancelled"
+      ) {
+
+        await cancelBooking(
+          bookingId
         );
 
         return;
@@ -2553,7 +2793,7 @@
     );
 
   </script>
-
+  
 </body>
 
 </html>
