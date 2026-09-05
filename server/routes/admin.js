@@ -6,18 +6,23 @@ import {
 } from "../middleware/authMiddleware.js";
 
 import {
-  getDashboard
+  getDashboard,
+  getAdminJobs,
+  getAdminWorkers
 } from "../controllers/adminController.js";
 
 const router = express.Router();
 
 router.use(requireAuth);
+
 router.use(requireRole("admin"));
 
 router.get("/", (req, res) => {
   return res.status(200).json({
     success: true,
+
     message: "Admin API is working.",
+
     admin: {
       id: req.user.id,
       email: req.user.email,
@@ -26,6 +31,19 @@ router.get("/", (req, res) => {
   });
 });
 
-router.get("/dashboard", getDashboard);
+router.get(
+  "/dashboard",
+  getDashboard
+);
+
+router.get(
+  "/jobs",
+  getAdminJobs
+);
+
+router.get(
+  "/workers",
+  getAdminWorkers
+);
 
 export default router;
