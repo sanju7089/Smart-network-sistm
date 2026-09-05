@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import Razorpay from "razorpay";
 
 import Booking, {
   BOOKING_STATUSES
@@ -6,10 +7,13 @@ import Booking, {
 
 import Job from "../models/Job.js";
 import Worker from "../models/Worker.js";
+import Payment from "../models/Payment.js";
+
 
 function isValidId(id) {
   return mongoose.Types.ObjectId.isValid(id);
 }
+
 
 function normalizeText(
   value,
@@ -19,6 +23,7 @@ function normalizeText(
     .trim()
     .slice(0, maxLength);
 }
+
 
 function parsePositiveInteger(
   value,
@@ -41,9 +46,11 @@ function parsePositiveInteger(
   );
 }
 
+
 function isAdmin(req) {
   return req.user?.role === "admin";
 }
+
 
 function isCustomerBooking(
   booking,
@@ -55,11 +62,13 @@ function isCustomerBooking(
   );
 }
 
+
 function getWorkerUserId(worker) {
   return worker?.userId
     ? String(worker.userId)
     : null;
 }
+
 
 function canAccessBooking(
   req,
@@ -86,6 +95,32 @@ function canAccessBooking(
   );
 }
 
+
+/*
+========================================
+CANCELLATION PERMISSIONS
+========================================
+
+Customer:
+  pending
+  accepted
+  confirmed
+
+Worker:
+  pending
+  accepted
+  confirmed
+
+Admin:
+  administrative override
+
+Never cancellable:
+  rejected
+  in_progress
+  completed
+  cancelled
+========================================
+*/
 function canCancelBooking(
   req,
   booking,
@@ -95,31 +130,39 @@ function canCancelBooking(
     return true;
   }
 
+  const cancellableStatuses = [
+    "pending",
+    "accepted",
+    "confirmed"
+  ];
+
   if (
     isCustomerBooking(
       booking,
       req.user.id
     )
   ) {
-    return [
-      "pending",
-      "accepted",
-      "confirmed"
-    ].includes(booking.status);
+    return cancellableStatuses.includes(
+      booking.status
+    );
   }
 
   return (
     worker &&
     getWorkerUserId(worker) ===
       String(req.user.id) &&
-    [
-      "pending",
-      "accepted",
-      "confirmed"
-    ].includes(booking.status)
+    cancellableStatuses.includes(
+      booking.status
+    )
   );
 }
 
+
+/*
+========================================
+BOOKING WORKFLOW
+========================================
+*/
 function getAllowedNextStatuses(
   currentStatus,
   actor
@@ -143,7 +186,8 @@ function getAllowedNextStatuses(
     worker: {
       pending: [
         "accepted",
-        "rejected"
+        "rejected",
+        "cancelled"
       ],
 
       accepted: [
@@ -161,6 +205,10 @@ function getAllowedNextStatuses(
       ]
     },
 
+    /*
+      Admin may perform administrative
+      status corrections.
+    */
     admin: {
       pending: BOOKING_STATUSES,
       accepted: BOOKING_STATUSES,
@@ -178,6 +226,12 @@ function getAllowedNextStatuses(
   );
 }
 
+
+/*
+========================================
+STATUS TIMESTAMPS
+========================================
+*/
 function applyStatusTimestamp(
   booking,
   status,
@@ -217,12 +271,203 @@ function applyStatusTimestamp(
   }
 }
 
+
+/*
+========================================
+RAZORPAY CLIENT
+========================================
+*/
+function getRazorpayClient() {
+  const keyId =
+    String(
+      process.env.RAZORPAY_KEY_ID || ""
+    ).trim();
+
+  const keySecret =
+    String(
+      process.env.RAZORPAY_KEY_SECRET || ""
+    ).trim();
+
+  if (!keyId || !keySecret) {
+    const error =
+      new Error(
+        "Razorpay credentials are not configured."
+      );
+
+    error.statusCode = 500;
+
+    throw error;
+  }
+
+  return new Razorpay({
+    key_id: keyId,
+    key_secret: keySecret
+  });
+}
+
+
+/*
+========================================
+REFUND PAID BOOKING PAYMENT
+========================================
+
+Important:
+
+- Payment amount is stored in paise.
+- Only successful paid Razorpay payment
+  is refundable.
+- Already refunded payment is ignored.
+- Refund is completed before booking
+  becomes cancelled.
+- If refund fails, booking remains
+  unchanged so money is not lost.
+========================================
+*/
+async function refundBookingPayment(
+  booking
+) {
+  const payment =
+    await Payment.findOne({
+      bookingId: booking._id,
+      method: "razorpay",
+      status: "paid"
+    }).sort({
+      createdAt: -1
+    });
+
+  if (!payment) {
+    return {
+      refunded: false,
+      reason: "no_paid_payment"
+    };
+  }
+
+  /*
+    Already refunded.
+  */
+  if (
+    payment.status ===
+      "refunded" ||
+    payment.refundId
+  ) {
+    return {
+      refunded: true,
+      alreadyRefunded: true,
+      payment
+    };
+  }
+
+  if (
+    !payment.gatewayPaymentId
+  ) {
+    const error =
+      new Error(
+        "Paid payment does not have a Razorpay payment ID."
+      );
+
+    error.statusCode = 409;
+
+    throw error;
+  }
+
+  const amount =
+    Number(payment.amount);
+
+  if (
+    !Number.isSafeInteger(amount) ||
+    amount < 100
+  ) {
+    const error =
+      new Error(
+        "Paid payment has an invalid refund amount."
+      );
+
+    error.statusCode = 409;
+
+    throw error;
+  }
+
+  const razorpay =
+    getRazorpayClient();
+
+  let refund;
+
+  try {
+    refund =
+      await razorpay.payments.refund(
+        payment.gatewayPaymentId,
+        {
+          amount,
+
+          notes: {
+            bookingId:
+              String(
+                booking._id
+              ),
+
+            reason:
+              "Booking cancelled"
+          }
+        }
+      );
+  } catch (error) {
+    console.error(
+      "RAZORPAY REFUND ERROR:",
+      error
+    );
+
+    const refundError =
+      new Error(
+        "Payment refund could not be initiated. Booking was not cancelled."
+      );
+
+    refundError.statusCode =
+      502;
+
+    throw refundError;
+  }
+
+  if (
+    !refund?.id
+  ) {
+    const error =
+      new Error(
+        "Razorpay did not return a refund ID. Booking was not cancelled."
+      );
+
+    error.statusCode = 502;
+
+    throw error;
+  }
+
+  payment.status =
+    "refunded";
+
+  payment.refundId =
+    String(refund.id);
+
+  payment.refundAmount =
+    amount;
+
+  payment.refundedAt =
+    new Date();
+
+  await payment.save();
+
+  return {
+    refunded: true,
+    alreadyRefunded: false,
+    payment,
+    refund
+  };
+}
+
+
 /*
 ========================================
 CREATE BOOKING
 ========================================
 */
-
 export async function createBooking(
   req,
   res
@@ -261,7 +506,8 @@ export async function createBooking(
     let preferredDate = null;
 
     if (date) {
-      preferredDate = new Date(date);
+      preferredDate =
+        new Date(date);
 
       if (
         Number.isNaN(
@@ -311,26 +557,6 @@ export async function createBooking(
       });
     }
 
-    /*
-    ========================================
-    WORKER AVAILABILITY SECURITY CHECK
-    ========================================
-
-    isActive:
-      Admin/account level activation.
-
-    profileCompleted:
-      Worker must have a valid completed profile.
-
-    isAvailable:
-      Worker-controlled ON/OFF switch for
-      accepting NEW bookings.
-
-    All three are checked on the server.
-    Frontend status cannot bypass this check.
-    ========================================
-    */
-
     if (
       !worker.isActive ||
       !worker.profileCompleted ||
@@ -343,19 +569,15 @@ export async function createBooking(
       });
     }
 
-    if (job.status !== "open") {
+    if (
+      job.status !== "open"
+    ) {
       return res.status(409).json({
         success: false,
         message:
           "This job is not available for booking."
       });
     }
-
-    /*
-    ========================================
-    JOB OWNERSHIP CHECK
-    ========================================
-    */
 
     if (
       !isAdmin(req) &&
@@ -369,12 +591,6 @@ export async function createBooking(
       });
     }
 
-    /*
-    ========================================
-    PREVENT SELF BOOKING
-    ========================================
-    */
-
     if (
       String(worker.userId) ===
       String(job.customerId)
@@ -385,12 +601,6 @@ export async function createBooking(
           "You cannot book your own worker profile."
       });
     }
-
-    /*
-    ========================================
-    DUPLICATE BOOKING CHECK
-    ========================================
-    */
 
     const existingBooking =
       await Booking.findOne({
@@ -403,7 +613,8 @@ export async function createBooking(
         success: false,
         message:
           "A booking already exists for this worker and job.",
-        data: existingBooking
+        data:
+          existingBooking
       });
     }
 
@@ -416,15 +627,19 @@ export async function createBooking(
     const booking =
       await Booking.create({
         jobId,
-        customerId: job.customerId,
+        customerId:
+          job.customerId,
         workerId,
-        status: "pending",
-        date: preferredDate,
+        status:
+          "pending",
+        date:
+          preferredDate,
 
-        notes: normalizeText(
-          notes,
-          2000
-        ),
+        notes:
+          normalizeText(
+            notes,
+            2000
+          ),
 
         customerMessage:
           finalCustomerMessage
@@ -434,11 +649,14 @@ export async function createBooking(
       success: true,
       message:
         "Booking created successfully.",
-      data: booking
+      data:
+        booking
     });
 
   } catch (error) {
-    if (error?.code === 11000) {
+    if (
+      error?.code === 11000
+    ) {
       return res.status(409).json({
         success: false,
         message:
@@ -459,12 +677,12 @@ export async function createBooking(
   }
 }
 
+
 /*
 ========================================
 GET BOOKINGS
 ========================================
 */
-
 export async function getBookings(
   req,
   res
@@ -479,6 +697,7 @@ export async function getBookings(
     const filter = {};
 
     if (isAdmin(req)) {
+
       if (status) {
         const requestedStatus =
           normalizeText(
@@ -505,6 +724,7 @@ export async function getBookings(
     } else if (
       req.user.role === "customer"
     ) {
+
       filter.customerId =
         req.user.id;
 
@@ -534,9 +754,11 @@ export async function getBookings(
     } else if (
       req.user.role === "worker"
     ) {
+
       const worker =
         await Worker.findOne({
-          userId: req.user.id
+          userId:
+            req.user.id
         }).select("_id");
 
       if (!worker) {
@@ -625,27 +847,35 @@ export async function getBookings(
           "name service location phone verified"
         ),
 
-      Booking.countDocuments(filter)
+      Booking.countDocuments(
+        filter
+      )
     ]);
 
     return res.status(200).json({
       success: true,
 
       pagination: {
-        page: currentPage,
-        limit: pageLimit,
+        page:
+          currentPage,
+
+        limit:
+          pageLimit,
+
         total,
 
         totalPages:
           Math.max(
             1,
             Math.ceil(
-              total / pageLimit
+              total /
+                pageLimit
             )
           ),
 
         hasNextPage:
-          currentPage * pageLimit <
+          currentPage *
+            pageLimit <
           total,
 
         hasPreviousPage:
@@ -673,12 +903,12 @@ export async function getBookings(
   }
 }
 
+
 /*
 ========================================
 GET BOOKING BY ID
 ========================================
 */
-
 export async function getBookingById(
   req,
   res
@@ -769,12 +999,12 @@ export async function getBookingById(
   }
 }
 
+
 /*
 ========================================
 UPDATE BOOKING STATUS
 ========================================
 */
-
 export async function updateBookingStatus(
   req,
   res
@@ -806,6 +1036,22 @@ export async function updateBookingStatus(
         success: false,
         message:
           "Invalid booking status."
+      });
+    }
+
+    /*
+      Cancellation has its own dedicated
+      endpoint so refund logic cannot be
+      bypassed through the normal status API.
+    */
+    if (
+      requestedStatus ===
+      "cancelled"
+    ) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Use the booking cancellation endpoint to cancel a booking."
       });
     }
 
@@ -930,12 +1176,38 @@ export async function updateBookingStatus(
   }
 }
 
+
 /*
 ========================================
 CANCEL BOOKING
 ========================================
-*/
 
+Customer:
+  pending
+  accepted
+  confirmed
+
+Worker:
+  pending
+  accepted
+  confirmed
+
+Admin:
+  administrative cancellation
+
+Payment:
+  paid Razorpay payment
+    ↓
+  initiate full refund
+    ↓
+  refund successful
+    ↓
+  booking cancelled
+
+If refund fails:
+  booking remains unchanged.
+========================================
+*/
 export async function cancelBooking(
   req,
   res
@@ -982,13 +1254,15 @@ export async function cancelBooking(
       });
     }
 
+    const nonCancellableStatuses = [
+      "completed",
+      "cancelled",
+      "in_progress",
+      "rejected"
+    ];
+
     if (
-      [
-        "completed",
-        "cancelled",
-        "in_progress",
-        "rejected"
-      ].includes(
+      nonCancellableStatuses.includes(
         booking.status
       )
     ) {
@@ -998,6 +1272,29 @@ export async function cancelBooking(
           "This booking can no longer be cancelled."
       });
     }
+
+    /*
+      Refund paid Razorpay payment before
+      changing booking status.
+
+      This prevents the dangerous state:
+
+        booking = cancelled
+        payment = paid
+        money = not refunded
+    */
+    const refundResult =
+      await refundBookingPayment(
+        booking
+      );
+
+    /*
+      If no paid payment exists,
+      cancellation continues normally.
+
+      If refund exists, it has already
+      been successfully recorded.
+    */
 
     booking.status =
       "cancelled";
@@ -1010,12 +1307,52 @@ export async function cancelBooking(
 
     await booking.save();
 
+    let message =
+      "Booking cancelled successfully.";
+
+    if (
+      refundResult.refunded
+    ) {
+      if (
+        refundResult.alreadyRefunded
+      ) {
+        message =
+          "Booking cancelled successfully. Payment was already refunded.";
+      } else {
+        message =
+          "Booking cancelled successfully. Full payment refund has been initiated.";
+      }
+    } else if (
+      refundResult.reason ===
+      "no_paid_payment"
+    ) {
+      message =
+        "Booking cancelled successfully. No paid payment requires a refund.";
+    }
+
     return res.status(200).json({
       success: true,
-      message:
-        "Booking cancelled successfully.",
-      data:
-        booking
+      message,
+
+      data: {
+        booking,
+        refund: {
+          required:
+            refundResult.refunded,
+          refunded:
+            refundResult.refunded,
+          alreadyRefunded:
+            refundResult.alreadyRefunded ||
+            false,
+          refundId:
+            refundResult.refund?.id ||
+            refundResult.payment?.refundId ||
+            null,
+          refundAmount:
+            refundResult.payment?.refundAmount ||
+            0
+        }
+      }
     });
 
   } catch (error) {
@@ -1024,10 +1361,14 @@ export async function cancelBooking(
       error
     );
 
-    return res.status(500).json({
+    return res.status(
+      error.statusCode || 500
+    ).json({
       success: false,
       message:
-        "Unable to cancel booking."
+        error.statusCode
+          ? error.message
+          : "Unable to cancel booking."
     });
   }
 }
