@@ -263,12 +263,6 @@ export async function createRazorpayOrder(
       bookingId
     } = req.body || {};
 
-    /*
-    ----------------------------------------------
-    1. BOOKING ID VALIDATION
-    ----------------------------------------------
-    */
-
     if (
       !isValidId(bookingId)
     ) {
@@ -278,12 +272,6 @@ export async function createRazorpayOrder(
           "Valid booking ID is required."
       });
     }
-
-    /*
-    ----------------------------------------------
-    2. LOAD BOOKING
-    ----------------------------------------------
-    */
 
     const booking =
       await Booking.findById(
@@ -301,12 +289,6 @@ export async function createRazorpayOrder(
       });
     }
 
-    /*
-    ----------------------------------------------
-    3. OWNERSHIP / ADMIN ACCESS
-    ----------------------------------------------
-    */
-
     if (
       !canAccessBooking(
         req,
@@ -319,12 +301,6 @@ export async function createRazorpayOrder(
           "You do not have permission to pay for this booking."
       });
     }
-
-    /*
-    ----------------------------------------------
-    4. BOOKING STATUS
-    ----------------------------------------------
-    */
 
     if (
       ![
@@ -341,12 +317,6 @@ export async function createRazorpayOrder(
       });
     }
 
-    /*
-    ----------------------------------------------
-    5. JOB MUST EXIST
-    ----------------------------------------------
-    */
-
     if (
       !booking.jobId
     ) {
@@ -356,12 +326,6 @@ export async function createRazorpayOrder(
           "The job associated with this booking was not found."
       });
     }
-
-    /*
-    ----------------------------------------------
-    6. SERVER-SIDE AMOUNT
-    ----------------------------------------------
-    */
 
     const budget = Number(
       booking.jobId.budget
@@ -380,20 +344,8 @@ export async function createRazorpayOrder(
       });
     }
 
-    /*
-    ----------------------------------------------
-    7. CURRENCY
-    ----------------------------------------------
-    */
-
     const currency =
       getCurrency();
-
-    /*
-    ----------------------------------------------
-    8. EXISTING ACTIVE PAYMENT CHECK
-    ----------------------------------------------
-    */
 
     const existingPayment =
       await findActiveRazorpayPayment(
@@ -454,12 +406,6 @@ export async function createRazorpayOrder(
         }
       });
     }
-
-    /*
-    ----------------------------------------------
-    9. ATOMIC DATABASE RESERVATION
-    ----------------------------------------------
-    */
 
     try {
       reservation =
@@ -535,20 +481,8 @@ export async function createRazorpayOrder(
       throw error;
     }
 
-    /*
-    ----------------------------------------------
-    10. RAZORPAY CONFIGURATION
-    ----------------------------------------------
-    */
-
     const razorpay =
       getRazorpayClient();
-
-    /*
-    ----------------------------------------------
-    11. CREATE RAZORPAY ORDER
-    ----------------------------------------------
-    */
 
     const order =
       await razorpay.orders.create({
@@ -585,12 +519,6 @@ export async function createRazorpayOrder(
     razorpayOrderCreated =
       true;
 
-    /*
-    ----------------------------------------------
-    12. ATTACH RAZORPAY ORDER
-    ----------------------------------------------
-    */
-
     reservation.razorpayOrderId =
       String(order.id);
 
@@ -598,12 +526,6 @@ export async function createRazorpayOrder(
       "created";
 
     await reservation.save();
-
-    /*
-    ----------------------------------------------
-    13. FINAL RESPONSE
-    ----------------------------------------------
-    */
 
     return res.status(201).json({
       success: true,
@@ -690,28 +612,6 @@ export async function createRazorpayOrder(
 ==================================================
 VERIFY RAZORPAY PAYMENT
 ==================================================
-
-SECURITY FLOW:
-
-1. Validate Razorpay response fields.
-2. Find local payment by order ID.
-3. Find linked booking.
-4. Verify ownership/admin access.
-5. Safe idempotency check.
-6. Generate HMAC SHA-256.
-7. Constant-time signature comparison.
-8. NEVER mutate payment on invalid signature.
-9. Fetch real payment from Razorpay.
-10. Verify payment ID.
-11. Verify order ID.
-12. Verify stored order relationship.
-13. Verify amount.
-14. Verify currency.
-15. Verify captured status.
-16. Prevent payment ID reuse.
-17. Atomically claim local payment.
-18. Confirm booking atomically.
-==================================================
 */
 
 export async function verifyRazorpayPayment(
@@ -724,12 +624,6 @@ export async function verifyRazorpayPayment(
       razorpay_payment_id,
       razorpay_signature
     } = req.body || {};
-
-    /*
-    ----------------------------------------------
-    1. REQUIRED FIELD VALIDATION
-    ----------------------------------------------
-    */
 
     const orderId =
       String(
@@ -758,12 +652,6 @@ export async function verifyRazorpayPayment(
       });
     }
 
-    /*
-    ----------------------------------------------
-    2. BASIC FORMAT VALIDATION
-    ----------------------------------------------
-    */
-
     if (
       orderId.length > 100 ||
       paymentId.length > 100 ||
@@ -775,12 +663,6 @@ export async function verifyRazorpayPayment(
           "Invalid Razorpay payment verification data."
       });
     }
-
-    /*
-    ----------------------------------------------
-    3. FIND LOCAL PAYMENT
-    ----------------------------------------------
-    */
 
     const payment =
       await Payment.findOne({
@@ -798,12 +680,6 @@ export async function verifyRazorpayPayment(
       });
     }
 
-    /*
-    ----------------------------------------------
-    4. FIND LINKED BOOKING
-    ----------------------------------------------
-    */
-
     const booking =
       await Booking.findById(
         payment.bookingId
@@ -817,12 +693,6 @@ export async function verifyRazorpayPayment(
       });
     }
 
-    /*
-    ----------------------------------------------
-    5. USER OWNERSHIP
-    ----------------------------------------------
-    */
-
     if (
       !canAccessBooking(
         req,
@@ -835,12 +705,6 @@ export async function verifyRazorpayPayment(
           "You do not have permission to verify this payment."
       });
     }
-
-    /*
-    ----------------------------------------------
-    6. IDEMPOTENCY
-    ----------------------------------------------
-    */
 
     if (
       payment.status ===
@@ -883,12 +747,6 @@ export async function verifyRazorpayPayment(
       });
     }
 
-    /*
-    ----------------------------------------------
-    7. PAYMENT STATUS SAFETY
-    ----------------------------------------------
-    */
-
     if (
       [
         "failed",
@@ -905,22 +763,10 @@ export async function verifyRazorpayPayment(
       });
     }
 
-    /*
-    ----------------------------------------------
-    8. RAZORPAY SECRET
-    ----------------------------------------------
-    */
-
     const secret =
       getRequiredEnv(
         "RAZORPAY_KEY_SECRET"
       );
-
-    /*
-    ----------------------------------------------
-    9. GENERATE HMAC SIGNATURE
-    ----------------------------------------------
-    */
 
     const generatedSignature =
       crypto
@@ -934,29 +780,11 @@ export async function verifyRazorpayPayment(
         )
         .digest("hex");
 
-    /*
-    ----------------------------------------------
-    10. CONSTANT-TIME SIGNATURE CHECK
-    ----------------------------------------------
-    */
-
     const validSignature =
       safeTimingCompare(
         signature,
         generatedSignature
       );
-
-    /*
-    IMPORTANT SECURITY FIX:
-    ----------------------------------------------
-    Invalid signature MUST NOT mutate the local
-    payment record.
-
-    Otherwise an attacker could repeatedly send
-    fake signatures and force a legitimate payment
-    reservation into "failed".
-    ----------------------------------------------
-    */
 
     if (
       !validSignature
@@ -967,12 +795,6 @@ export async function verifyRazorpayPayment(
           "Invalid Razorpay payment signature."
       });
     }
-
-    /*
-    ----------------------------------------------
-    11. LOCAL ORDER ID MATCH
-    ----------------------------------------------
-    */
 
     if (
       String(
@@ -985,12 +807,6 @@ export async function verifyRazorpayPayment(
           "Razorpay order mismatch."
       });
     }
-
-    /*
-    ----------------------------------------------
-    12. SERVER-TO-SERVER RAZORPAY CHECK
-    ----------------------------------------------
-    */
 
     const razorpay =
       getRazorpayClient();
@@ -1027,12 +843,6 @@ export async function verifyRazorpayPayment(
       });
     }
 
-    /*
-    ----------------------------------------------
-    13. PAYMENT ID MATCH
-    ----------------------------------------------
-    */
-
     if (
       String(
         gatewayPayment.id
@@ -1045,12 +855,6 @@ export async function verifyRazorpayPayment(
       });
     }
 
-    /*
-    ----------------------------------------------
-    14. GATEWAY ORDER MATCH
-    ----------------------------------------------
-    */
-
     if (
       String(
         gatewayPayment.order_id || ""
@@ -1062,12 +866,6 @@ export async function verifyRazorpayPayment(
           "Razorpay payment does not belong to this order."
       });
     }
-
-    /*
-    ----------------------------------------------
-    15. DATABASE ORDER MATCH
-    ----------------------------------------------
-    */
 
     if (
       String(
@@ -1083,12 +881,6 @@ export async function verifyRazorpayPayment(
           "Payment order does not match the stored payment."
       });
     }
-
-    /*
-    ----------------------------------------------
-    16. AMOUNT AUTHENTICITY
-    ----------------------------------------------
-    */
 
     const gatewayAmount =
       Number(
@@ -1134,12 +926,6 @@ export async function verifyRazorpayPayment(
       });
     }
 
-    /*
-    ----------------------------------------------
-    17. CURRENCY AUTHENTICITY
-    ----------------------------------------------
-    */
-
     const databaseCurrency =
       String(
         payment.currency || ""
@@ -1177,12 +963,6 @@ export async function verifyRazorpayPayment(
       });
     }
 
-    /*
-    ----------------------------------------------
-    18. CAPTURE STATUS
-    ----------------------------------------------
-    */
-
     const gatewayStatus =
       String(
         gatewayPayment.status || ""
@@ -1200,12 +980,6 @@ export async function verifyRazorpayPayment(
           "Payment has not been captured by Razorpay yet."
       });
     }
-
-    /*
-    ----------------------------------------------
-    19. PAYMENT ID REUSE CHECK
-    ----------------------------------------------
-    */
 
     const paymentAlreadyUsed =
       await Payment.findOne({
@@ -1246,24 +1020,6 @@ export async function verifyRazorpayPayment(
           "This Razorpay payment has already been associated with another payment."
       });
     }
-
-    /*
-    ----------------------------------------------
-    20. ATOMIC PAYMENT CLAIM
-    ----------------------------------------------
-
-    CRITICAL SECURITY FIX:
-
-    Two simultaneous valid verification requests
-    must not both be allowed to change the same
-    local payment into "paid".
-
-    The conditional update below allows only one
-    request to claim the payment while it is still
-    unclaimed.
-
-    ----------------------------------------------
-    */
 
     const now =
       new Date();
@@ -1324,12 +1080,6 @@ export async function verifyRazorpayPayment(
           new: true
         }
       );
-
-    /*
-    ----------------------------------------------
-    21. HANDLE PAYMENT CLAIM RACE
-    ----------------------------------------------
-    */
 
     if (
       !claimedPayment
@@ -1392,12 +1142,6 @@ export async function verifyRazorpayPayment(
       });
     }
 
-    /*
-    ----------------------------------------------
-    22. CONFIRM BOOKING ATOMICALLY
-    ----------------------------------------------
-    */
-
     let finalBooking =
       booking;
 
@@ -1449,12 +1193,6 @@ export async function verifyRazorpayPayment(
       }
     }
 
-    /*
-    ----------------------------------------------
-    23. SUCCESS
-    ----------------------------------------------
-    */
-
     return res.status(200).json({
       success: true,
 
@@ -1484,12 +1222,6 @@ export async function verifyRazorpayPayment(
       "VERIFY RAZORPAY PAYMENT ERROR:",
       error
     );
-
-    /*
-    ----------------------------------------------
-    DUPLICATE KEY / CONCURRENT PAYMENT SAFETY
-    ----------------------------------------------
-    */
 
     if (
       isDuplicateKeyError(
@@ -1826,6 +1558,22 @@ export async function getAllPayments(
 ==================================================
 RAZORPAY WEBHOOK
 ==================================================
+
+SECURITY:
+
+1. Raw request body.
+2. Webhook secret.
+3. HMAC SHA-256.
+4. Constant-time signature comparison.
+5. Event ID extraction.
+6. Atomic event idempotency.
+7. Payment state transition.
+8. Booking state transition.
+9. Paid/refunded states are never downgraded
+   by late failed/authorized events.
+10. Concurrent duplicate webhook requests are
+    prevented from processing the same event twice.
+==================================================
 */
 
 export async function razorpayWebhook(
@@ -1928,6 +1676,14 @@ export async function razorpayWebhook(
         ""
       ).trim();
 
+    if (!event) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Webhook event is required."
+      });
+    }
+
     const paymentEntity =
       payload?.payload?.payment
         ?.entity;
@@ -1971,6 +1727,12 @@ export async function razorpayWebhook(
       });
     }
 
+    /*
+    ------------------------------------------------
+    FIND LOCAL PAYMENT
+    ------------------------------------------------
+    */
+
     let payment = null;
 
     if (
@@ -1999,6 +1761,11 @@ export async function razorpayWebhook(
     }
 
     if (!payment) {
+      /*
+      Unknown payment events are acknowledged so
+      Razorpay does not retry indefinitely.
+      */
+
       return res.status(200).json({
         success: true,
         message:
@@ -2007,78 +1774,268 @@ export async function razorpayWebhook(
     }
 
     /*
-    ----------------------------------------------
-    WEBHOOK IDEMPOTENCY
-    ----------------------------------------------
+    ------------------------------------------------
+    EVENT ID REQUIREMENT
+    ------------------------------------------------
+
+    For reliable exactly-once processing, Razorpay
+    event ID is required.
+
+    If the provider does not send an event ID,
+    the event is still processed safely by state
+    transition rules, but cannot have true event-level
+    deduplication.
+    ------------------------------------------------
     */
 
-    if (
-      eventId &&
-      payment.processedWebhookEvents?.includes(
-        eventId
-      )
-    ) {
-      return res.status(200).json({
-        success: true,
-        message:
-          "Webhook already processed."
-      });
-    }
-
     /*
-    ----------------------------------------------
-    PAYMENT CAPTURED
-    ----------------------------------------------
+    ------------------------------------------------
+    PAYMENT.CAPTURED
+    ------------------------------------------------
     */
 
     if (
       event ===
       "payment.captured"
     ) {
-      payment.status =
-        "paid";
-
-      payment.paidAt =
-        payment.paidAt ||
-        new Date();
+      /*
+      Validate the gateway event against the local
+      payment before changing local financial state.
+      */
 
       if (
-        paymentId
+        paymentEntity
       ) {
-        payment.gatewayPaymentId =
-          paymentId;
+        const gatewayAmount =
+          Number(
+            paymentEntity.amount
+          );
 
-        payment.transactionId =
-          paymentId;
+        const localAmount =
+          Number(
+            payment.amount
+          );
+
+        if (
+          !Number.isSafeInteger(
+            gatewayAmount
+          ) ||
+          gatewayAmount <= 0 ||
+          gatewayAmount !==
+            localAmount
+        ) {
+          console.error(
+            "WEBHOOK CAPTURED AMOUNT MISMATCH:",
+            {
+              eventId,
+              paymentId,
+              orderId,
+              gatewayAmount,
+              localAmount
+            }
+          );
+
+          return res.status(400).json({
+            success: false,
+            message:
+              "Webhook payment amount verification failed."
+          });
+        }
+
+        const gatewayCurrency =
+          String(
+            paymentEntity.currency ||
+              ""
+          )
+            .trim()
+            .toUpperCase();
+
+        const localCurrency =
+          String(
+            payment.currency ||
+              ""
+          )
+            .trim()
+            .toUpperCase();
+
+        if (
+          !gatewayCurrency ||
+          !localCurrency ||
+          gatewayCurrency !==
+            localCurrency
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Webhook payment currency verification failed."
+          });
+        }
+
+        if (
+          paymentEntity.order_id &&
+          String(
+            paymentEntity.order_id
+          ) !==
+            String(
+              payment.razorpayOrderId
+            )
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Webhook order does not match the stored payment."
+          });
+        }
+
+        if (
+          paymentEntity.id &&
+          String(
+            paymentEntity.id
+          ) !==
+            String(
+              paymentId
+            )
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Webhook payment ID mismatch."
+          });
+        }
       }
+
+      /*
+      ------------------------------------------------
+      ATOMIC PAYMENT EVENT CLAIM
+      ------------------------------------------------
+
+      The event is added with $addToSet in the same
+      database update as the payment status change.
+
+      Therefore two simultaneous webhook deliveries
+      with the same event ID cannot both successfully
+      match the condition.
+      ------------------------------------------------
+      */
+
+      let updatedPayment = null;
 
       if (
         eventId
       ) {
-        payment.processedWebhookEvents =
-          [
-            ...(payment.processedWebhookEvents ||
-              []),
-            eventId
-          ].slice(-50);
+        updatedPayment =
+          await Payment.findOneAndUpdate(
+            {
+              _id:
+                payment._id,
+
+              processedWebhookEvents: {
+                $ne:
+                  eventId
+              }
+            },
+            {
+              $set: {
+                status:
+                  "paid",
+
+                paidAt:
+                  payment.paidAt ||
+                  new Date(),
+
+                ...(paymentId
+                  ? {
+                      gatewayPaymentId:
+                        paymentId,
+
+                      transactionId:
+                        paymentId
+                    }
+                  : {})
+              },
+
+              $addToSet: {
+                processedWebhookEvents:
+                  eventId
+              }
+            },
+            {
+              new: true
+            }
+          );
+      } else {
+        /*
+        No event ID: state update remains idempotent
+        at payment-state level.
+        */
+
+        updatedPayment =
+          await Payment.findOneAndUpdate(
+            {
+              _id:
+                payment._id,
+
+              status: {
+                $ne:
+                  "refunded"
+              }
+            },
+            {
+              $set: {
+                status:
+                  "paid",
+
+                paidAt:
+                  payment.paidAt ||
+                  new Date(),
+
+                ...(paymentId
+                  ? {
+                      gatewayPaymentId:
+                        paymentId,
+
+                      transactionId:
+                        paymentId
+                    }
+                  : {})
+              }
+            },
+            {
+              new: true
+            }
+          );
       }
 
-      await payment.save();
-
-      const booking =
-        await Booking.findById(
-          payment.bookingId
-        );
+      /*
+      Duplicate event:
+      another concurrent request already added the
+      event ID and processed the payment.
+      */
 
       if (
-        booking &&
-        booking.status ===
-          "accepted"
+        eventId &&
+        !updatedPayment
+      ) {
+        return res.status(200).json({
+          success: true,
+          message:
+            "Webhook already processed."
+        });
+      }
+
+      /*
+      ------------------------------------------------
+      ATOMIC BOOKING CONFIRMATION
+      ------------------------------------------------
+      */
+
+      if (
+        updatedPayment
       ) {
         await Booking.findOneAndUpdate(
           {
             _id:
-              booking._id,
+              updatedPayment.bookingId,
 
             status:
               "accepted"
@@ -2089,7 +2046,6 @@ export async function razorpayWebhook(
                 "confirmed",
 
               confirmedAt:
-                booking.confirmedAt ||
                 new Date()
             }
           }
@@ -2097,15 +2053,15 @@ export async function razorpayWebhook(
       }
 
     /*
-    ----------------------------------------------
-    PAYMENT AUTHORIZED
-    ----------------------------------------------
+    ------------------------------------------------
+    PAYMENT.AUTHORIZED
+    ------------------------------------------------
 
-    An authorized payment is NOT treated as
-    completed here. The payment must be captured
-    before local status becomes paid.
+    Authorized != captured.
 
-    ----------------------------------------------
+    Therefore this event NEVER changes payment
+    status to paid.
+    ------------------------------------------------
     */
 
     } else if (
@@ -2115,20 +2071,43 @@ export async function razorpayWebhook(
       if (
         eventId
       ) {
-        payment.processedWebhookEvents =
-          [
-            ...(payment.processedWebhookEvents ||
-              []),
-            eventId
-          ].slice(-50);
+        const recorded =
+          await Payment.findOneAndUpdate(
+            {
+              _id:
+                payment._id,
 
-        await payment.save();
+              processedWebhookEvents: {
+                $ne:
+                  eventId
+              }
+            },
+            {
+              $addToSet: {
+                processedWebhookEvents:
+                  eventId
+              }
+            },
+            {
+              new: true
+            }
+          );
+
+        if (
+          !recorded
+        ) {
+          return res.status(200).json({
+            success: true,
+            message:
+              "Webhook already processed."
+          });
+        }
       }
 
     /*
-    ----------------------------------------------
-    PAYMENT FAILED
-    ----------------------------------------------
+    ------------------------------------------------
+    PAYMENT.FAILED
+    ------------------------------------------------
     */
 
     } else if (
@@ -2136,105 +2115,313 @@ export async function razorpayWebhook(
       "payment.failed"
     ) {
       if (
-        payment.status !==
-          "paid" &&
-        payment.status !==
-          "refunded"
+        eventId
       ) {
-        payment.status =
-          "failed";
+        /*
+        Payment failure and event recording happen
+        atomically.
 
-        payment.failedAt =
-          payment.failedAt ||
-          new Date();
+        A payment that has already become paid or
+        refunded is never downgraded.
+        */
+
+        const failedPayment =
+          await Payment.findOneAndUpdate(
+            {
+              _id:
+                payment._id,
+
+              processedWebhookEvents: {
+                $ne:
+                  eventId
+              },
+
+              status: {
+                $nin: [
+                  "paid",
+                  "refunded"
+                ]
+              }
+            },
+            {
+              $set: {
+                status:
+                  "failed",
+
+                failedAt:
+                  payment.failedAt ||
+                  new Date(),
+
+                ...(paymentId
+                  ? {
+                      gatewayPaymentId:
+                        paymentId
+                    }
+                  : {})
+              },
+
+              $addToSet: {
+                processedWebhookEvents:
+                  eventId
+              }
+            },
+            {
+              new: true
+            }
+          );
 
         if (
-          paymentId
+          !failedPayment
         ) {
-          payment.gatewayPaymentId =
-            paymentId;
+          const currentPayment =
+            await Payment.findById(
+              payment._id
+            ).select(
+              "+processedWebhookEvents"
+            );
+
+          if (
+            currentPayment?.processedWebhookEvents?.includes(
+              eventId
+            )
+          ) {
+            return res.status(200).json({
+              success: true,
+              message:
+                "Webhook already processed."
+            });
+          }
+
+          /*
+          If the payment is already paid/refunded,
+          acknowledge the event without downgrading
+          financial state.
+          */
+
+          if (
+            [
+              "paid",
+              "refunded"
+            ].includes(
+              currentPayment?.status
+            )
+          ) {
+            return res.status(200).json({
+              success: true,
+              message:
+                "Late payment failure ignored because the payment is already settled."
+            });
+          }
+
+          return res.status(409).json({
+            success: false,
+            message:
+              "Payment webhook could not be processed safely. Razorpay may retry it."
+          });
+        }
+      } else {
+        /*
+        Without an event ID, do not downgrade a
+        settled payment.
+        */
+
+        if (
+          ![
+            "paid",
+            "refunded"
+          ].includes(
+            payment.status
+          )
+        ) {
+          await Payment.findOneAndUpdate(
+            {
+              _id:
+                payment._id,
+
+              status: {
+                $nin: [
+                  "paid",
+                  "refunded"
+                ]
+              }
+            },
+            {
+              $set: {
+                status:
+                  "failed",
+
+                failedAt:
+                  payment.failedAt ||
+                  new Date(),
+
+                ...(paymentId
+                  ? {
+                      gatewayPaymentId:
+                        paymentId
+                    }
+                  : {})
+              }
+            }
+          );
         }
       }
 
-      if (
-        eventId
-      ) {
-        payment.processedWebhookEvents =
-          [
-            ...(payment.processedWebhookEvents ||
-              []),
-            eventId
-          ].slice(-50);
-      }
-
-      await payment.save();
-
     /*
-    ----------------------------------------------
-    REFUND PROCESSED
-    ----------------------------------------------
+    ------------------------------------------------
+    REFUND.PROCESSED
+    ------------------------------------------------
     */
 
     } else if (
       event ===
       "refund.processed"
     ) {
-      payment.status =
-        "refunded";
-
-      payment.refundedAt =
-        payment.refundedAt ||
-        new Date();
-
-      if (
-        refundEntity?.id
-      ) {
-        payment.refundId =
-          String(
-            refundEntity.id
-          );
-      }
-
-      if (
-        refundEntity?.amount !==
-        undefined
-      ) {
-        payment.refundAmount =
-          Number(
-            refundEntity.amount
-          ) || 0;
-      }
-
       if (
         eventId
       ) {
-        payment.processedWebhookEvents =
-          [
-            ...(payment.processedWebhookEvents ||
-              []),
-            eventId
-          ].slice(-50);
+        const refundedPayment =
+          await Payment.findOneAndUpdate(
+            {
+              _id:
+                payment._id,
+
+              processedWebhookEvents: {
+                $ne:
+                  eventId
+              }
+            },
+            {
+              $set: {
+                status:
+                  "refunded",
+
+                refundedAt:
+                  payment.refundedAt ||
+                  new Date(),
+
+                ...(refundEntity?.id
+                  ? {
+                      refundId:
+                        String(
+                          refundEntity.id
+                        )
+                    }
+                  : {}),
+
+                ...(refundEntity?.amount !==
+                undefined
+                  ? {
+                      refundAmount:
+                        Number(
+                          refundEntity.amount
+                        ) || 0
+                    }
+                  : {})
+              },
+
+              $addToSet: {
+                processedWebhookEvents:
+                  eventId
+              }
+            },
+            {
+              new: true
+            }
+          );
+
+        if (
+          !refundedPayment
+        ) {
+          return res.status(200).json({
+            success: true,
+            message:
+              "Webhook already processed."
+          });
+        }
+      } else {
+        await Payment.findOneAndUpdate(
+          {
+            _id:
+              payment._id
+          },
+          {
+            $set: {
+              status:
+                "refunded",
+
+              refundedAt:
+                payment.refundedAt ||
+                new Date(),
+
+              ...(refundEntity?.id
+                ? {
+                    refundId:
+                      String(
+                        refundEntity.id
+                      )
+                  }
+                : {}),
+
+              ...(refundEntity?.amount !==
+              undefined
+                ? {
+                    refundAmount:
+                      Number(
+                        refundEntity.amount
+                      ) || 0
+                  }
+                : {})
+            }
+          }
+        );
       }
 
-      await payment.save();
-
     /*
-    ----------------------------------------------
-    OTHER VALID WEBHOOK EVENTS
-    ----------------------------------------------
+    ------------------------------------------------
+    OTHER WEBHOOK EVENTS
+    ------------------------------------------------
     */
 
     } else if (
       eventId
     ) {
-      payment.processedWebhookEvents =
-        [
-          ...(payment.processedWebhookEvents ||
-            []),
-          eventId
-        ].slice(-50);
+      /*
+      Unknown-but-valid event:
+      record it atomically so duplicate deliveries
+      do not repeatedly execute processing.
+      */
 
-      await payment.save();
+      const recorded =
+        await Payment.findOneAndUpdate(
+          {
+            _id:
+              payment._id,
+
+            processedWebhookEvents: {
+              $ne:
+                eventId
+            }
+          },
+          {
+            $addToSet: {
+              processedWebhookEvents:
+                eventId
+            }
+          },
+          {
+            new: true
+          }
+        );
+
+      if (
+        !recorded
+      ) {
+        return res.status(200).json({
+          success: true,
+          message:
+            "Webhook already processed."
+        });
+      }
     }
 
     return res.status(200).json({
@@ -2254,4 +2441,4 @@ export async function razorpayWebhook(
         "Unable to process Razorpay webhook."
     });
   }
-}
+  }
