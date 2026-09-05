@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <title>Post Work | Smart Work Network</title>
+
+  <link
+    rel="stylesheet"
+    href="css/main.css"
+  >
+</head>
+
+<body>
+
+  <header class="header">
+
+    <div class="container nav">
+
+      <a
+        class="brand"
+        href="index.html"
+      >
+        Smart Work Network
+      </a>
+
+      <nav class="navlinks">
+
+        <a href="services.html">
+          Services
+        </a>
+
+        <a href="find-help.html">
+          Find Help
+        </a>
+
+        <a href="workers.html">
+          Workers
+        </a>
+
+        <span data-auth></span>
+
+      </nav>
+
+    </div>
+
+  </header>
+
+
+  <main>
+
+    <section class="section">
+
+      <div class="container">
+
+        <h1>Post New Work</h1>
+
+        <p class="lead">
+          Tell workers what work you need.
+        </p>
+
+        <form
+          id="workForm"
+          class="card"
+          onsubmit="postWork(event)"
+        >
+
+          <label for="title">
+            Work Title
+          </label>
+
+          <input
+            id="title"
+            name="title"
+            type="text"
+            maxlength="200"
+            required
+          >
+
+
+          <label for="description">
+            Work Description
+          </label>
+
+          <textarea
+            id="description"
+            name="description"
+            rows="6"
+            maxlength="5000"
+            required
+          ></textarea>
+
+
+          <label for="category">
+            Category
+          </label>
+
+          <input
+            id="category"
+            name="category"
+            type="text"
+            maxlength="100"
+          >
+
+
+          <label for="service">
+            Required Service
+          </label>
+
+          <input
+            id="service"
+            name="service"
+            type="text"
+            maxlength="150"
+          >
+
+
+          <label for="location">
+            Location
+          </label>
+
+          <input
+            id="location"
+            name="location"
+            type="text"
+            maxlength="200"
+          >
+
+
+          <label for="budget">
+            Budget
+          </label>
+
+          <input
+            id="budget"
+            name="budget"
+            type="number"
+            min="0"
+            step="0.01"
+          >
+
+
+          <br>
+
+          <button
+            class="btn btn-primary"
+            type="submit"
+          >
+            Post Work
+          </button>
+
+        </form>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <footer class="footer">
+
+    <div class="container">
+
+      <b>Smart Work Network</b>
+
+      <p>
+        Services • Workers • Work opportunities
+      </p>
+
+    </div>
+
+  </footer>
+
+
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/work.js"></script>
+
+</body>
+
+</html>
