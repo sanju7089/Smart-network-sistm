@@ -1,133 +1,81 @@
 "use strict";
 
-function escapeEarningsHtml(
-value = ""
-) {
+function escapeEarningsHtml(value = "") {
 if (
-typeof window.escapeHtml ===
-"function"
+typeof window.escapeHtml === "function"
 ) {
-return window.escapeHtml(
-value
-);
+return window.escapeHtml(String(value));
 }
 
 return String(value)
-.replace(
-/&/g,
-"&"
-)
-.replace(
-/</g,
-"<"
-)
-.replace(
-/>/g,
-">"
-)
-.replace(
-/"/g,
-"""
-)
-.replace(
-/'/g,
-"'"
-);
+.replace(/&/g, "&")
+.replace(/</g, "<")
+.replace(/>/g, ">")
+.replace(/"/g, """)
+.replace(/'/g, "'");
 }
 
-function formatMoney(
-value,
-currency = "INR"
-) {
-const amount =
-Number(value);
+function formatMoney(value, currency = "INR") {
+const amount = Number(value);
 
-if (
-!Number.isFinite(
-amount
-)
-) {
-return "₹0";
+if (!Number.isFinite(amount)) {
+return "₹0.00";
 }
 
 try {
-return amount.toLocaleString(
-"en-IN",
-{
+return amount.toLocaleString("en-IN", {
 style: "currency",
-currency,
+currency: currency || "INR",
 maximumFractionDigits: 2
-}
-);
+});
 } catch {
-return "₹${amount.toLocaleString( "en-IN", { maximumFractionDigits: 2 } )}";
+return "₹${amount.toLocaleString("en-IN", { maximumFractionDigits: 2 })}";
 }
 }
 
-function formatDate(
-value
-) {
+function formatDate(value) {
 if (!value) {
 return "Unknown";
 }
 
-const date =
-new Date(value);
+const date = new Date(value);
 
-if (
-Number.isNaN(
-date.getTime()
-)
-) {
+if (Number.isNaN(date.getTime())) {
 return "Unknown";
 }
 
-return date.toLocaleString(
-"en-IN",
-{
+try {
+return date.toLocaleString("en-IN", {
 dateStyle: "medium",
 timeStyle: "short"
+});
+} catch {
+return date.toLocaleString("en-IN");
 }
-);
 }
 
-function showEarningsMessage(
-message,
-error = false
-) {
-const element =
-document.querySelector(
-"#earningsMessage"
-);
+function showEarningsMessage(message, error = false) {
+const element = document.querySelector("#earningsMessage");
 
 if (!element) {
 return;
 }
 
-element.innerHTML = "<div class="notice"> ${escapeEarningsHtml( message )} </div>";
+element.innerHTML = "<div class="notice"> ${escapeEarningsHtml(message)} </div>";
 
 if (error) {
-console.error(
-message
-);
+console.error(message);
 }
 }
 
-function getEarningsData(
-result
-) {
-if (
-!result ||
-typeof result !==
-"object"
-) {
+function getEarningsData(result) {
+if (!result || typeof result !== "object") {
 return {};
 }
 
 if (
 result.data &&
-typeof result.data ===
-"object"
+typeof result.data === "object"
 ) {
 return result.data;
 }
@@ -135,43 +83,39 @@ return result.data;
 return result;
 }
 
-function renderEarningsStats(
-data
-) {
-const element =
-document.querySelector(
-"#earningsStats"
-);
+function renderEarningsStats(data) {
+const element = document.querySelector("#earningsStats");
 
 if (!element) {
 return;
 }
 
-const currency =
-data.currency ||
-"INR";
+const currency = data.currency || "INR";
+
+const completedBookings =
+Number(
+data.completedBookingCount ??
+data.completedPaidBookings ??
+0
+);
+
+const totalPaidBookings =
+Number(data.totalPaidBookings || 0);
 
 element.innerHTML = `
-
 <div class="card">
-
-  <div class="stat">
-    ${escapeEarningsHtml(
-      formatMoney(
-        data.availableAmount,
-        currency
-      )
-    )}
-  </div>
-
-  <p>
-    Available Earnings
-  </p>
-
+<div class="stat">
+${escapeEarningsHtml(
+formatMoney(
+data.availableAmount,
+currency
+)
+)}
+</div>
+<p>Available Earnings</p>
 </div>
 
 <div class="card">
-
   <div class="stat">
     ${escapeEarningsHtml(
       formatMoney(
@@ -180,15 +124,10 @@ element.innerHTML = `
       )
     )}
   </div>
-
-  <p>
-    Total Paid Earnings
-  </p>
-
+  <p>Total Paid Earnings</p>
 </div>
 
 <div class="card">
-
   <div class="stat">
     ${escapeEarningsHtml(
       formatMoney(
@@ -197,15 +136,10 @@ element.innerHTML = `
       )
     )}
   </div>
-
-  <p>
-    Completed Work Earnings
-  </p>
-
+  <p>Completed Work Earnings</p>
 </div>
 
 <div class="card">
-
   <div class="stat">
     ${escapeEarningsHtml(
       formatMoney(
@@ -214,54 +148,31 @@ element.innerHTML = `
       )
     )}
   </div>
-
-  <p>
-    Paid but Work Not Completed
-  </p>
-
+  <p>Paid but Work Not Completed</p>
 </div>
 
 <div class="card">
-
   <div class="stat">
     ${escapeEarningsHtml(
-      String(
-        data.completedBookingCount ||
-        data.completedPaidBookings ||
-        0
-      )
+      String(completedBookings)
     )}
   </div>
-
-  <p>
-    Completed Paid Bookings
-  </p>
-
+  <p>Completed Paid Bookings</p>
 </div>
 
 <div class="card">
-
   <div class="stat">
     ${escapeEarningsHtml(
-      String(
-        data.totalPaidBookings ||
-        0
-      )
+      String(totalPaidBookings)
     )}
   </div>
-
-  <p>
-    Total Paid Bookings
-  </p>
-
+  <p>Total Paid Bookings</p>
 </div>
 
 `;
 }
 
-function getTransactionId(
-payment
-) {
+function getTransactionId(payment) {
 return (
 payment.transactionId ||
 payment.razorpayPaymentId ||
@@ -271,20 +182,15 @@ payment.id ||
 );
 }
 
-function getJobTitle(
-payment
-) {
+function getJobTitle(payment) {
 return (
 payment.booking?.job?.title ||
 "Work booking"
 );
 }
 
-function renderPayments(
-payments
-) {
-const element =
-document.querySelector(
+function renderPayments(payments) {
+const element = document.querySelector(
 "#earningsPayments"
 );
 
@@ -293,222 +199,182 @@ return;
 }
 
 if (
-!Array.isArray(
-payments
-) ||
+!Array.isArray(payments) ||
 payments.length === 0
 ) {
 element.innerHTML = "<div class="notice"> No earning transactions yet. </div>";
-
 return;
+}
+
+element.innerHTML = payments
+.map((payment) => {
+const status = String(
+payment.status || "unknown"
+);
+
+  const booking = payment.booking || {};
+
+  const bookingId =
+    booking.id || "";
+
+  const jobTitle =
+    getJobTitle(payment);
+
+  const transactionId =
+    getTransactionId(payment);
+
+  const workStatus =
+    booking.status || "Unknown";
+
+  const amount =
+    formatMoney(
+      payment.amount,
+      payment.currency || "INR"
+    );
+
+  const method =
+    payment.method || "Unknown";
+
+  return `
+    <div class="card">
+
+      <div class="row between">
+        <b>
+          ${escapeEarningsHtml(amount)}
+        </b>
+
+        <span class="tag">
+          ${escapeEarningsHtml(status)}
+        </span>
+      </div>
+
+      <p>
+        <strong>Work:</strong>
+        ${escapeEarningsHtml(jobTitle)}
+      </p>
+
+      <p>
+        <strong>Booking ID:</strong>
+        ${escapeEarningsHtml(
+          String(bookingId)
+        )}
+      </p>
+
+      <p>
+        <strong>Transaction ID:</strong>
+        ${escapeEarningsHtml(
+          String(transactionId)
+        )}
+      </p>
+
+      <p>
+        <strong>Work status:</strong>
+        ${escapeEarningsHtml(
+          String(workStatus)
+        )}
+      </p>
+
+      <p>
+        <strong>Payment method:</strong>
+        ${escapeEarningsHtml(
+          String(method)
+        )}
+      </p>
+
+      ${
+        payment.razorpayPaymentId
+          ? `
+            <p>
+              <strong>Razorpay Payment ID:</strong>
+              ${escapeEarningsHtml(
+                payment.razorpayPaymentId
+              )}
+            </p>
+          `
+          : ""
+      }
+
+      ${
+        payment.razorpayOrderId
+          ? `
+            <p>
+              <strong>Razorpay Order ID:</strong>
+              ${escapeEarningsHtml(
+                payment.razorpayOrderId
+              )}
+            </p>
+          `
+          : ""
+      }
+
+      ${
+        payment.paidAt
+          ? `
+            <p class="muted">
+              Paid:
+              ${escapeEarningsHtml(
+                formatDate(
+                  payment.paidAt
+                )
+              )}
+            </p>
+          `
+          : ""
+      }
+
+      ${
+        payment.refundedAt
+          ? `
+            <p class="muted">
+              Refunded:
+              ${escapeEarningsHtml(
+                formatDate(
+                  payment.refundedAt
+                )
+              )}
+            </p>
+          `
+          : ""
+      }
+
+      ${
+        payment.refundId
+          ? `
+            <p class="muted">
+              Refund ID:
+              ${escapeEarningsHtml(
+                payment.refundId
+              )}
+            </p>
+          `
+          : ""
+      }
+
+      ${
+        Number(payment.refundAmount || 0) > 0
+          ? `
+            <p class="muted">
+              Refund Amount:
+              ${escapeEarningsHtml(
+                formatMoney(
+                  payment.refundAmount,
+                  payment.currency || "INR"
+                )
+              )}
+            </p>
+          `
+          : ""
+      }
+
+    </div>
+  `;
+})
+.join("");
 
 }
 
-element.innerHTML =
-payments
-.map(
-(payment) => {
-
-      const status =
-        String(
-          payment.status ||
-          "unknown"
-        );
-
-      const booking =
-        payment.booking;
-
-      const bookingId =
-        booking?.id ||
-        "";
-
-      const jobTitle =
-        getJobTitle(
-          payment
-        );
-
-      const transactionId =
-        getTransactionId(
-          payment
-        );
-
-      const workStatus =
-        booking?.status ||
-        "Unknown";
-
-      const paidAt =
-        payment.paidAt;
-
-      const refundedAt =
-        payment.refundedAt;
-
-      const refundId =
-        payment.refundId;
-
-      const amount =
-        formatMoney(
-          payment.amount,
-          payment.currency ||
-            "INR"
-        );
-
-      return `
-
-        <div class="card">
-
-          <div class="row between">
-
-            <b>
-              ${escapeEarningsHtml(
-                amount
-              )}
-            </b>
-
-            <span class="tag">
-              ${escapeEarningsHtml(
-                status
-              )}
-            </span>
-
-          </div>
-
-          <p>
-            <strong>
-              Work:
-            </strong>
-            ${escapeEarningsHtml(
-              jobTitle
-            )}
-          </p>
-
-          <p>
-            <strong>
-              Booking ID:
-            </strong>
-            ${escapeEarningsHtml(
-              String(
-                bookingId
-              )
-            )}
-          </p>
-
-          <p>
-            <strong>
-              Transaction ID:
-            </strong>
-            ${escapeEarningsHtml(
-              String(
-                transactionId
-              )
-            )}
-          </p>
-
-          <p>
-            <strong>
-              Work status:
-            </strong>
-            ${escapeEarningsHtml(
-              workStatus
-            )}
-          </p>
-
-          <p>
-            <strong>
-              Payment method:
-            </strong>
-            ${escapeEarningsHtml(
-              payment.method ||
-              "Unknown"
-            )}
-          </p>
-
-          ${
-            payment.razorpayPaymentId
-              ? `
-                <p>
-                  <strong>
-                    Razorpay Payment ID:
-                  </strong>
-                  ${escapeEarningsHtml(
-                    payment.razorpayPaymentId
-                  )}
-                </p>
-              `
-              : ""
-          }
-
-          ${
-            payment.razorpayOrderId
-              ? `
-                <p>
-                  <strong>
-                    Razorpay Order ID:
-                  </strong>
-                  ${escapeEarningsHtml(
-                    payment.razorpayOrderId
-                  )}
-                </p>
-              `
-              : ""
-          }
-
-          ${
-            paidAt
-              ? `
-                <p class="muted">
-                  Paid:
-                  ${escapeEarningsHtml(
-                    formatDate(
-                      paidAt
-                    )
-                  )}
-                </p>
-              `
-              : ""
-          }
-
-          ${
-            refundedAt
-              ? `
-                <p class="muted">
-                  Refunded:
-                  ${escapeEarningsHtml(
-                    formatDate(
-                      refundedAt
-                    )
-                  )}
-                </p>
-              `
-              : ""
-          }
-
-          ${
-            refundId
-              ? `
-                <p class="muted">
-                  Refund ID:
-                  ${escapeEarningsHtml(
-                    refundId
-                  )}
-                </p>
-              `
-              : ""
-          }
-
-        </div>
-
-      `;
-    }
-  )
-  .join("");
-
-}
-
-function renderPagination(
-pagination
-) {
-const container =
-document.querySelector(
+function renderPagination(pagination) {
+const container = document.querySelector(
 "#earningsPagination"
 );
 
@@ -517,16 +383,16 @@ return;
 }
 
 const page =
-Number(
-pagination?.page || 1
-);
+Number(pagination?.page || 1);
 
 const totalPages =
-Number(
-pagination?.totalPages || 0
-);
+Number(pagination?.totalPages || 0);
+
+const total =
+Number(pagination?.total || 0);
 
 if (
+total <= 0 ||
 totalPages <= 1
 ) {
 container.innerHTML = "";
@@ -534,40 +400,29 @@ return;
 }
 
 container.innerHTML = `
-
 <div class="row between">
 
   <button
     class="btn"
     type="button"
     id="earningsPrevious"
-    ${page <= 1
-      ? "disabled"
-      : ""}
+    ${page <= 1 ? "disabled" : ""}
   >
     Previous
   </button>
 
   <span>
     Page
-    ${escapeEarningsHtml(
-      String(page)
-    )}
+    ${escapeEarningsHtml(String(page))}
     of
-    ${escapeEarningsHtml(
-      String(totalPages)
-    )}
+    ${escapeEarningsHtml(String(totalPages))}
   </span>
 
   <button
     class="btn"
     type="button"
     id="earningsNext"
-    ${
-      page >= totalPages
-        ? "disabled"
-        : ""
-    }
+    ${page >= totalPages ? "disabled" : ""}
   >
     Next
   </button>
@@ -591,9 +446,7 @@ previous.addEventListener(
 "click",
 () => {
 if (page > 1) {
-loadEarnings(
-page - 1
-);
+loadEarnings(page - 1);
 }
 }
 );
@@ -603,39 +456,26 @@ if (next) {
 next.addEventListener(
 "click",
 () => {
-if (
-page <
-totalPages
-) {
-loadEarnings(
-page + 1
-);
+if (page < totalPages) {
+loadEarnings(page + 1);
 }
 }
 );
 }
 }
 
-async function earningsRequest(
-endpoint
-) {
+async function earningsRequest(endpoint) {
 if (
 window.SWN &&
-typeof window.SWN.request ===
-"function"
+typeof window.SWN.request === "function"
 ) {
-return window.SWN.request(
-endpoint
-);
+return window.SWN.request(endpoint);
 }
 
 if (
-typeof window.apiFetch ===
-"function"
+typeof window.apiFetch === "function"
 ) {
-return window.apiFetch(
-endpoint
-);
+return window.apiFetch(endpoint);
 }
 
 throw new Error(
@@ -643,15 +483,10 @@ throw new Error(
 );
 }
 
-async function loadEarnings(
-page = 1
-) {
+async function loadEarnings(page = 1) {
 const user =
-typeof window.protect ===
-"function"
-? window.protect(
-"worker"
-)
+typeof window.protect === "function"
+? window.protect("worker")
 : null;
 
 if (!user) {
@@ -668,34 +503,28 @@ earningsMessage.innerHTML = "";
 }
 
 try {
-const response =
-await earningsRequest(
-"/earnings/me?page=${encodeURIComponent( page )}&limit=50"
-);
+const endpoint =
+"/earnings/me?page=${encodeURIComponent( page )}&limit=50";
 
-let result = {};
-
-try {
-  result =
-    await response.json();
-} catch {
-  result = {};
-}
+/*
+ * SWN.request() already returns parsed JSON.
+ * Do NOT call response.json() here.
+ */
+const result =
+  await earningsRequest(endpoint);
 
 if (
-  !response.ok ||
+  !result ||
   !result.success
 ) {
   throw new Error(
-    result.message ||
+    result?.message ||
     "Unable to load earnings."
   );
 }
 
 const data =
-  getEarningsData(
-    result
-  );
+  getEarningsData(result);
 
 const subtitle =
   document.querySelector(
@@ -703,38 +532,35 @@ const subtitle =
   );
 
 if (subtitle) {
-  subtitle.textContent =
-    `${Number(
-      data.completedBookingCount ||
-      data.completedPaidBookings ||
+  const completedBookings =
+    Number(
+      data.completedBookingCount ??
+      data.completedPaidBookings ??
       0
-    )} completed paid booking(s) • ${formatMoney(
+    );
+
+  subtitle.textContent =
+    `${completedBookings} completed paid booking(s) • ${formatMoney(
       data.availableAmount,
-      data.currency ||
-        "INR"
+      data.currency || "INR"
     )} available`;
 }
 
-renderEarningsStats(
-  data
-);
+renderEarningsStats(data);
 
 renderPayments(
-  Array.isArray(
-    data.payments
-  )
+  Array.isArray(data.payments)
     ? data.payments
     : []
 );
 
 renderPagination(
-  data.pagination ||
-  {}
+  data.pagination || {}
 );
 
 } catch (error) {
 showEarningsMessage(
-error.message ||
+error?.message ||
 "Unable to load earnings.",
 true
 );
@@ -780,16 +606,11 @@ document.querySelector(
 if (refresh) {
   refresh.addEventListener(
     "click",
-    () =>
-      loadEarnings(
-        1
-      )
+    () => loadEarnings(1)
   );
 }
 
-loadEarnings(
-  1
-);
+loadEarnings(1);
 
 }
 );
