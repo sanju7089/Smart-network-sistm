@@ -18,7 +18,7 @@ Includes:
 - Invalid/closed work handling
 - Central SWN API client
 - XSS-safe rendering
-  ========================================
+  ==================================================
   */
 
 /*
@@ -34,16 +34,13 @@ typeof window.SWN.flash === "function"
 ) {
 window.SWN.flash(message);
 } else {
-alert(message);
+alert(String(message || ""));
 }
 }
 
 function escapeWorkHtml(value = "") {
-if (
-typeof window.escapeHtml ===
-"function"
-) {
-return window.escapeHtml(value);
+if (typeof window.escapeHtml === "function") {
+return window.escapeHtml(String(value));
 }
 
 return String(value)
@@ -56,16 +53,11 @@ return String(value)
 
 function getJobIdFromUrl() {
 return String(
-new URLSearchParams(
-window.location.search
-).get("id") || ""
+new URLSearchParams(window.location.search).get("id") || ""
 ).trim();
 }
 
-function normalizeWorkText(
-value,
-maxLength = 200
-) {
+function normalizeWorkText(value, maxLength = 200) {
 return String(value ?? "")
 .trim()
 .slice(0, maxLength);
@@ -82,18 +74,14 @@ if (event) {
 event.preventDefault();
 }
 
-if (
-typeof window.protect !==
-"function"
-) {
+if (typeof window.protect !== "function") {
 showWorkMessage(
 "Authentication system is unavailable."
 );
 return;
 }
 
-const user =
-window.protect("customer");
+const user = window.protect("customer");
 
 if (!user) {
 return;
@@ -101,8 +89,7 @@ return;
 
 if (
 !window.SWN ||
-typeof window.SWN.request !==
-"function"
+typeof window.SWN.request !== "function"
 ) {
 showWorkMessage(
 "API connection is unavailable."
@@ -110,18 +97,14 @@ showWorkMessage(
 return;
 }
 
-const form =
-document.querySelector("#workForm");
+const form = document.querySelector("#workForm");
 
 if (!form) {
-showWorkMessage(
-"Work form not found."
-);
+showWorkMessage("Work form not found.");
 return;
 }
 
-const formData =
-new FormData(form);
+const formData = new FormData(form);
 
 const jobData = {
 title: String(
@@ -160,9 +143,7 @@ showWorkMessage(
 return;
 }
 
-if (
-jobData.title.length < 3
-) {
+if (jobData.title.length < 3) {
 showWorkMessage(
 "Work title must be at least 3 characters."
 );
@@ -172,9 +153,7 @@ return;
 if (
 jobData.budget !== "" &&
 (
-!Number.isFinite(
-Number(jobData.budget)
-) ||
+!Number.isFinite(Number(jobData.budget)) ||
 Number(jobData.budget) < 0
 )
 ) {
@@ -184,54 +163,39 @@ showWorkMessage(
 return;
 }
 
-const submitButton =
-form.querySelector(
+const submitButton = form.querySelector(
 'button[type="submit"], input[type="submit"]'
 );
 
-const originalButtonText =
-submitButton
+const originalButtonText = submitButton
 ? submitButton.textContent
 : "";
 
 try {
 if (submitButton) {
 submitButton.disabled = true;
-submitButton.textContent =
-"Posting...";
+submitButton.textContent = "Posting...";
 }
 
 const payload = {
   title: jobData.title,
-
-  description:
-    jobData.description,
-
-  category:
-    jobData.category,
-
-  service:
-    jobData.service,
-
-  location:
-    jobData.location,
-
+  description: jobData.description,
+  category: jobData.category,
+  service: jobData.service,
+  location: jobData.location,
   budget:
     jobData.budget === ""
       ? ""
       : Number(jobData.budget)
 };
 
-const result =
-  await window.SWN.request(
-    "/jobs",
-    {
-      method: "POST",
-      body: JSON.stringify(
-        payload
-      )
-    }
-  );
+const result = await window.SWN.request(
+  "/jobs",
+  {
+    method: "POST",
+    body: JSON.stringify(payload)
+  }
+);
 
 if (
   !result ||
@@ -300,24 +264,16 @@ READ SEARCH FILTERS
 
 function readWorkFilters() {
 const search =
-document.querySelector(
-"#workSearch"
-);
+document.querySelector("#workSearch");
 
 const category =
-document.querySelector(
-"#workCategory"
-);
+document.querySelector("#workCategory");
 
 const service =
-document.querySelector(
-"#workService"
-);
+document.querySelector("#workService");
 
 const location =
-document.querySelector(
-"#workLocation"
-);
+document.querySelector("#workLocation");
 
 workSearchState.search =
 normalizeWorkText(
@@ -351,12 +307,10 @@ BUILD JOB SEARCH URL
 */
 
 function buildWorkListEndpoint() {
-const params =
-new URLSearchParams();
+const params = new URLSearchParams();
 
 /*
-Public Find Work must only
-request OPEN jobs.
+Public Find Work must only request OPEN jobs.
 */
 
 params.set(
@@ -366,48 +320,36 @@ params.set(
 
 params.set(
 "page",
-String(
-workSearchState.page
-)
+String(workSearchState.page)
 );
 
 params.set(
 "limit",
-String(
-workSearchState.limit
-)
+String(workSearchState.limit)
 );
 
-if (
-workSearchState.search
-) {
+if (workSearchState.search) {
 params.set(
 "search",
 workSearchState.search
 );
 }
 
-if (
-workSearchState.category
-) {
+if (workSearchState.category) {
 params.set(
 "category",
 workSearchState.category
 );
 }
 
-if (
-workSearchState.service
-) {
+if (workSearchState.service) {
 params.set(
 "service",
 workSearchState.service
 );
 }
 
-if (
-workSearchState.location
-) {
+if (workSearchState.location) {
 params.set(
 "location",
 workSearchState.location
@@ -423,9 +365,7 @@ EXTRACT JOB LIST
 
 */
 
-function extractJobList(
-result
-) {
+function extractJobList(result) {
 if (
 result &&
 Array.isArray(result.data)
@@ -436,9 +376,7 @@ return result.data;
 if (
 result &&
 result.data &&
-Array.isArray(
-result.data.jobs
-)
+Array.isArray(result.data.jobs)
 ) {
 return result.data.jobs;
 }
@@ -459,9 +397,7 @@ RENDER FIND WORK CARD
 
 */
 
-function renderWorkCard(
-job
-) {
+function renderWorkCard(job) {
 if (!job) {
 return "";
 }
@@ -475,13 +411,7 @@ return "";
 }
 
 /*
-Public list is expected to
-contain only open jobs.
-
-Do not render invalid/closed
-jobs even if malformed data
-somehow reaches the browser.
-
+Public list must contain only open jobs.
 */
 
 if (
@@ -522,12 +452,24 @@ job.location ||
 "Location not specified"
 );
 
-const budget =
-job.budget === null ||
-job.budget === undefined ||
-job.budget === ""
-? "Negotiable"
-: "₹${Number( job.budget ).toLocaleString( "en-IN" )}";
+let budget = "Negotiable";
+
+if (
+job.budget !== null &&
+job.budget !== undefined &&
+job.budget !== ""
+) {
+const numericBudget =
+Number(job.budget);
+
+if (
+  Number.isFinite(numericBudget)
+) {
+  budget =
+    `₹${numericBudget.toLocaleString("en-IN")}`;
+}
+
+}
 
 const safeDescription =
 description.length > 220
@@ -537,9 +479,7 @@ description.length > 220
 return `
 <article
 class="item"
-data-job-id="${escapeWorkHtml(
-jobId
-)}"
+data-job-id="${escapeWorkHtml(jobId)}"
 >
 
   <div
@@ -601,16 +541,15 @@ jobId
         "
       >
         <b>Budget:</b>
-        ${budget}
+        ${escapeWorkHtml(budget)}
       </p>
 
     </div>
 
-
     <a
       class="btn btn-primary"
       href="work-request.html?id=${encodeURIComponent(
-        jobId
+        String(jobId)
       )}"
       aria-label="View work details for ${escapeWorkHtml(
         job.title ||
@@ -688,9 +627,7 @@ totalPages;
 workSearchState.page =
 currentPage;
 
-if (
-totalPages <= 1
-) {
+if (totalPages <= 1) {
 pagination.style.display =
 "none";
 
@@ -735,16 +672,25 @@ workSearchState.total
 ) || 0;
 
 const currentPage =
-workSearchState.page;
+Number(
+workSearchState.page
+) || 1;
 
 const limit =
-workSearchState.limit;
+Number(
+workSearchState.limit
+) || 20;
 
 if (!total) {
 summary.textContent =
 "No matching open work requests found.";
+
 return;
+
 }
+
+const count =
+Number(visibleCount) || 0;
 
 const start =
 (
@@ -754,7 +700,7 @@ limit
 
 const end =
 Math.min(
-start + visibleCount - 1,
+start + Math.max(count, 1) - 1,
 total
 );
 
@@ -784,7 +730,8 @@ if (
 typeof window.SWN.request !==
 "function"
 ) {
-element.innerHTML = "<div class="notice"> API connection is unavailable. </div>";
+element.innerHTML =
+"<div class="notice"> API connection is unavailable. </div>";
 
 return;
 
@@ -801,7 +748,8 @@ readWorkFilters();
 workSearchState.loading =
 true;
 
-element.innerHTML = "<div class="notice"> Loading work requests... </div>";
+element.innerHTML =
+"<div class="notice"> Loading work requests... </div>";
 
 try {
 const endpoint =
@@ -846,9 +794,9 @@ workSearchState.totalPages =
   );
 
 /*
-  Backend is authoritative,
-  but browser also protects
-  against closed/invalid jobs.
+Backend is authoritative,
+browser also protects against
+closed/invalid jobs.
 */
 
 const validJobs =
@@ -870,11 +818,12 @@ const cards =
     .join("");
 
 if (!cards) {
-  element.innerHTML = `
-    <div class="notice">
-      No matching open work requests found.
-    </div>
-  `;
+  element.innerHTML =
+    `
+      <div class="notice">
+        No matching open work requests found.
+      </div>
+    `;
 } else {
   element.innerHTML =
     cards;
@@ -892,14 +841,15 @@ console.error(
 error
 );
 
-element.innerHTML = `
-  <div class="notice">
-    ${escapeWorkHtml(
-      error?.message ||
-      "Unable to load work requests."
-    )}
-  </div>
-`;
+element.innerHTML =
+  `
+    <div class="notice">
+      ${escapeWorkHtml(
+        error?.message ||
+        "Unable to load work requests."
+      )}
+    </div>
+  `;
 
 const summary =
   document.querySelector(
@@ -962,25 +912,16 @@ if (location) {
 location.value = "";
 }
 
-workSearchState.search =
-"";
-
-workSearchState.category =
-"";
-
-workSearchState.service =
-"";
-
-workSearchState.location =
-"";
-
-workSearchState.page =
-1;
+workSearchState.search = "";
+workSearchState.category = "";
+workSearchState.service = "";
+workSearchState.location = "";
+workSearchState.page = 1;
 
 jobs(
 "jobsList",
 {
-resetPage: false
+resetPage: true
 }
 );
 }
@@ -992,20 +933,21 @@ WORK DETAIL
 */
 
 async function request() {
-const element =
+const container =
 document.querySelector(
 "#requestDetail"
 );
 
-const id =
-getJobIdFromUrl();
-
-if (!element) {
+if (!container) {
 return;
 }
 
-if (!id) {
-element.innerHTML = "<div class="notice"> Work request ID is missing. </div>";
+const jobId =
+getJobIdFromUrl();
+
+if (!jobId) {
+container.innerHTML =
+"<div class="notice"> Invalid work request. </div>";
 
 return;
 
@@ -1016,104 +958,146 @@ if (
 typeof window.SWN.request !==
 "function"
 ) {
-element.innerHTML = "<div class="notice"> API connection is unavailable. </div>";
+container.innerHTML =
+"<div class="notice"> API connection is unavailable. </div>";
 
 return;
 
 }
 
-element.innerHTML = "<div class="notice"> Loading work details... </div>";
+container.innerHTML =
+"<div class="notice"> Loading work details... </div>";
 
 try {
 const result =
 await window.SWN.request(
-"/jobs/${encodeURIComponent(id)}"
+"/jobs/${encodeURIComponent(jobId)}"
 );
 
 if (
   !result ||
-  result.success !== true
+  result.success !== true ||
+  !result.data
 ) {
   throw new Error(
     result?.message ||
-    "Work request not found or is no longer available."
+    "Work request not found."
   );
 }
 
 const job =
   result.data;
 
-if (!job) {
-  throw new Error(
-    "Work request not found or is no longer available."
-  );
-}
+const status =
+  String(
+    job.status ||
+    "open"
+  ).toLowerCase();
 
 /*
-  Public detail should be open.
-
-  Non-open jobs can only be returned
-  by backend to authorized owner/admin.
-  Therefore the frontend must not
-  blindly treat every response as
-  public work.
+--------------------------------------------------
+PUBLIC / OWNER / ADMIN ACCESS CHECK
+--------------------------------------------------
 */
 
-const currentUser =
+let currentUser = null;
+
+if (
+  window.SWN &&
   typeof window.SWN.user ===
-  "function"
-    ? window.SWN.user()
-    : null;
+    "function"
+) {
+  currentUser =
+    window.SWN.user();
+}
+
+if (!currentUser) {
+  try {
+    const storedUser =
+      localStorage.getItem(
+        "swn_user"
+      );
+
+    if (storedUser) {
+      currentUser =
+        JSON.parse(
+          storedUser
+        );
+    }
+  } catch (error) {
+    console.warn(
+      "Unable to read stored user:",
+      error
+    );
+  }
+}
+
+const customerId =
+  job.customerId &&
+  typeof job.customerId === "object"
+    ? (
+        job.customerId._id ||
+        job.customerId.id
+      )
+    : job.customerId;
+
+const currentUserId =
+  currentUser &&
+  (
+    currentUser._id ||
+    currentUser.id
+  );
 
 const isOwner =
   Boolean(
-    currentUser &&
-    currentUser.id &&
-    job.customerId &&
-    String(
-      job.customerId?._id ||
-      job.customerId
-    ) ===
-    String(
-      currentUser.id
-    )
+    currentUserId &&
+    customerId &&
+    String(currentUserId) ===
+      String(customerId)
   );
 
 const isAdmin =
   Boolean(
     currentUser &&
-    currentUser.role ===
-    "admin"
+    currentUser.role === "admin"
   );
 
+/*
+Public users can only view OPEN jobs.
+Owner/admin can view their private jobs.
+*/
+
 if (
-  job.status &&
-  job.status !== "open" &&
+  status !== "open" &&
   !isOwner &&
   !isAdmin
 ) {
-  throw new Error(
-    "This work request is no longer available."
-  );
+  container.innerHTML =
+    `
+      <div class="notice">
+        This work request is no longer available.
+      </div>
+    `;
+
+  return;
 }
+
+/*
+--------------------------------------------------
+SAFE DATA
+--------------------------------------------------
+*/
 
 const title =
   escapeWorkHtml(
     job.title ||
-    "Work Request"
+    "Untitled Work"
   );
 
 const description =
   escapeWorkHtml(
     job.description ||
-    ""
-  );
-
-const service =
-  escapeWorkHtml(
-    job.service ||
-    job.category ||
-    "General"
+    "No description provided."
   );
 
 const category =
@@ -1122,217 +1106,217 @@ const category =
     "General"
   );
 
+const service =
+  escapeWorkHtml(
+    job.service ||
+    "General Service"
+  );
+
 const location =
   escapeWorkHtml(
     job.location ||
     "Location not specified"
   );
 
-const budget =
-  job.budget === null ||
-  job.budget === undefined ||
-  job.budget === ""
-    ? "Negotiable"
-    : `₹${Number(
-        job.budget
-      ).toLocaleString(
-        "en-IN"
-      )}`;
+let budget =
+  "Negotiable";
 
-const jobId =
-  job._id ||
-  job.id;
+if (
+  job.budget !== null &&
+  job.budget !== undefined &&
+  job.budget !== ""
+) {
+  const numericBudget =
+    Number(job.budget);
 
-if (!jobId) {
-  throw new Error(
-    "Invalid work data."
-  );
+  if (
+    Number.isFinite(numericBudget)
+  ) {
+    budget =
+      `₹${numericBudget.toLocaleString("en-IN")}`;
+  }
 }
 
-const status =
-  String(
-    job.status ||
-    "open"
-  ).toLowerCase();
-
-const statusLabel =
+const safeStatus =
   escapeWorkHtml(
     status
-      .replace(
-        /_/g,
-        " "
-      )
-      .replace(
-        /\b\w/g,
-        (letter) =>
-          letter.toUpperCase()
-      )
   );
 
-const canFindWorkers =
-  status === "open";
+/*
+--------------------------------------------------
+FIND MATCHED WORKERS
+--------------------------------------------------
+*/
 
-element.innerHTML = `
-  <div class="card">
-
-    <div
-      class="row"
-      style="
-        margin-bottom:12px;
-      "
-    >
-
-      <span class="tag">
-        ${service}
-      </span>
-
-      <span class="tag">
-        ${category}
-      </span>
-
-      <span class="tag">
-        ${location}
-      </span>
-
-      <span class="tag">
-        Status: ${statusLabel}
-      </span>
-
-    </div>
-
-
-    <h1>
-      ${title}
-    </h1>
-
-
-    <p class="lead">
-      ${description}
-    </p>
-
-
-    <div
-      style="
-        display:grid;
-        gap:8px;
-        margin:18px 0;
-      "
-    >
-
-      <p>
-        <b>Service:</b>
-        ${service}
-      </p>
-
-      <p>
-        <b>Category:</b>
-        ${category}
-      </p>
-
-      <p>
-        <b>Location:</b>
-        ${location}
-      </p>
-
-      <p>
-        <b>Budget:</b>
-        ${budget}
-      </p>
-
-    </div>
-
-
-    <div
-      class="row"
-      style="
-        margin-top:18px;
-      "
-    >
-
+const matchedWorkersButton =
+  status === "open"
+    ? `
       <a
-        class="btn btn-light"
-        href="find-work.html"
+        class="btn btn-primary"
+        href="workers.html?jobId=${encodeURIComponent(
+          String(jobId)
+        )}"
       >
-        ← Back to Find Work
+        Find Matched Workers
       </a>
+    `
+    : "";
 
-      ${
-        canFindWorkers
-          ? `
-            <a
-              class="btn btn-primary"
-              href="workers.html?service=${encodeURIComponent(
-                job.service ||
-                job.category ||
-                ""
-              )}&jobId=${encodeURIComponent(
-                jobId
-              )}"
-            >
-              Find Matched Workers
-            </a>
-          `
-          : `
-            <span
-              class="notice"
-              style="
-                margin:0;
-              "
-            >
-              This work request is no longer
-              accepting new worker bookings.
+/*
+--------------------------------------------------
+DETAIL RENDER
+--------------------------------------------------
+*/
+
+container.innerHTML =
+  `
+    <article class="card">
+
+      <div
+        class="row between"
+        style="
+          align-items:flex-start;
+          gap:16px;
+        "
+      >
+
+        <div
+          style="
+            min-width:0;
+            flex:1;
+          "
+        >
+
+          <h1
+            style="
+              margin-top:0;
+            "
+          >
+            ${title}
+          </h1>
+
+          <div
+            class="row"
+            style="
+              gap:6px;
+              margin-bottom:14px;
+            "
+          >
+
+            <span class="tag">
+              ${service}
             </span>
-          `
-      }
 
-    </div>
+            <span class="tag">
+              ${category}
+            </span>
 
-  </div>
-`;
+            <span class="tag">
+              ${location}
+            </span>
+
+            <span class="tag">
+              Status: ${safeStatus}
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div
+        style="
+          margin-top:16px;
+        "
+      >
+
+        <h3>
+          Work Description
+        </h3>
+
+        <p
+          style="
+            white-space:pre-wrap;
+          "
+        >
+          ${description}
+        </p>
+
+      </div>
+
+      <div
+        style="
+          margin-top:16px;
+        "
+      >
+
+        <p>
+          <b>Category:</b>
+          ${category}
+        </p>
+
+        <p>
+          <b>Service:</b>
+          ${service}
+        </p>
+
+        <p>
+          <b>Location:</b>
+          ${location}
+        </p>
+
+        <p>
+          <b>Budget:</b>
+          ${escapeWorkHtml(budget)}
+        </p>
+
+      </div>
+
+      <div
+        class="row"
+        style="
+          margin-top:20px;
+          gap:10px;
+        "
+      >
+
+        ${matchedWorkersButton}
+
+        <a
+          class="btn btn-light"
+          href="find-work.html"
+        >
+          Back to Find Work
+        </a>
+
+      </div>
+
+    </article>
+  `;
 
 } catch (error) {
 console.error(
-"LOAD JOB DETAIL ERROR:",
+"LOAD WORK DETAIL ERROR:",
 error
 );
 
-const message =
-  error?.message ||
-  "Unable to load work details.";
-
-element.innerHTML = `
-  <div class="notice">
-
-    <strong>
-      Work request unavailable
-    </strong>
-
-    <p
-      style="
-        margin:8px 0 14px;
-      "
-    >
+container.innerHTML =
+  `
+    <div class="notice">
       ${escapeWorkHtml(
-        message
+        error?.message ||
+        "This work request is invalid, unavailable, or no longer exists."
       )}
-    </p>
-
-    <a
-      class="btn btn-primary"
-      href="find-work.html"
-    >
-      Back to Find Work
-    </a>
-
-  </div>
-`;
+    </div>
+  `;
 
 }
 }
 
 /*
 
-FIND WORK EVENT HANDLERS
+INITIALIZE FIND WORK SEARCH
 
 */
 
@@ -1360,24 +1344,15 @@ document.querySelector(
 if (form) {
 form.addEventListener(
 "submit",
-(event) => {
+function(event) {
 event.preventDefault();
 
-    if (
-      workSearchState.loading
-    ) {
-      return;
-    }
-
-    readWorkFilters();
-
-    workSearchState.page =
-      1;
+    workSearchState.page = 1;
 
     jobs(
       "jobsList",
       {
-        resetPage: false
+        resetPage: true
       }
     );
   }
@@ -1388,14 +1363,16 @@ event.preventDefault();
 if (resetButton) {
 resetButton.addEventListener(
 "click",
-resetWorkFilters
+function() {
+resetWorkFilters();
+}
 );
 }
 
 if (previous) {
 previous.addEventListener(
 "click",
-() => {
+function() {
 if (
 workSearchState.loading ||
 workSearchState.page <= 1
@@ -1403,15 +1380,9 @@ workSearchState.page <= 1
 return;
 }
 
-    workSearchState.page -=
-      1;
+    workSearchState.page -= 1;
 
-    jobs(
-      "jobsList",
-      {
-        resetPage: false
-      }
-    );
+    jobs("jobsList");
   }
 );
 
@@ -1420,7 +1391,7 @@ return;
 if (next) {
 next.addEventListener(
 "click",
-() => {
+function() {
 if (
 workSearchState.loading ||
 workSearchState.page >=
@@ -1429,15 +1400,9 @@ workSearchState.totalPages
 return;
 }
 
-    workSearchState.page +=
-      1;
+    workSearchState.page += 1;
 
-    jobs(
-      "jobsList",
-      {
-        resetPage: false
-      }
-    );
+    jobs("jobsList");
   }
 );
 
@@ -1453,40 +1418,39 @@ PAGE INITIALIZATION
 function initializeWorkPage() {
 initializeWorkSearch();
 
-const hasJobsList =
+const list =
 document.querySelector(
 "#jobsList"
 );
 
-const hasRequestDetail =
+const detail =
 document.querySelector(
 "#requestDetail"
 );
 
-if (hasJobsList) {
-jobs();
+if (list) {
+jobs("jobsList");
 }
 
-if (hasRequestDetail) {
+if (detail) {
 request();
 }
 }
 
-if (
-document.readyState ===
-"loading"
-) {
+/*
+
+DOM READY
+
+*/
+
 document.addEventListener(
 "DOMContentLoaded",
 initializeWorkPage
 );
-} else {
-initializeWorkPage();
-}
 
 /*
 
-PUBLIC API
+GLOBAL EXPORTS
 
 */
 
@@ -1501,3 +1465,4 @@ request;
 
 window.resetWorkFilters =
 resetWorkFilters;
+大小规律
