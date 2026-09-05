@@ -60,9 +60,9 @@ const paymentSchema = new mongoose.Schema(
     },
 
     /*
-      IMPORTANT:
-      null default is used instead of ""
-      so sparse unique indexes work correctly.
+    ========================================
+    RAZORPAY ORDER ID
+    ========================================
     */
 
     razorpayOrderId: {
@@ -106,8 +106,9 @@ const paymentSchema = new mongoose.Schema(
     },
 
     /*
-      Razorpay webhook event IDs.
-      Used for idempotency protection.
+    ========================================
+    RAZORPAY WEBHOOK IDEMPOTENCY
+    ========================================
     */
 
     processedWebhookEvents: {
@@ -155,6 +156,12 @@ const paymentSchema = new mongoose.Schema(
   }
 );
 
+/*
+========================================
+NORMAL INDEXES
+========================================
+*/
+
 paymentSchema.index({
   userId: 1,
   createdAt: -1
@@ -170,6 +177,48 @@ paymentSchema.index({
   status: 1,
   createdAt: -1
 });
+
+/*
+========================================
+IMPORTANT:
+ONLY ONE ACTIVE RAZORPAY PAYMENT
+PER BOOKING
+
+This protects against two simultaneous
+order-creation requests creating multiple
+active payment records for the same booking.
+
+Terminal states:
+paid / failed / cancelled / refunded
+
+can have historical records.
+
+Active states:
+created / pending / processing
+
+allow only one record.
+========================================
+*/
+
+paymentSchema.index(
+  {
+    bookingId: 1,
+    method: 1
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      method: "razorpay",
+      status: {
+        $in: [
+          "created",
+          "pending",
+          "processing"
+        ]
+      }
+    }
+  }
+);
 
 const Payment = mongoose.model(
   "Payment",
