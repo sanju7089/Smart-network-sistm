@@ -1,17 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Worker Profile - Smart Work Network</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Worker Profile | Smart Work Network</title>
 
   <meta
     name="description"
-    content="View and manage worker profile on Smart Work Network."
+    content="Worker profile on Smart Work Network."
   >
 
-  <link rel="stylesheet" href="css/style.css">
+  <link
+    rel="stylesheet"
+    href="css/main.css"
+  >
 
   <style>
     .worker-profile-page {
@@ -28,14 +36,12 @@
       margin-bottom: 24px;
     }
 
-    .worker-profile-card h1,
-    .worker-profile-card h2 {
-      margin-top: 0;
-    }
-
     .worker-profile-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(
+        2,
+        minmax(0, 1fr)
+      );
       gap: 18px;
     }
 
@@ -213,19 +219,24 @@
       class="worker-profile-card"
       hidden
     >
+
       <h1>Edit Worker Profile</h1>
 
       <p>
-        Update your worker information below. Your changes will be saved to
-        your Smart Work Network worker profile.
+        Update your worker information below.
       </p>
 
-      <form id="workerProfileForm" novalidate>
+      <form
+        id="workerProfileForm"
+        novalidate
+      >
 
         <div class="worker-profile-grid">
 
           <div class="worker-profile-field">
-            <label for="workerName">Name</label>
+            <label for="workerName">
+              Name
+            </label>
 
             <input
               id="workerName"
@@ -238,33 +249,37 @@
           </div>
 
           <div class="worker-profile-field">
-            <label for="workerService">Service</label>
+            <label for="workerService">
+              Service
+            </label>
 
             <input
               id="workerService"
               name="service"
               type="text"
               maxlength="100"
-              placeholder="e.g. Electrician, Plumber, Driver"
               required
             >
           </div>
 
           <div class="worker-profile-field">
-            <label for="workerLocation">Location</label>
+            <label for="workerLocation">
+              Location
+            </label>
 
             <input
               id="workerLocation"
               name="location"
               type="text"
               maxlength="150"
-              autocomplete="address-level2"
               required
             >
           </div>
 
           <div class="worker-profile-field">
-            <label for="workerPhone">Phone</label>
+            <label for="workerPhone">
+              Phone
+            </label>
 
             <input
               id="workerPhone"
@@ -277,25 +292,27 @@
           </div>
 
           <div class="worker-profile-field">
-            <label for="workerExperience">Experience</label>
+            <label for="workerExperience">
+              Experience
+            </label>
 
             <input
               id="workerExperience"
               name="experience"
               type="text"
               maxlength="100"
-              placeholder="e.g. 5 years"
             >
           </div>
 
           <div class="worker-profile-field full-width">
-            <label for="workerBio">Bio</label>
+            <label for="workerBio">
+              Bio
+            </label>
 
             <textarea
               id="workerBio"
               name="bio"
               maxlength="1000"
-              placeholder="Tell customers about your experience and services."
             ></textarea>
           </div>
 
@@ -317,18 +334,21 @@
         </div>
 
       </form>
+
     </section>
 
     <section
       id="workerDetailSection"
       class="worker-profile-card"
     >
+
       <div
         id="workerDetail"
         class="worker-profile-loading"
       >
         Loading worker profile...
       </div>
+
     </section>
 
   </main>
@@ -341,25 +361,39 @@
 
     (() => {
       const messageElement =
-        document.getElementById("workerProfileMessage");
+        document.getElementById(
+          "workerProfileMessage"
+        );
 
       const editSection =
-        document.getElementById("workerEditSection");
+        document.getElementById(
+          "workerEditSection"
+        );
 
       const detailSection =
-        document.getElementById("workerDetailSection");
+        document.getElementById(
+          "workerDetailSection"
+        );
 
       const detailElement =
-        document.getElementById("workerDetail");
+        document.getElementById(
+          "workerDetail"
+        );
 
       const form =
-        document.getElementById("workerProfileForm");
+        document.getElementById(
+          "workerProfileForm"
+        );
 
       const saveButton =
-        document.getElementById("saveWorkerProfileButton");
+        document.getElementById(
+          "saveWorkerProfileButton"
+        );
 
       const params =
-        new URLSearchParams(window.location.search);
+        new URLSearchParams(
+          window.location.search
+        );
 
       const editMode =
         params.get("edit") === "1" ||
@@ -368,11 +402,19 @@
       const workerId =
         params.get("id");
 
+      const jobId =
+        params.get("jobId");
+
       let currentWorker = null;
 
       function escapeValue(value) {
-        if (typeof window.escapeHtml === "function") {
-          return window.escapeHtml(value ?? "");
+        if (
+          typeof window.escapeHtml ===
+          "function"
+        ) {
+          return window.escapeHtml(
+            value ?? ""
+          );
         }
 
         const div =
@@ -384,7 +426,10 @@
         return div.innerHTML;
       }
 
-      function showMessage(message, type) {
+      function showMessage(
+        message,
+        type = "error"
+      ) {
         if (!messageElement) {
           return;
         }
@@ -393,7 +438,7 @@
           message || "";
 
         messageElement.className =
-          `worker-profile-message show ${type || ""}`;
+          `worker-profile-message show ${type}`;
       }
 
       function clearMessage() {
@@ -401,48 +446,50 @@
           return;
         }
 
-        messageElement.textContent =
-          "";
+        messageElement.textContent = "";
 
         messageElement.className =
           "worker-profile-message";
       }
 
-      async function apiRequest(path, options = {}) {
+      async function apiRequest(
+        path,
+        options = {}
+      ) {
         if (
-          typeof window.SWN !== "undefined" &&
-          typeof window.SWN.request === "function"
+          typeof window.SWN ===
+            "undefined" ||
+          typeof window.SWN.request !==
+            "function"
         ) {
-          return await window.SWN.request(
-            path,
-            options
+          throw new Error(
+            "API client is not available."
           );
         }
 
-        throw new Error(
-          "API client is not available."
+        return window.SWN.request(
+          path,
+          options
         );
       }
 
       function getResponseData(result) {
         if (
-          !result ||
-          typeof result !== "object"
-        ) {
-          return {};
-        }
-
-        if (
+          result &&
+          typeof result === "object" &&
           result.data &&
-          typeof result.data === "object"
+          typeof result.data ===
+            "object"
         ) {
           return result.data;
         }
 
-        return result;
+        return result || {};
       }
 
-      function getWorkerFromResponse(result) {
+      function getWorkerFromResponse(
+        result
+      ) {
         const data =
           getResponseData(result);
 
@@ -456,7 +503,7 @@
       }
 
       function getWorkerId(worker) {
-        return (
+        return String(
           worker?.id ||
           worker?._id ||
           worker?.workerId ||
@@ -465,75 +512,69 @@
       }
 
       function populateForm(worker) {
-        if (
-          !worker ||
-          !form
-        ) {
+        if (!worker) {
           return;
         }
 
-        const nameInput =
-          document.getElementById(
-            "workerName"
-          );
+        document.getElementById(
+          "workerName"
+        ).value =
+          worker.name || "";
 
-        const serviceInput =
-          document.getElementById(
-            "workerService"
-          );
+        document.getElementById(
+          "workerService"
+        ).value =
+          worker.service || "";
 
-        const locationInput =
-          document.getElementById(
-            "workerLocation"
-          );
+        document.getElementById(
+          "workerLocation"
+        ).value =
+          worker.location || "";
 
-        const phoneInput =
-          document.getElementById(
-            "workerPhone"
-          );
+        document.getElementById(
+          "workerPhone"
+        ).value =
+          worker.phone || "";
 
-        const experienceInput =
-          document.getElementById(
-            "workerExperience"
-          );
+        document.getElementById(
+          "workerExperience"
+        ).value =
+          worker.experience || "";
 
-        const bioInput =
-          document.getElementById(
-            "workerBio"
-          );
-
-        if (nameInput) {
-          nameInput.value =
-            worker.name || "";
-        }
-
-        if (serviceInput) {
-          serviceInput.value =
-            worker.service || "";
-        }
-
-        if (locationInput) {
-          locationInput.value =
-            worker.location || "";
-        }
-
-        if (phoneInput) {
-          phoneInput.value =
-            worker.phone || "";
-        }
-
-        if (experienceInput) {
-          experienceInput.value =
-            worker.experience || "";
-        }
-
-        if (bioInput) {
-          bioInput.value =
-            worker.bio || "";
-        }
+        document.getElementById(
+          "workerBio"
+        ).value =
+          worker.bio || "";
       }
 
-      function renderWorkerDetail(worker) {
+      function buildCheckoutUrl(id) {
+        if (!id) {
+          return "";
+        }
+
+        const checkoutParams =
+          new URLSearchParams();
+
+        checkoutParams.set(
+          "workerId",
+          id
+        );
+
+        if (jobId) {
+          checkoutParams.set(
+            "jobId",
+            jobId
+          );
+        }
+
+        return (
+          `checkout.html?${checkoutParams.toString()}`
+        );
+      }
+
+      function renderWorkerDetail(
+        worker
+      ) {
         if (!detailElement) {
           return;
         }
@@ -541,10 +582,13 @@
         if (!worker) {
           detailElement.innerHTML = `
             <div class="worker-profile-empty">
-              <h2>Worker Profile Not Found</h2>
+              <h2>
+                Worker Profile Not Found
+              </h2>
 
               <p>
-                The requested worker profile could not be found.
+                The requested worker profile
+                could not be found.
               </p>
             </div>
           `;
@@ -552,12 +596,15 @@
           return;
         }
 
+        const id =
+          getWorkerId(worker);
+
         const verified =
           worker.verified === true ||
           worker.isVerified === true;
 
-        const id =
-          getWorkerId(worker);
+        const checkoutUrl =
+          buildCheckoutUrl(id);
 
         detailElement.innerHTML = `
           <h1>
@@ -571,7 +618,9 @@
             verified
               ? `
                 <p>
-                  <span class="worker-profile-badge verified">
+                  <span
+                    class="worker-profile-badge verified"
+                  >
                     Verified Worker
                   </span>
                 </p>
@@ -579,12 +628,18 @@
               : ""
           }
 
-          <div class="worker-profile-detail-row">
-            <div class="worker-profile-detail-label">
+          <div
+            class="worker-profile-detail-row"
+          >
+            <div
+              class="worker-profile-detail-label"
+            >
               Service
             </div>
 
-            <div class="worker-profile-detail-value">
+            <div
+              class="worker-profile-detail-value"
+            >
               ${escapeValue(
                 worker.service ||
                 "Not specified"
@@ -592,12 +647,18 @@
             </div>
           </div>
 
-          <div class="worker-profile-detail-row">
-            <div class="worker-profile-detail-label">
+          <div
+            class="worker-profile-detail-row"
+          >
+            <div
+              class="worker-profile-detail-label"
+            >
               Location
             </div>
 
-            <div class="worker-profile-detail-value">
+            <div
+              class="worker-profile-detail-value"
+            >
               ${escapeValue(
                 worker.location ||
                 "Not specified"
@@ -605,12 +666,18 @@
             </div>
           </div>
 
-          <div class="worker-profile-detail-row">
-            <div class="worker-profile-detail-label">
+          <div
+            class="worker-profile-detail-row"
+          >
+            <div
+              class="worker-profile-detail-label"
+            >
               Phone
             </div>
 
-            <div class="worker-profile-detail-value">
+            <div
+              class="worker-profile-detail-value"
+            >
               ${escapeValue(
                 worker.phone ||
                 "Not specified"
@@ -618,12 +685,18 @@
             </div>
           </div>
 
-          <div class="worker-profile-detail-row">
-            <div class="worker-profile-detail-label">
+          <div
+            class="worker-profile-detail-row"
+          >
+            <div
+              class="worker-profile-detail-label"
+            >
               Experience
             </div>
 
-            <div class="worker-profile-detail-value">
+            <div
+              class="worker-profile-detail-value"
+            >
               ${escapeValue(
                 worker.experience ||
                 "Not specified"
@@ -631,12 +704,18 @@
             </div>
           </div>
 
-          <div class="worker-profile-detail-row">
-            <div class="worker-profile-detail-label">
+          <div
+            class="worker-profile-detail-row"
+          >
+            <div
+              class="worker-profile-detail-label"
+            >
               About
             </div>
 
-            <div class="worker-profile-detail-value">
+            <div
+              class="worker-profile-detail-value"
+            >
               ${escapeValue(
                 worker.bio ||
                 "No bio available."
@@ -644,20 +723,67 @@
             </div>
           </div>
 
-          <div class="worker-profile-actions">
-            ${
-              id
-                ? `
+          ${
+            checkoutUrl
+              ? `
+                <div
+                  class="worker-profile-actions"
+                >
                   <a
-                    href="checkout.html?workerId=${encodeURIComponent(id)}"
+                    href="${escapeValue(
+                      checkoutUrl
+                    )}"
                   >
                     Hire Worker
                   </a>
-                `
-                : ""
-            }
-          </div>
+                </div>
+              `
+              : ""
+          }
         `;
+      }
+
+      async function loadPublicProfile() {
+        if (!workerId) {
+          detailElement.innerHTML = `
+            <div class="worker-profile-error">
+              Worker ID is missing.
+            </div>
+          `;
+
+          return;
+        }
+
+        try {
+          const result =
+            await apiRequest(
+              `/workers/${encodeURIComponent(
+                workerId
+              )}`
+            );
+
+          const worker =
+            getWorkerFromResponse(
+              result
+            );
+
+          currentWorker =
+            worker;
+
+          renderWorkerDetail(
+            worker
+          );
+
+        } catch (error) {
+          detailElement.innerHTML = `
+            <div class="worker-profile-error">
+              ${escapeValue(
+                error?.message ||
+                "Unable to load worker profile."
+              )}
+            </div>
+          `;
+        }
       }
 
       async function loadEditProfile() {
@@ -665,14 +791,20 @@
           return;
         }
 
-        clearMessage();
+        const user =
+          typeof window.protect ===
+          "function"
+            ? window.protect("worker")
+            : null;
 
-        editSection.hidden =
-          false;
+        if (!user) {
+          return;
+        }
+
+        editSection.hidden = false;
 
         if (detailSection) {
-          detailSection.hidden =
-            true;
+          detailSection.hidden = true;
         }
 
         try {
@@ -682,7 +814,9 @@
             );
 
           const worker =
-            getWorkerFromResponse(result);
+            getWorkerFromResponse(
+              result
+            );
 
           if (
             !worker ||
@@ -701,107 +835,58 @@
         } catch (error) {
           showMessage(
             error?.message ||
-            "Unable to load worker profile.",
-            "error"
+            "Unable to load your worker profile."
           );
         }
       }
 
-      async function loadPublicProfile() {
-        if (editSection) {
-          editSection.hidden =
-            true;
-        }
-
-        if (detailSection) {
-          detailSection.hidden =
-            false;
-        }
-
-        if (!workerId) {
-          renderWorkerDetail(null);
-          return;
-        }
-
-        try {
-          const result =
-            await apiRequest(
-              `/workers/${encodeURIComponent(workerId)}`
-            );
-
-          const worker =
-            getWorkerFromResponse(result);
-
-          if (
-            !worker ||
-            !getWorkerId(worker)
-          ) {
-            throw new Error(
-              "Worker profile was not found."
-            );
-          }
-
-          currentWorker =
-            worker;
-
-          renderWorkerDetail(worker);
-
-        } catch (error) {
-          if (detailElement) {
-            detailElement.innerHTML = `
-              <div class="worker-profile-error">
-                ${escapeValue(
-                  error?.message ||
-                  "Unable to load worker profile."
-                )}
-              </div>
-            `;
-          }
-        }
-      }
-
-      async function saveProfile() {
-        if (!form) {
-          return;
-        }
+      async function saveProfile(
+        event
+      ) {
+        event.preventDefault();
 
         clearMessage();
 
+        if (
+          !currentWorker ||
+          !getWorkerId(currentWorker)
+        ) {
+          showMessage(
+            "Worker profile is not loaded."
+          );
+
+          return;
+        }
+
         const name =
-          document
-            .getElementById("workerName")
-            ?.value
-            .trim() || "";
+          document.getElementById(
+            "workerName"
+          ).value.trim();
 
         const service =
-          document
-            .getElementById("workerService")
-            ?.value
-            .trim() || "";
+          document.getElementById(
+            "workerService"
+          ).value.trim();
 
         const location =
-          document
-            .getElementById("workerLocation")
-            ?.value
-            .trim() || "";
+          document.getElementById(
+            "workerLocation"
+          ).value.trim();
 
         const phone =
-          document
-            .getElementById("workerPhone")
-            ?.value
-            .trim() || "";
+          document.getElementById(
+            "workerPhone"
+          ).value.trim();
 
         const experience =
-          document
-            .getElementById("workerExperience")
-            ?.value
-            .trim() || "";
+          document.getElementById(
+            "workerExperience"
+          ).value.trim();
 
         const bio =
-          document
-            .getElementById("workerBio")
-            ?.value
-            .trim() || "";
+          document.getElementById(
+            "workerBio"
+          ).value.trim();
 
         if (
           !name ||
@@ -810,81 +895,56 @@
           !phone
         ) {
           showMessage(
-            "Name, service, location and phone are required.",
-            "error"
+            "Name, service, location and phone are required."
           );
 
           return;
         }
-
-        const id =
-          getWorkerId(currentWorker);
-
-        if (!id) {
-          showMessage(
-            "Worker profile ID is missing.",
-            "error"
-          );
-
-          return;
-        }
-
-        const payload = {
-          name,
-          service,
-          location,
-          phone,
-          experience,
-          bio
-        };
 
         if (saveButton) {
-          saveButton.disabled =
-            true;
-
+          saveButton.disabled = true;
           saveButton.textContent =
             "Saving...";
         }
 
         try {
+          const id =
+            getWorkerId(
+              currentWorker
+            );
+
           const result =
             await apiRequest(
-              `/workers/${encodeURIComponent(id)}`,
+              `/workers/${encodeURIComponent(
+                id
+              )}`,
               {
                 method: "PATCH",
-
-                headers: {
-                  "Content-Type":
-                    "application/json"
-                },
-
-                body: JSON.stringify(
-                  payload
-                )
+                body: JSON.stringify({
+                  name,
+                  service,
+                  location,
+                  phone,
+                  experience,
+                  bio
+                })
               }
             );
 
-          const updatedWorker =
-            getWorkerFromResponse(result);
+          const worker =
+            getWorkerFromResponse(
+              result
+            );
 
-          if (
-            !updatedWorker ||
-            !getWorkerId(updatedWorker)
-          ) {
-            currentWorker = {
-              ...currentWorker,
-              ...payload
-            };
-          } else {
+          if (worker) {
             currentWorker =
-              updatedWorker;
+              worker;
+
+            populateForm(worker);
           }
 
-          populateForm(
-            currentWorker
-          );
-
           showMessage(
+            result?.message ||
             "Worker profile updated successfully.",
             "success"
           );
@@ -892,63 +952,38 @@
         } catch (error) {
           showMessage(
             error?.message ||
-            "Unable to save worker profile.",
-            "error"
+            "Unable to update worker profile."
           );
 
         } finally {
           if (saveButton) {
-            saveButton.disabled =
-              false;
-
+            saveButton.disabled = false;
             saveButton.textContent =
               "Save Profile";
           }
         }
       }
 
-      function initialize() {
-        /*
-         * IMPORTANT:
-         * app.js protect() expects a single role string.
-         * Do NOT change this to ["worker"].
-         */
-        if (editMode) {
-          const user =
-            typeof window.protect === "function"
-              ? window.protect("worker")
-              : null;
-
-          if (
-            typeof window.protect === "function" &&
-            !user
-          ) {
-            return;
-          }
-
-          loadEditProfile();
-          return;
-        }
-
-        loadPublicProfile();
-      }
-
       if (form) {
         form.addEventListener(
           "submit",
-          async (event) => {
-            event.preventDefault();
-            await saveProfile();
-          }
+          saveProfile
         );
       }
 
       document.addEventListener(
         "DOMContentLoaded",
-        initialize
+        () => {
+          if (editMode) {
+            loadEditProfile();
+          } else {
+            loadPublicProfile();
+          }
+        }
       );
     })();
   </script>
 
 </body>
+
 </html>
