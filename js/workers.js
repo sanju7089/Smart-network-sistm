@@ -1,36 +1,27 @@
-function escapeWorkerHtml(
-  value = ""
-) {
+"use strict";
+
+/*
+ * Smart Work Network
+ * Worker Listing + Worker Profile
+ *
+ * Uses the central SWN API client.
+ * No direct GitHub changes are made by this code.
+ */
+
+function escapeWorkerHtml(value = "") {
   if (
     typeof window.escapeHtml ===
     "function"
   ) {
-    return window.escapeHtml(
-      value
-    );
+    return window.escapeHtml(value);
   }
 
   return String(value)
-    .replace(
-      /&/g,
-      "&amp;"
-    )
-    .replace(
-      /</g,
-      "&lt;"
-    )
-    .replace(
-      />/g,
-      "&gt;"
-    )
-    .replace(
-      /"/g,
-      "&quot;"
-    )
-    .replace(
-      /'/g,
-      "&#039;"
-    );
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function getWorkerQuery() {
@@ -40,46 +31,30 @@ function getWorkerQuery() {
 }
 
 function getWorkerServiceFilter() {
-  const params =
-    getWorkerQuery();
-
   return String(
-    params.get("service") || ""
+    getWorkerQuery().get("service") || ""
   ).trim();
 }
 
 function getJobId() {
-  const params =
-    getWorkerQuery();
-
   return String(
-    params.get("jobId") || ""
+    getWorkerQuery().get("jobId") || ""
   ).trim();
 }
 
 function getWorkerId() {
-  const params =
-    getWorkerQuery();
-
   return String(
-    params.get("id") || ""
+    getWorkerQuery().get("id") || ""
   ).trim();
 }
 
-function workerProfileUrl(
-  workerId
-) {
+function workerProfileUrl(workerId) {
   const cleanWorkerId =
-    String(
-      workerId || ""
-    ).trim();
+    String(workerId || "").trim();
 
   if (!cleanWorkerId) {
     return "worker-profile.html";
   }
-
-  const jobId =
-    getJobId();
 
   const params =
     new URLSearchParams();
@@ -88,6 +63,8 @@ function workerProfileUrl(
     "id",
     cleanWorkerId
   );
+
+  const jobId = getJobId();
 
   if (jobId) {
     params.set(
@@ -99,20 +76,13 @@ function workerProfileUrl(
   return `worker-profile.html?${params.toString()}`;
 }
 
-function checkoutUrl(
-  workerId
-) {
+function checkoutUrl(workerId) {
   const cleanWorkerId =
-    String(
-      workerId || ""
-    ).trim();
+    String(workerId || "").trim();
 
   if (!cleanWorkerId) {
     return "workers.html";
   }
-
-  const jobId =
-    getJobId();
 
   const params =
     new URLSearchParams();
@@ -122,6 +92,8 @@ function checkoutUrl(
     cleanWorkerId
   );
 
+  const jobId = getJobId();
+
   if (jobId) {
     params.set(
       "jobId",
@@ -130,6 +102,152 @@ function checkoutUrl(
   }
 
   return `checkout.html?${params.toString()}`;
+}
+
+function normalizeWorkerSkills(
+  skills
+) {
+  if (!Array.isArray(skills)) {
+    return [];
+  }
+
+  const seen = new Set();
+
+  return skills
+    .map((skill) =>
+      String(skill ?? "").trim()
+    )
+    .filter(Boolean)
+    .filter((skill) => {
+      const key =
+        skill.toLowerCase();
+
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+
+      return true;
+    })
+    .slice(0, 50);
+}
+
+function renderWorkerSkills(
+  skills
+) {
+  const normalized =
+    normalizeWorkerSkills(skills);
+
+  if (!normalized.length) {
+    return `
+      <span class="tag">
+        Skills not specified
+      </span>
+    `;
+  }
+
+  return `
+    <div
+      class="worker-skills"
+      style="
+        display:flex;
+        flex-wrap:wrap;
+        gap:6px;
+        margin:10px 0;
+      "
+    >
+      ${normalized
+        .map(
+          (skill) => `
+            <span
+              class="tag"
+              style="
+                display:inline-flex;
+                align-items:center;
+              "
+            >
+              ${escapeWorkerHtml(skill)}
+            </span>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderAvailabilityBadge(
+  isAvailable
+) {
+  if (isAvailable === true) {
+    return `
+      <span
+        class="tag"
+        style="
+          background:#e8f7ed;
+          color:#176b35;
+        "
+      >
+        Available
+      </span>
+    `;
+  }
+
+  return `
+    <span
+      class="tag"
+      style="
+        background:#fff0f0;
+        color:#a51d2d;
+      "
+    >
+      Currently Unavailable
+    </span>
+  `;
+}
+
+function renderBookingButton(
+  worker
+) {
+  const id =
+    worker?._id ||
+    worker?.id;
+
+  if (!id) {
+    return "";
+  }
+
+  const isAvailable =
+    worker.isAvailable === true;
+
+  if (!isAvailable) {
+    return `
+      <button
+        type="button"
+        class="btn"
+        disabled
+        aria-disabled="true"
+        title="This worker is currently unavailable for new bookings."
+        style="
+          opacity:.6;
+          cursor:not-allowed;
+        "
+      >
+        Currently Unavailable
+      </button>
+    `;
+  }
+
+  return `
+    <a
+      class="btn btn-primary"
+      href="${escapeWorkerHtml(
+        checkoutUrl(id)
+      )}"
+    >
+      Book This Worker
+    </a>
+  `;
 }
 
 function renderWorkerCard(
@@ -172,22 +290,41 @@ function renderWorkerCard(
     );
 
   const verifiedBadge =
-    worker.verified
+    worker.verified === true
       ? `
-        <span class="tag">
+        <span
+          class="tag"
+          style="
+            background:#e8f7ed;
+            color:#176b35;
+          "
+        >
           Verified
         </span>
       `
       : `
         <span class="tag">
-          Profile Pending Verification
+          Verification Pending
         </span>
       `;
 
   return `
     <div class="card">
 
-      ${verifiedBadge}
+      <div
+        style="
+          display:flex;
+          flex-wrap:wrap;
+          gap:6px;
+          margin-bottom:10px;
+        "
+      >
+        ${verifiedBadge}
+
+        ${renderAvailabilityBadge(
+          worker.isAvailable
+        )}
+      </div>
 
       <h3>
         ${name}
@@ -198,19 +335,136 @@ function renderWorkerCard(
       </p>
 
       <p>
-        Experience:
+        <b>Experience:</b>
         ${experience}
       </p>
 
-      <a
-        class="btn btn-primary"
-        href="${workerProfileUrl(id)}"
+      ${renderWorkerSkills(
+        worker.skills
+      )}
+
+      <div
+        style="
+          display:flex;
+          flex-wrap:wrap;
+          gap:8px;
+          margin-top:12px;
+        "
       >
-        View Profile
-      </a>
+
+        <a
+          class="btn"
+          href="${escapeWorkerHtml(
+            workerProfileUrl(id)
+          )}"
+        >
+          View Profile
+        </a>
+
+        ${renderBookingButton(
+          worker
+        )}
+
+      </div>
 
     </div>
   `;
+}
+
+async function apiRequest(
+  endpoint,
+  options = {}
+) {
+  if (
+    window.SWN &&
+    typeof window.SWN.request ===
+      "function"
+  ) {
+    return window.SWN.request(
+      endpoint,
+      options
+    );
+  }
+
+  if (
+    typeof window.apiFetch ===
+    "function"
+  ) {
+    return window.apiFetch(
+      endpoint,
+      options
+    );
+  }
+
+  throw new Error(
+    "Central API client is not available."
+  );
+}
+
+function extractWorkers(
+  result
+) {
+  if (
+    result &&
+    Array.isArray(result.data)
+  ) {
+    return result.data;
+  }
+
+  if (
+    result &&
+    result.data &&
+    Array.isArray(
+      result.data.workers
+    )
+  ) {
+    return result.data.workers;
+  }
+
+  if (
+    result &&
+    Array.isArray(result.workers)
+  ) {
+    return result.workers;
+  }
+
+  return [];
+}
+
+function extractWorker(
+  result
+) {
+  if (
+    result &&
+    result.data &&
+    result.data._id
+  ) {
+    return result.data;
+  }
+
+  if (
+    result &&
+    result.data &&
+    result.data.worker
+  ) {
+    return result.data.worker;
+  }
+
+  if (
+    result &&
+    result.worker
+  ) {
+    return result.worker;
+  }
+
+  if (
+    result &&
+    result.profile
+  ) {
+    return result.profile;
+  }
+
+  return null;
 }
 
 async function loadWorkers() {
@@ -243,6 +497,12 @@ async function loadWorkers() {
       );
     }
 
+    /*
+     * Backend defaults to active,
+     * completed and available workers.
+     * We intentionally do not force
+     * another availability filter here.
+     */
     const query =
       params.toString();
 
@@ -253,36 +513,13 @@ async function loadWorkers() {
           : ""
       }`;
 
-    const response =
-      await fetch(
-        SWN.api(endpoint)
+    const result =
+      await apiRequest(
+        endpoint
       );
-
-    let result = {};
-
-    try {
-      result =
-        await response.json();
-    } catch {
-      result = {};
-    }
-
-    if (
-      !response.ok ||
-      !result.success
-    ) {
-      throw new Error(
-        result.message ||
-        "Unable to load workers."
-      );
-    }
 
     const workers =
-      Array.isArray(
-        result.data
-      )
-        ? result.data
-        : [];
+      extractWorkers(result);
 
     if (!workers.length) {
       list.innerHTML = `
@@ -321,7 +558,7 @@ async function loadWorkers() {
     list.innerHTML = `
       <div class="notice">
         ${escapeWorkerHtml(
-          error.message ||
+          error?.message ||
           "Unable to load workers."
         )}
       </div>
@@ -364,32 +601,13 @@ async function loadWorkerDetail() {
         workerId
       )}`;
 
-    const response =
-      await fetch(
-        SWN.api(endpoint)
+    const result =
+      await apiRequest(
+        endpoint
       );
-
-    let result = {};
-
-    try {
-      result =
-        await response.json();
-    } catch {
-      result = {};
-    }
-
-    if (
-      !response.ok ||
-      !result.success
-    ) {
-      throw new Error(
-        result.message ||
-        "Worker not found."
-      );
-    }
 
     const worker =
-      result.data;
+      extractWorker(result);
 
     if (!worker) {
       throw new Error(
@@ -444,9 +662,15 @@ async function loadWorkerDetail() {
       );
 
     const verifiedBadge =
-      worker.verified
+      worker.verified === true
         ? `
-          <span class="tag">
+          <span
+            class="tag"
+            style="
+              background:#e8f7ed;
+              color:#176b35;
+            "
+          >
             Verified Worker
           </span>
         `
@@ -459,7 +683,22 @@ async function loadWorkerDetail() {
     detail.innerHTML = `
       <div class="card">
 
-        ${verifiedBadge}
+        <div
+          style="
+            display:flex;
+            flex-wrap:wrap;
+            gap:6px;
+            margin-bottom:12px;
+          "
+        >
+
+          ${verifiedBadge}
+
+          ${renderAvailabilityBadge(
+            worker.isAvailable
+          )}
+
+        </div>
 
         <h1>
           ${name}
@@ -479,6 +718,20 @@ async function loadWorkerDetail() {
           ${experience}
         </p>
 
+        <div
+          style="
+            margin:16px 0;
+          "
+        >
+          <strong>
+            Skills
+          </strong>
+
+          ${renderWorkerSkills(
+            worker.skills
+          )}
+        </div>
+
         <p>
           <b>About:</b>
           ${bio}
@@ -489,12 +742,27 @@ async function loadWorkerDetail() {
           ${phone}
         </p>
 
-        <a
-          class="btn btn-primary"
-          href="${checkoutUrl(id)}"
+        <div
+          style="
+            display:flex;
+            flex-wrap:wrap;
+            gap:8px;
+            margin-top:16px;
+          "
         >
-          Book This Worker
-        </a>
+
+          <a
+            class="btn"
+            href="workers.html"
+          >
+            Back to Workers
+          </a>
+
+          ${renderBookingButton(
+            worker
+          )}
+
+        </div>
 
       </div>
     `;
@@ -508,7 +776,7 @@ async function loadWorkerDetail() {
     detail.innerHTML = `
       <div class="notice">
         ${escapeWorkerHtml(
-          error.message ||
+          error?.message ||
           "Unable to load worker profile."
         )}
       </div>
@@ -516,13 +784,37 @@ async function loadWorkerDetail() {
   }
 }
 
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
+function initializeWorkersPage() {
+  const hasWorkerList =
+    document.querySelector(
+      "#workersList"
+    );
+
+  const hasWorkerDetail =
+    document.querySelector(
+      "#workerDetail"
+    );
+
+  if (hasWorkerList) {
     loadWorkers();
+  }
+
+  if (hasWorkerDetail) {
     loadWorkerDetail();
   }
-);
+}
+
+if (
+  document.readyState ===
+  "loading"
+) {
+  document.addEventListener(
+    "DOMContentLoaded",
+    initializeWorkersPage
+  );
+} else {
+  initializeWorkersPage();
+}
 
 window.loadWorkers =
   loadWorkers;
