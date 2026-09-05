@@ -28,7 +28,11 @@ return String(value)
 }
 
 async function fetchApiData(path) {
-const response = await apiFetch(path);
+if (typeof window.apiFetch !== "function") {
+throw new Error("API system is not loaded.");
+}
+
+const response = await window.apiFetch(path);
 
 let result = {};
 
@@ -68,12 +72,23 @@ return "<div class="card"> <div class="stat"> ${formatNumber(count)} </div> <p>$
 }
 
 async function loadCustomerDashboard(element, user) {
+const customerId =
+user?.id ||
+user?._id ||
+user?.userId;
+
+if (!customerId) {
+throw new Error(
+"Customer account information is missing."
+);
+}
+
 const [
 jobsResult,
 bookingsResult
 ] = await Promise.all([
 fetchApiData(
-"/jobs?customerId=${encodeURIComponent(user.id)}"
+"/jobs?customerId=${encodeURIComponent(customerId)}"
 ),
 fetchApiData("/bookings")
 ]);
@@ -117,9 +132,8 @@ getBookingStatus(booking) ===
 
 element.innerHTML = `
 <div class="row between">
-
-  <div>
-    <h1>Customer Dashboard</h1>
+<div>
+<h1>Customer Dashboard</h1>
 
     <p class="lead">
       Manage your work requests and bookings.
@@ -132,11 +146,9 @@ element.innerHTML = `
   >
     Post New Work
   </a>
-
 </div>
 
 <div class="grid2">
-
   ${createStatusCard(
     "My Work Requests",
     jobs.length
@@ -156,13 +168,11 @@ element.innerHTML = `
     "Completed Bookings",
     completedBookings.length
   )}
-
 </div>
 
 <br>
 
 <div class="row">
-
   <a
     class="btn"
     href="bookings.html"
@@ -176,7 +186,6 @@ element.innerHTML = `
   >
     View Work Requests
   </a>
-
 </div>
 
 ${
@@ -208,9 +217,7 @@ fetchApiData("/workers/me/profile")
 
 const jobs = getData(jobsResult);
 const bookings = getData(bookingsResult);
-
-const worker =
-profileResult.data || null;
+const worker = profileResult?.data || null;
 
 const pendingBookings =
 bookings.filter(
@@ -245,9 +252,8 @@ worker?.profileCompleted
 
 element.innerHTML = `
 <div class="row between">
-
-  <div>
-    <h1>Worker Dashboard</h1>
+<div>
+<h1>Worker Dashboard</h1>
 
     <p class="lead">
       Manage available work and your bookings.
@@ -260,14 +266,12 @@ element.innerHTML = `
   >
     Find Work
   </a>
-
 </div>
 
 ${
   !profileCompleted
     ? `
       <div class="notice">
-
         <h3>
           ⚠️ Complete Your Worker Profile
         </h3>
@@ -285,17 +289,14 @@ ${
         >
           Complete My Profile
         </a>
-
       </div>
 
       <br>
     `
     : `
       <div class="notice">
-
         ✅ Your worker profile is complete
         and available for customers.
-
       </div>
 
       <br>
@@ -303,7 +304,6 @@ ${
 }
 
 <div class="grid2">
-
   ${createStatusCard(
     "Available Requests",
     jobs.length
@@ -323,13 +323,11 @@ ${
     "Completed Work",
     completedBookings.length
   )}
-
 </div>
 
 <br>
 
 <div class="row">
-
   <a
     class="btn btn-primary"
     href="bookings.html"
@@ -346,19 +344,18 @@ ${
 
   <a
     class="btn"
-    href="profile.html"
+    href="worker-profile.html?edit=1"
   >
     Edit My Profile
   </a>
-
 </div>
 
 <br>
 
 <div class="notice">
-  Earnings will be shown here after the
-  payment and worker payout system is
-  connected securely.
+  Your earnings can be viewed from the
+  Earnings section after completed work
+  and successful payments.
 </div>
 
 `;
@@ -374,16 +371,24 @@ if (!element) {
 return;
 }
 
-const user =
-typeof window.protect === "function"
-? window.protect()
-: null;
+if (typeof window.protect !== "function") {
+showDashboardError(
+element,
+"Authentication system is not loaded."
+);
+return;
+}
+
+const user = window.protect();
 
 if (!user) {
 return;
 }
 
-if (user.role === "customer") {
+const role =
+String(user.role || "").toLowerCase();
+
+if (role === "customer") {
 loadCustomerDashboard(
 element,
 user
@@ -404,7 +409,7 @@ return;
 
 }
 
-if (user.role === "worker") {
+if (role === "worker") {
 loadWorkerDashboard(
 element
 ).catch((error) => {
@@ -424,12 +429,10 @@ return;
 
 }
 
-if (user.role === "admin") {
+if (role === "admin") {
 window.location.href =
 "admin.html";
-
 return;
-
 }
 
 showDashboardError(
@@ -445,3 +448,9 @@ initializeDashboard
 
 window.initializeDashboard =
 initializeDashboard;
+
+window.loadCustomerDashboard =
+loadCustomerDashboard;
+
+window.loadWorkerDashboard =
+loadWorkerDashboard;
