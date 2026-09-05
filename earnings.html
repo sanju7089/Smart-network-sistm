@@ -1,162 +1,137 @@
 <!doctype html>
-<html lang="en">
 
-<head>
+<html lang="en"><head>
+  <meta charset="utf-8"><meta
+name="viewport"
+content="width=device-width, initial-scale=1"
 
-  <meta charset="utf-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
+«»
 
   <title>
     Earnings | Smart Work Network
-  </title>
-
-  <link
+  </title>  <link
     rel="stylesheet"
     href="css/main.css"
   >
+</head><body><header class="header">  <div class="container nav"><a
+  class="brand"
+  href="index.html"
+>
+  Smart Work Network
+</a>
 
-</head>
+<nav class="navlinks">
 
-<body>
+  <a href="services.html">
+    Services
+  </a>
 
-<header class="header">
+  <a href="find-help.html">
+    Find Help
+  </a>
 
-  <div class="container nav">
+  <a href="workers.html">
+    Workers
+  </a>
 
-    <a
-      class="brand"
-      href="index.html"
+  <span data-auth></span>
+
+</nav>
+
+  </div></header><main><section class="section">  <div class="container"><div class="row between">
+
+  <div>
+
+    <h1>
+      My Earnings
+    </h1>
+
+    <p
+      class="lead"
+      id="earningsSubtitle"
     >
-      Smart Work Network
-    </a>
-
-    <nav class="navlinks">
-
-      <a href="services.html">
-        Services
-      </a>
-
-      <a href="find-help.html">
-        Find Help
-      </a>
-
-      <a href="workers.html">
-        Workers
-      </a>
-
-      <span data-auth></span>
-
-    </nav>
-
-  </div>
-
-</header>
-
-<main>
-
-<section class="section">
-
-  <div class="container">
-
-    <div class="row between">
-
-      <div>
-
-        <h1>
-          My Earnings
-        </h1>
-
-        <p
-          class="lead"
-          id="earningsSubtitle"
-        >
-          Loading earnings...
-        </p>
-
-      </div>
-
-      <button
-        class="btn"
-        id="refreshEarnings"
-        type="button"
-      >
-        Refresh
-      </button>
-
-    </div>
-
-    <div
-      id="earningsMessage"
-    ></div>
-
-    <div
-      class="grid2"
-      id="earningsStats"
-    ></div>
-
-    <br>
-
-    <div class="card">
-
-      <h2>
-        Payment History
-      </h2>
-
-      <div
-        id="earningsPayments"
-      >
-        <div class="notice">
-          Loading payments...
-        </div>
-      </div>
-
-    </div>
-
-  </div>
-
-</section>
-
-</main>
-
-<footer class="footer">
-
-  <div class="container">
-
-    <b>
-      Smart Work Network
-    </b>
-
-    <p>
-      Services • Workers • Work opportunities
+      Loading earnings...
     </p>
 
-    <div class="row">
-
-      <a href="support.html">
-        Support
-      </a>
-
-      <a href="profile.html">
-        Profile
-      </a>
-
-      <a href="urgent-help.html">
-        Urgent Help
-      </a>
-
-    </div>
-
   </div>
 
-</footer>
+  <button
+    class="btn"
+    id="refreshEarnings"
+    type="button"
+  >
+    Refresh
+  </button>
 
+</div>
+
+<div
+  id="earningsMessage"
+  aria-live="polite"
+></div>
+
+<div
+  class="grid2"
+  id="earningsStats"
+></div>
+
+<br>
+
+<div class="card">
+
+  <h2>
+    Payment History
+  </h2>
+
+  <div
+    id="earningsPayments"
+  >
+    <div class="notice">
+      Loading payments...
+    </div>
+  </div>
+
+  <div
+    id="earningsPagination"
+    aria-label="Earnings pagination"
+  ></div>
+
+</div>
+
+  </div></section></main><footer class="footer">  <div class="container"><b>
+  Smart Work Network
+</b>
+
+<p>
+  Services • Workers • Work opportunities
+</p>
+
+<div class="row">
+
+  <a href="support.html">
+    Support
+  </a>
+
+  <a href="profile.html">
+    Profile
+  </a>
+
+  <a href="urgent-help.html">
+    Urgent Help
+  </a>
+
+</div>
+
+</div>
+  
+</footer>
+  
 <script src="js/app.js"></script>
+  
 <script src="js/auth.js"></script>
+  
 <script src="js/earnings.js"></script>
 
 </body>
+
 </html>
