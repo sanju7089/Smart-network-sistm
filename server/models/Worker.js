@@ -26,6 +26,18 @@ const workerSchema = new mongoose.Schema(
       maxlength: 100
     },
 
+    skills: {
+      type: [
+        {
+          type: String,
+          trim: true,
+          minlength: 1,
+          maxlength: 80
+        }
+      ],
+      default: []
+    },
+
     location: {
       type: String,
       default: "",
@@ -70,6 +82,12 @@ const workerSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
       index: true
+    },
+
+    isAvailable: {
+      type: Boolean,
+      default: true,
+      index: true
     }
   },
   {
@@ -79,6 +97,7 @@ const workerSchema = new mongoose.Schema(
 
 workerSchema.index({
   isActive: 1,
+  isAvailable: 1,
   profileCompleted: 1,
   verified: -1,
   createdAt: -1
@@ -88,14 +107,22 @@ workerSchema.index({
   service: 1,
   location: 1,
   isActive: 1,
+  isAvailable: 1,
   profileCompleted: 1
+});
+
+workerSchema.index({
+  skills: 1,
+  isActive: 1,
+  isAvailable: 1
 });
 
 workerSchema.index({
   name: "text",
   service: "text",
   location: "text",
-  bio: "text"
+  bio: "text",
+  skills: "text"
 });
 
 const Worker = mongoose.model(
