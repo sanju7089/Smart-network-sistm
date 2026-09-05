@@ -24,6 +24,24 @@ function saveAuth(token, user) {
   );
 }
 
+/*
+ * Update the currently logged-in user in localStorage.
+ * This keeps the frontend auth state synchronized
+ * after profile changes.
+ */
+function setCurrentUser(user) {
+  if (!user || typeof user !== "object") {
+    return null;
+  }
+
+  localStorage.setItem(
+    "swn_user",
+    JSON.stringify(user)
+  );
+
+  return user;
+}
+
 function redirectByRole(user) {
   if (user.role === "admin") {
     window.location.href = "admin.html";
@@ -290,5 +308,6 @@ window.login = login;
 window.logout = logout;
 window.getAuthToken = getAuthToken;
 window.getCurrentUser = getCurrentUser;
+window.setCurrentUser = setCurrentUser;
 window.refreshCurrentUser = refreshCurrentUser;
 window.apiFetch = apiFetch;
