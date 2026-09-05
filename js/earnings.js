@@ -1,353 +1,798 @@
-function escapeEarningsHtml(
-  value = ""
-) {
-  if (
-    typeof window.escapeHtml ===
-    "function"
-  ) {
-    return window.escapeHtml(value);
-  }
+"use strict";
 
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+function escapeEarningsHtml(
+value = ""
+) {
+if (
+typeof window.escapeHtml ===
+"function"
+) {
+return window.escapeHtml(
+value
+);
+}
+
+return String(value)
+.replace(
+/&/g,
+"&"
+)
+.replace(
+/</g,
+"<"
+)
+.replace(
+/>/g,
+">"
+)
+.replace(
+/"/g,
+"""
+)
+.replace(
+/'/g,
+"'"
+);
 }
 
 function formatMoney(
-  value,
-  currency = "INR"
+value,
+currency = "INR"
 ) {
-  return Number(
-    value || 0
-  ).toLocaleString(
-    "en-IN",
-    {
-      style: "currency",
-      currency
-    }
-  );
+const amount =
+Number(value);
+
+if (
+!Number.isFinite(
+amount
+)
+) {
+return "₹0";
+}
+
+try {
+return amount.toLocaleString(
+"en-IN",
+{
+style: "currency",
+currency,
+maximumFractionDigits: 2
+}
+);
+} catch {
+return "₹${amount.toLocaleString( "en-IN", { maximumFractionDigits: 2 } )}";
+}
 }
 
 function formatDate(
-  value
+value
 ) {
-  if (!value) {
-    return "Unknown";
-  }
+if (!value) {
+return "Unknown";
+}
 
-  const date =
-    new Date(value);
+const date =
+new Date(value);
 
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return "Unknown";
-  }
+if (
+Number.isNaN(
+date.getTime()
+)
+) {
+return "Unknown";
+}
 
-  return date.toLocaleString(
-    "en-IN",
-    {
-      dateStyle: "medium",
-      timeStyle: "short"
-    }
-  );
+return date.toLocaleString(
+"en-IN",
+{
+dateStyle: "medium",
+timeStyle: "short"
+}
+);
 }
 
 function showEarningsMessage(
-  message,
-  error = false
+message,
+error = false
 ) {
-  const element =
-    document.querySelector(
-      "#earningsMessage"
-    );
+const element =
+document.querySelector(
+"#earningsMessage"
+);
 
-  if (!element) return;
+if (!element) {
+return;
+}
 
-  element.innerHTML = `
-    <div class="notice">
-      ${escapeEarningsHtml(message)}
-    </div>
-  `;
+element.innerHTML = "<div class="notice"> ${escapeEarningsHtml( message )} </div>";
 
-  if (error) {
-    console.error(message);
-  }
+if (error) {
+console.error(
+message
+);
+}
+}
+
+function getEarningsData(
+result
+) {
+if (
+!result ||
+typeof result !==
+"object"
+) {
+return {};
+}
+
+if (
+result.data &&
+typeof result.data ===
+"object"
+) {
+return result.data;
+}
+
+return result;
 }
 
 function renderEarningsStats(
-  data
+data
 ) {
-  const element =
-    document.querySelector(
-      "#earningsStats"
-    );
+const element =
+document.querySelector(
+"#earningsStats"
+);
 
-  if (!element) return;
+if (!element) {
+return;
+}
 
-  const currency =
-    data.currency || "INR";
+const currency =
+data.currency ||
+"INR";
 
-  element.innerHTML = `
+element.innerHTML = `
 
-    <div class="card">
+<div class="card">
 
-      <div class="stat">
-        ${escapeEarningsHtml(
-          formatMoney(
-            data.grossAmount,
-            currency
-          )
-        )}
-      </div>
+  <div class="stat">
+    ${escapeEarningsHtml(
+      formatMoney(
+        data.availableAmount,
+        currency
+      )
+    )}
+  </div>
 
-      <p>
-        Total Paid Earnings
-      </p>
+  <p>
+    Available Earnings
+  </p>
 
-    </div>
+</div>
 
-    <div class="card">
+<div class="card">
 
-      <div class="stat">
-        ${escapeEarningsHtml(
-          formatMoney(
-            data.completedAmount,
-            currency
-          )
-        )}
-      </div>
+  <div class="stat">
+    ${escapeEarningsHtml(
+      formatMoney(
+        data.grossAmount,
+        currency
+      )
+    )}
+  </div>
 
-      <p>
-        Completed Work Earnings
-      </p>
+  <p>
+    Total Paid Earnings
+  </p>
 
-    </div>
+</div>
 
-    <div class="card">
+<div class="card">
 
-      <div class="stat">
-        ${escapeEarningsHtml(
-          formatMoney(
-            data.pendingWorkAmount,
-            currency
-          )
-        )}
-      </div>
+  <div class="stat">
+    ${escapeEarningsHtml(
+      formatMoney(
+        data.completedAmount,
+        currency
+      )
+    )}
+  </div>
 
-      <p>
-        Paid but Work Not Completed
-      </p>
+  <p>
+    Completed Work Earnings
+  </p>
 
-    </div>
+</div>
 
-    <div class="card">
+<div class="card">
 
-      <div class="stat">
-        ${escapeEarningsHtml(
-          String(
-            data.totalPaidBookings || 0
-          )
-        )}
-      </div>
+  <div class="stat">
+    ${escapeEarningsHtml(
+      formatMoney(
+        data.pendingWorkAmount,
+        currency
+      )
+    )}
+  </div>
 
-      <p>
-        Paid Bookings
-      </p>
+  <p>
+    Paid but Work Not Completed
+  </p>
 
-    </div>
+</div>
 
-  `;
+<div class="card">
+
+  <div class="stat">
+    ${escapeEarningsHtml(
+      String(
+        data.completedBookingCount ||
+        data.completedPaidBookings ||
+        0
+      )
+    )}
+  </div>
+
+  <p>
+    Completed Paid Bookings
+  </p>
+
+</div>
+
+<div class="card">
+
+  <div class="stat">
+    ${escapeEarningsHtml(
+      String(
+        data.totalPaidBookings ||
+        0
+      )
+    )}
+  </div>
+
+  <p>
+    Total Paid Bookings
+  </p>
+
+</div>
+
+`;
+}
+
+function getTransactionId(
+payment
+) {
+return (
+payment.transactionId ||
+payment.razorpayPaymentId ||
+payment.razorpayOrderId ||
+payment.id ||
+"Not available"
+);
+}
+
+function getJobTitle(
+payment
+) {
+return (
+payment.booking?.job?.title ||
+"Work booking"
+);
 }
 
 function renderPayments(
-  payments
+payments
 ) {
-  const element =
-    document.querySelector(
-      "#earningsPayments"
-    );
+const element =
+document.querySelector(
+"#earningsPayments"
+);
 
-  if (!element) return;
-
-  if (!payments.length) {
-
-    element.innerHTML = `
-      <div class="notice">
-        No paid bookings yet.
-      </div>
-    `;
-
-    return;
-  }
-
-  element.innerHTML =
-    payments
-      .map(
-        (payment) => `
-          <div class="card">
-
-            <div class="row between">
-
-              <b>
-                ${escapeEarningsHtml(
-                  formatMoney(
-                    payment.amount,
-                    payment.currency ||
-                      "INR"
-                  )
-                )}
-              </b>
-
-              <span class="tag">
-                ${escapeEarningsHtml(
-                  payment.status
-                )}
-              </span>
-
-            </div>
-
-            <p>
-              Booking:
-              ${escapeEarningsHtml(
-                String(
-                  payment.booking?.id ||
-                  ""
-                )
-              )}
-            </p>
-
-            <p>
-              Work status:
-              ${escapeEarningsHtml(
-                payment.booking?.status ||
-                "Unknown"
-              )}
-            </p>
-
-            <p class="muted">
-              Paid:
-              ${escapeEarningsHtml(
-                formatDate(
-                  payment.paidAt
-                )
-              )}
-            </p>
-
-          </div>
-        `
-      )
-      .join("");
+if (!element) {
+return;
 }
 
-async function loadEarnings() {
+if (
+!Array.isArray(
+payments
+) ||
+payments.length === 0
+) {
+element.innerHTML = "<div class="notice"> No earning transactions yet. </div>";
 
-  const user =
-    typeof window.protect ===
-    "function"
-      ? protect("worker")
-      : null;
+return;
 
-  if (!user) {
-    return;
-  }
+}
 
-  try {
+element.innerHTML =
+payments
+.map(
+(payment) => {
 
-    const response =
-      await apiFetch(
-        "/earnings/me"
-      );
+      const status =
+        String(
+          payment.status ||
+          "unknown"
+        );
 
-    let result = {};
+      const booking =
+        payment.booking;
 
-    try {
-      result =
-        await response.json();
-    } catch {
-      result = {};
+      const bookingId =
+        booking?.id ||
+        "";
+
+      const jobTitle =
+        getJobTitle(
+          payment
+        );
+
+      const transactionId =
+        getTransactionId(
+          payment
+        );
+
+      const workStatus =
+        booking?.status ||
+        "Unknown";
+
+      const paidAt =
+        payment.paidAt;
+
+      const refundedAt =
+        payment.refundedAt;
+
+      const refundId =
+        payment.refundId;
+
+      const amount =
+        formatMoney(
+          payment.amount,
+          payment.currency ||
+            "INR"
+        );
+
+      return `
+
+        <div class="card">
+
+          <div class="row between">
+
+            <b>
+              ${escapeEarningsHtml(
+                amount
+              )}
+            </b>
+
+            <span class="tag">
+              ${escapeEarningsHtml(
+                status
+              )}
+            </span>
+
+          </div>
+
+          <p>
+            <strong>
+              Work:
+            </strong>
+            ${escapeEarningsHtml(
+              jobTitle
+            )}
+          </p>
+
+          <p>
+            <strong>
+              Booking ID:
+            </strong>
+            ${escapeEarningsHtml(
+              String(
+                bookingId
+              )
+            )}
+          </p>
+
+          <p>
+            <strong>
+              Transaction ID:
+            </strong>
+            ${escapeEarningsHtml(
+              String(
+                transactionId
+              )
+            )}
+          </p>
+
+          <p>
+            <strong>
+              Work status:
+            </strong>
+            ${escapeEarningsHtml(
+              workStatus
+            )}
+          </p>
+
+          <p>
+            <strong>
+              Payment method:
+            </strong>
+            ${escapeEarningsHtml(
+              payment.method ||
+              "Unknown"
+            )}
+          </p>
+
+          ${
+            payment.razorpayPaymentId
+              ? `
+                <p>
+                  <strong>
+                    Razorpay Payment ID:
+                  </strong>
+                  ${escapeEarningsHtml(
+                    payment.razorpayPaymentId
+                  )}
+                </p>
+              `
+              : ""
+          }
+
+          ${
+            payment.razorpayOrderId
+              ? `
+                <p>
+                  <strong>
+                    Razorpay Order ID:
+                  </strong>
+                  ${escapeEarningsHtml(
+                    payment.razorpayOrderId
+                  )}
+                </p>
+              `
+              : ""
+          }
+
+          ${
+            paidAt
+              ? `
+                <p class="muted">
+                  Paid:
+                  ${escapeEarningsHtml(
+                    formatDate(
+                      paidAt
+                    )
+                  )}
+                </p>
+              `
+              : ""
+          }
+
+          ${
+            refundedAt
+              ? `
+                <p class="muted">
+                  Refunded:
+                  ${escapeEarningsHtml(
+                    formatDate(
+                      refundedAt
+                    )
+                  )}
+                </p>
+              `
+              : ""
+          }
+
+          ${
+            refundId
+              ? `
+                <p class="muted">
+                  Refund ID:
+                  ${escapeEarningsHtml(
+                    refundId
+                  )}
+                </p>
+              `
+              : ""
+          }
+
+        </div>
+
+      `;
     }
+  )
+  .join("");
 
-    if (
-      !response.ok ||
-      !result.success
-    ) {
-      throw new Error(
-        result.message ||
-        "Unable to load earnings."
-      );
+}
+
+function renderPagination(
+pagination
+) {
+const container =
+document.querySelector(
+"#earningsPagination"
+);
+
+if (!container) {
+return;
+}
+
+const page =
+Number(
+pagination?.page || 1
+);
+
+const totalPages =
+Number(
+pagination?.totalPages || 0
+);
+
+if (
+totalPages <= 1
+) {
+container.innerHTML = "";
+return;
+}
+
+container.innerHTML = `
+
+<div class="row between">
+
+  <button
+    class="btn"
+    type="button"
+    id="earningsPrevious"
+    ${page <= 1
+      ? "disabled"
+      : ""}
+  >
+    Previous
+  </button>
+
+  <span>
+    Page
+    ${escapeEarningsHtml(
+      String(page)
+    )}
+    of
+    ${escapeEarningsHtml(
+      String(totalPages)
+    )}
+  </span>
+
+  <button
+    class="btn"
+    type="button"
+    id="earningsNext"
+    ${
+      page >= totalPages
+        ? "disabled"
+        : ""
     }
+  >
+    Next
+  </button>
 
-    const data =
-      result.data || {};
+</div>
 
-    const subtitle =
-      document.querySelector(
-        "#earningsSubtitle"
-      );
+`;
 
-    if (subtitle) {
-      subtitle.textContent =
-        `${data.totalPaidBookings || 0} paid booking(s)`;
-    }
+const previous =
+document.querySelector(
+"#earningsPrevious"
+);
 
-    renderEarningsStats(
-      data
-    );
+const next =
+document.querySelector(
+"#earningsNext"
+);
 
-    renderPayments(
-      Array.isArray(
-        data.payments
-      )
-        ? data.payments
-        : []
-    );
+if (previous) {
+previous.addEventListener(
+"click",
+() => {
+if (page > 1) {
+loadEarnings(
+page - 1
+);
+}
+}
+);
+}
 
-  } catch (error) {
+if (next) {
+next.addEventListener(
+"click",
+() => {
+if (
+page <
+totalPages
+) {
+loadEarnings(
+page + 1
+);
+}
+}
+);
+}
+}
 
-    showEarningsMessage(
-      error.message ||
-      "Unable to load earnings.",
-      true
-    );
+async function earningsRequest(
+endpoint
+) {
+if (
+window.SWN &&
+typeof window.SWN.request ===
+"function"
+) {
+return window.SWN.request(
+endpoint
+);
+}
 
-    const payments =
-      document.querySelector(
-        "#earningsPayments"
-      );
+if (
+typeof window.apiFetch ===
+"function"
+) {
+return window.apiFetch(
+endpoint
+);
+}
 
-    if (payments) {
-      payments.innerHTML = "";
-    }
+throw new Error(
+"Central API client is not available."
+);
+}
 
-  }
+async function loadEarnings(
+page = 1
+) {
+const user =
+typeof window.protect ===
+"function"
+? window.protect(
+"worker"
+)
+: null;
+
+if (!user) {
+return;
+}
+
+const earningsMessage =
+document.querySelector(
+"#earningsMessage"
+);
+
+if (earningsMessage) {
+earningsMessage.innerHTML = "";
+}
+
+try {
+const response =
+await earningsRequest(
+"/earnings/me?page=${encodeURIComponent( page )}&limit=50"
+);
+
+let result = {};
+
+try {
+  result =
+    await response.json();
+} catch {
+  result = {};
+}
+
+if (
+  !response.ok ||
+  !result.success
+) {
+  throw new Error(
+    result.message ||
+    "Unable to load earnings."
+  );
+}
+
+const data =
+  getEarningsData(
+    result
+  );
+
+const subtitle =
+  document.querySelector(
+    "#earningsSubtitle"
+  );
+
+if (subtitle) {
+  subtitle.textContent =
+    `${Number(
+      data.completedBookingCount ||
+      data.completedPaidBookings ||
+      0
+    )} completed paid booking(s) • ${formatMoney(
+      data.availableAmount,
+      data.currency ||
+        "INR"
+    )} available`;
+}
+
+renderEarningsStats(
+  data
+);
+
+renderPayments(
+  Array.isArray(
+    data.payments
+  )
+    ? data.payments
+    : []
+);
+
+renderPagination(
+  data.pagination ||
+  {}
+);
+
+} catch (error) {
+showEarningsMessage(
+error.message ||
+"Unable to load earnings.",
+true
+);
+
+const stats =
+  document.querySelector(
+    "#earningsStats"
+  );
+
+const payments =
+  document.querySelector(
+    "#earningsPayments"
+  );
+
+const pagination =
+  document.querySelector(
+    "#earningsPagination"
+  );
+
+if (stats) {
+  stats.innerHTML = "";
+}
+
+if (payments) {
+  payments.innerHTML = "";
+}
+
+if (pagination) {
+  pagination.innerHTML = "";
+}
+
+}
 }
 
 document.addEventListener(
-  "DOMContentLoaded",
-  () => {
+"DOMContentLoaded",
+() => {
+const refresh =
+document.querySelector(
+"#refreshEarnings"
+);
 
-    const refresh =
-      document.querySelector(
-        "#refreshEarnings"
-      );
+if (refresh) {
+  refresh.addEventListener(
+    "click",
+    () =>
+      loadEarnings(
+        1
+      )
+  );
+}
 
-    if (refresh) {
-      refresh.addEventListener(
-        "click",
-        loadEarnings
-      );
-    }
+loadEarnings(
+  1
+);
 
-    loadEarnings();
-
-  }
+}
 );
 
 window.loadEarnings =
-  loadEarnings;
+loadEarnings;
