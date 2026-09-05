@@ -2,6 +2,7 @@
 <html>
 
 <head>
+
   <meta charset="utf-8">
 
   <meta
@@ -9,15 +10,20 @@
     content="width=device-width, initial-scale=1"
   >
 
-  <title>Work Details | Smart Work Network</title>
+  <title>
+    Work Details | Smart Work Network
+  </title>
 
   <link
     rel="stylesheet"
     href="css/main.css"
   >
+
 </head>
 
+
 <body>
+
 
   <header class="header">
 
@@ -29,6 +35,7 @@
       >
         Smart Work Network
       </a>
+
 
       <nav class="navlinks">
 
@@ -59,7 +66,86 @@
 
       <div class="container">
 
-        <div id="requestDetail"></div>
+
+        <!--
+        ================================================
+        EXISTING WORK DETAIL
+        ================================================
+        -->
+
+        <div
+          id="requestDetail"
+        ></div>
+
+
+        <!--
+        ================================================
+        OWNER / ADMIN MANAGEMENT
+        ================================================
+        -->
+
+        <section
+          id="workManagement"
+          class="card"
+          hidden
+          style="margin-top: 24px;"
+        >
+
+          <div class="row between">
+
+            <div>
+
+              <h3>
+                Manage Work
+              </h3>
+
+              <p class="muted">
+                Edit or delete this work request.
+              </p>
+
+            </div>
+
+
+            <div class="row">
+
+              <button
+                type="button"
+                id="editWorkButton"
+                class="btn btn-primary"
+                hidden
+              >
+                Edit Work
+              </button>
+
+
+              <button
+                type="button"
+                id="deleteWorkButton"
+                class="btn"
+                hidden
+              >
+                Delete Work
+              </button>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        <!--
+        ================================================
+        EDITOR
+        ================================================
+        -->
+
+        <div
+          id="workEditor"
+          hidden
+          style="margin-top: 24px;"
+        ></div>
+
 
       </div>
 
@@ -72,19 +158,28 @@
 
     <div class="container">
 
-      <b>Smart Work Network</b>
+      <b>
+        Smart Work Network
+      </b>
 
       <p>
         Services • Workers • Work opportunities
       </p>
 
+
       <div class="row">
 
-        <a href="support.html">Support</a>
+        <a href="support.html">
+          Support
+        </a>
 
-        <a href="profile.html">Profile</a>
+        <a href="profile.html">
+          Profile
+        </a>
 
-        <a href="urgent-help.html">Urgent Help</a>
+        <a href="urgent-help.html">
+          Urgent Help
+        </a>
 
       </div>
 
@@ -93,9 +188,17 @@
   </footer>
 
 
+  <!--
+  IMPORTANT:
+  app.js must load before work.js/work-manage.js
+  -->
+
   <script src="js/app.js"></script>
 
   <script src="js/work.js"></script>
+
+  <script src="js/work-manage.js"></script>
+
 
 </body>
 
