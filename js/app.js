@@ -1,7 +1,33 @@
 "use strict";
 
+/*
+========================================
+SMART WORK NETWORK
+CENTRAL API CONFIGURATION
+========================================
+
+Development:
+- localhost
+- 127.0.0.1
+
+Production:
+- Render backend
+
+All frontend API requests must go
+through SWN.api(), SWN.raw() or
+SWN.request().
+*/
+
+const isLocalhost =
+  typeof window !== "undefined" &&
+  ["localhost", "127.0.0.1"].includes(
+    window.location.hostname
+  );
+
 const SWN_CONFIG = Object.freeze({
-  API_URL: "https://smart-network-sistm.onrender.com/api"
+  API_URL: isLocalhost
+    ? "http://localhost:3000/api"
+    : "https://smart-network-sistm.onrender.com/api"
 });
 
 const SWN = {
@@ -10,8 +36,11 @@ const SWN = {
   },
 
   api(path = "") {
-    const base = SWN_CONFIG.API_URL.replace(/\/$/, "");
-    const cleanPath = String(path || "").trim();
+    const base =
+      SWN_CONFIG.API_URL.replace(/\/$/, "");
+
+    const cleanPath =
+      String(path || "").trim();
 
     if (!cleanPath) {
       return base;
@@ -26,8 +55,12 @@ const SWN = {
 
   get(key, defaultValue = null) {
     try {
-      const value = localStorage.getItem(key);
-      return value ? JSON.parse(value) : defaultValue;
+      const value =
+        localStorage.getItem(key);
+
+      return value
+        ? JSON.parse(value)
+        : defaultValue;
     } catch {
       return defaultValue;
     }
@@ -50,7 +83,9 @@ const SWN = {
       }
 
       const value =
-        localStorage.getItem("swn_user");
+        localStorage.getItem(
+          "swn_user"
+        );
 
       return value
         ? JSON.parse(value)
@@ -87,15 +122,19 @@ const SWN = {
     extraHeaders = {},
     hasBody = false
   ) {
-    const headers = new Headers(
-      extraHeaders || {}
-    );
+    const headers =
+      new Headers(
+        extraHeaders || {}
+      );
 
-    const token = this.token();
+    const token =
+      this.token();
 
     if (
       hasBody &&
-      !headers.has("Content-Type")
+      !headers.has(
+        "Content-Type"
+      )
     ) {
       headers.set(
         "Content-Type",
@@ -105,7 +144,9 @@ const SWN = {
 
     if (
       token &&
-      !headers.has("Authorization")
+      !headers.has(
+        "Authorization"
+      )
     ) {
       headers.set(
         "Authorization",
@@ -121,23 +162,31 @@ const SWN = {
     return headers;
   },
 
-  async raw(path, options = {}) {
+  async raw(
+    path,
+    options = {}
+  ) {
     const requestOptions = {
       ...options
     };
 
     const hasBody =
-      requestOptions.body !== undefined &&
-      requestOptions.body !== null;
+      requestOptions.body !==
+        undefined &&
+      requestOptions.body !==
+        null;
 
     const isFormData =
-      typeof FormData !== "undefined" &&
-      requestOptions.body instanceof FormData;
+      typeof FormData !==
+        "undefined" &&
+      requestOptions.body instanceof
+        FormData;
 
     if (isFormData) {
       requestOptions.headers =
         new Headers(
-          requestOptions.headers || {}
+          requestOptions.headers ||
+            {}
         );
 
       requestOptions.headers.delete(
@@ -147,35 +196,43 @@ const SWN = {
 
     requestOptions.headers =
       this.authHeaders(
-        requestOptions.headers || {},
+        requestOptions.headers ||
+          {},
         hasBody && !isFormData
       );
 
     let response;
 
     try {
-      response = await fetch(
-        this.api(path),
-        requestOptions
-      );
+      response =
+        await fetch(
+          this.api(path),
+          requestOptions
+        );
     } catch (error) {
-      const networkError = new Error(
-        "Unable to connect to the server. Please check your internet connection and try again."
-      );
+      const networkError =
+        new Error(
+          "Unable to connect to the server. Please check your internet connection and try again."
+        );
 
-      networkError.cause = error;
+      networkError.cause =
+        error;
 
       throw networkError;
     }
 
-    if (response.status === 401) {
+    if (
+      response.status === 401
+    ) {
       this.clearAuth();
     }
 
     return response;
   },
 
-  async parseResponse(response) {
+  async parseResponse(
+    response
+  ) {
     if (!response) {
       return null;
     }
@@ -202,7 +259,9 @@ const SWN = {
         await response.text();
 
       return text
-        ? { message: text }
+        ? {
+            message: text
+          }
         : null;
     } catch {
       return null;
@@ -225,11 +284,12 @@ const SWN = {
       );
 
     if (!response.ok) {
-      const error = new Error(
-        data?.message ||
-        data?.error ||
-        `Request failed with status ${response.status}`
-      );
+      const error =
+        new Error(
+          data?.message ||
+            data?.error ||
+            `Request failed with status ${response.status}`
+        );
 
       error.status =
         response.status;
@@ -250,7 +310,8 @@ const SWN = {
     if (
       typeof window.logout ===
         "function" &&
-      window.logout !== this.logout
+      window.logout !==
+        this.logout
     ) {
       window.logout();
       return;
@@ -264,7 +325,9 @@ const SWN = {
 
   flash(message) {
     alert(
-      String(message || "")
+      String(
+        message || ""
+      )
     );
   }
 };
@@ -274,18 +337,26 @@ function dashboardUrl(user) {
     return "login.html";
   }
 
-  if (user.role === "admin") {
+  if (
+    user.role ===
+    "admin"
+  ) {
     return "admin.html";
   }
 
-  if (user.role === "worker") {
+  if (
+    user.role ===
+    "worker"
+  ) {
     return "worker-dashboard.html";
   }
 
   return "customer-dashboard.html";
 }
 
-function escapeHtml(value = "") {
+function escapeHtml(
+  value = ""
+) {
   return String(value)
     .replace(
       /&/g,
@@ -383,7 +454,9 @@ function redirectToCorrectDashboard(
     dashboardUrl(user);
 }
 
-function protect(role = null) {
+function protect(
+  role = null
+) {
   const user =
     SWN.user();
 
