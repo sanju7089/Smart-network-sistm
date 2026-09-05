@@ -1,6 +1,5 @@
 <!doctype html>
-<html>
-
+<html lang="en">
 <head>
   <meta charset="utf-8">
 
@@ -9,7 +8,9 @@
     content="width=device-width, initial-scale=1"
   >
 
-  <title>Admin Jobs | Smart Work Network</title>
+  <title>
+    Admin Jobs | Smart Work Network
+  </title>
 
   <link
     rel="stylesheet"
@@ -17,10 +18,9 @@
   >
 </head>
 
-<body>
+<body data-admin-page="jobs">
 
   <header class="header">
-
     <div class="container nav">
 
       <a
@@ -32,67 +32,67 @@
 
       <nav class="navlinks">
 
-        <a href="services.html">Services</a>
+        <a href="admin.html">
+          Dashboard
+        </a>
 
-        <a href="find-help.html">Find Help</a>
+        <a href="admin-users.html">
+          Users
+        </a>
 
-        <a href="workers.html">Workers</a>
+        <a href="admin-jobs.html">
+          Jobs
+        </a>
+
+        <a href="admin-payments.html">
+          Payments
+        </a>
+
+        <a href="admin-reports.html">
+          Reports
+        </a>
+
+        <a href="admin-verification.html">
+          Verification
+        </a>
 
         <span data-auth></span>
 
       </nav>
-
     </div>
-
   </header>
-
 
   <main>
 
     <section class="section">
-
       <div class="container">
 
-        <h1>Jobs</h1>
+        <h1>
+          Job Management
+        </h1>
 
-        <div id="jobsList"></div>
+        <p
+          id="adminStatus"
+          class="muted"
+        >
+          Connecting…
+        </p>
+
+        <div
+          id="adminCards"
+          class="grid grid-3"
+        ></div>
+
+        <div id="adminTable"></div>
 
       </div>
-
     </section>
 
   </main>
 
-
-  <footer class="footer">
-
-    <div class="container">
-
-      <b>Smart Work Network</b>
-
-      <p>
-        Services • Workers • Work opportunities
-      </p>
-
-      <div class="row">
-
-        <a href="support.html">Support</a>
-
-        <a href="profile.html">Profile</a>
-
-        <a href="urgent-help.html">Urgent Help</a>
-
-      </div>
-
-    </div>
-
-  </footer>
-
-
+  <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
-
-  <script src="js/work.js"></script>
+  <script src="js/admin.js"></script>
 
 </body>
-
 </html>
