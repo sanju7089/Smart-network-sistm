@@ -1,9 +1,7 @@
 "use strict";
 
 function escapeEarningsHtml(value = "") {
-if (
-typeof window.escapeHtml === "function"
-) {
+if (typeof window.escapeHtml === "function") {
 return window.escapeHtml(String(value));
 }
 
@@ -44,14 +42,10 @@ if (Number.isNaN(date.getTime())) {
 return "Unknown";
 }
 
-try {
 return date.toLocaleString("en-IN", {
 dateStyle: "medium",
 timeStyle: "short"
 });
-} catch {
-return date.toLocaleString("en-IN");
-}
 }
 
 function showEarningsMessage(message, error = false) {
@@ -73,14 +67,10 @@ if (!result || typeof result !== "object") {
 return {};
 }
 
-if (
-result.data &&
+return result.data &&
 typeof result.data === "object"
-) {
-return result.data;
-}
-
-return result;
+? result.data
+: result;
 }
 
 function renderEarningsStats(data) {
@@ -92,24 +82,21 @@ return;
 
 const currency = data.currency || "INR";
 
-const completedBookings =
-Number(
+const completedBookings = Number(
 data.completedBookingCount ??
 data.completedPaidBookings ??
 0
 );
 
-const totalPaidBookings =
-Number(data.totalPaidBookings || 0);
+const totalPaidBookings = Number(
+data.totalPaidBookings || 0
+);
 
 element.innerHTML = `
 <div class="card">
 <div class="stat">
 ${escapeEarningsHtml(
-formatMoney(
-data.availableAmount,
-currency
-)
+formatMoney(data.availableAmount, currency)
 )}
 </div>
 <p>Available Earnings</p>
@@ -118,10 +105,7 @@ currency
 <div class="card">
   <div class="stat">
     ${escapeEarningsHtml(
-      formatMoney(
-        data.grossAmount,
-        currency
-      )
+      formatMoney(data.grossAmount, currency)
     )}
   </div>
   <p>Total Paid Earnings</p>
@@ -130,10 +114,7 @@ currency
 <div class="card">
   <div class="stat">
     ${escapeEarningsHtml(
-      formatMoney(
-        data.completedAmount,
-        currency
-      )
+      formatMoney(data.completedAmount, currency)
     )}
   </div>
   <p>Completed Work Earnings</p>
@@ -142,10 +123,7 @@ currency
 <div class="card">
   <div class="stat">
     ${escapeEarningsHtml(
-      formatMoney(
-        data.pendingWorkAmount,
-        currency
-      )
+      formatMoney(data.pendingWorkAmount, currency)
     )}
   </div>
   <p>Paid but Work Not Completed</p>
@@ -182,195 +160,151 @@ payment.id ||
 );
 }
 
-function getJobTitle(payment) {
-return (
-payment.booking?.job?.title ||
-"Work booking"
-);
-}
-
 function renderPayments(payments) {
-const element = document.querySelector(
-"#earningsPayments"
-);
+const element = document.querySelector("#earningsPayments");
 
 if (!element) {
 return;
 }
 
-if (
-!Array.isArray(payments) ||
-payments.length === 0
-) {
+if (!Array.isArray(payments) || payments.length === 0) {
 element.innerHTML = "<div class="notice"> No earning transactions yet. </div>";
 return;
 }
 
-element.innerHTML = payments
-.map((payment) => {
+element.innerHTML = payments.map((payment) => {
+const booking = payment.booking || {};
+
+const job = booking.job || {};
+
 const status = String(
-payment.status || "unknown"
+  payment.status || "unknown"
 );
 
-  const booking = payment.booking || {};
+const amount = formatMoney(
+  payment.amount,
+  payment.currency || "INR"
+);
 
-  const bookingId =
-    booking.id || "";
+const transactionId = getTransactionId(payment);
 
-  const jobTitle =
-    getJobTitle(payment);
+return `
+  <div class="card">
 
-  const transactionId =
-    getTransactionId(payment);
+    <div class="row between">
+      <b>
+        ${escapeEarningsHtml(amount)}
+      </b>
 
-  const workStatus =
-    booking.status || "Unknown";
-
-  const amount =
-    formatMoney(
-      payment.amount,
-      payment.currency || "INR"
-    );
-
-  const method =
-    payment.method || "Unknown";
-
-  return `
-    <div class="card">
-
-      <div class="row between">
-        <b>
-          ${escapeEarningsHtml(amount)}
-        </b>
-
-        <span class="tag">
-          ${escapeEarningsHtml(status)}
-        </span>
-      </div>
-
-      <p>
-        <strong>Work:</strong>
-        ${escapeEarningsHtml(jobTitle)}
-      </p>
-
-      <p>
-        <strong>Booking ID:</strong>
-        ${escapeEarningsHtml(
-          String(bookingId)
-        )}
-      </p>
-
-      <p>
-        <strong>Transaction ID:</strong>
-        ${escapeEarningsHtml(
-          String(transactionId)
-        )}
-      </p>
-
-      <p>
-        <strong>Work status:</strong>
-        ${escapeEarningsHtml(
-          String(workStatus)
-        )}
-      </p>
-
-      <p>
-        <strong>Payment method:</strong>
-        ${escapeEarningsHtml(
-          String(method)
-        )}
-      </p>
-
-      ${
-        payment.razorpayPaymentId
-          ? `
-            <p>
-              <strong>Razorpay Payment ID:</strong>
-              ${escapeEarningsHtml(
-                payment.razorpayPaymentId
-              )}
-            </p>
-          `
-          : ""
-      }
-
-      ${
-        payment.razorpayOrderId
-          ? `
-            <p>
-              <strong>Razorpay Order ID:</strong>
-              ${escapeEarningsHtml(
-                payment.razorpayOrderId
-              )}
-            </p>
-          `
-          : ""
-      }
-
-      ${
-        payment.paidAt
-          ? `
-            <p class="muted">
-              Paid:
-              ${escapeEarningsHtml(
-                formatDate(
-                  payment.paidAt
-                )
-              )}
-            </p>
-          `
-          : ""
-      }
-
-      ${
-        payment.refundedAt
-          ? `
-            <p class="muted">
-              Refunded:
-              ${escapeEarningsHtml(
-                formatDate(
-                  payment.refundedAt
-                )
-              )}
-            </p>
-          `
-          : ""
-      }
-
-      ${
-        payment.refundId
-          ? `
-            <p class="muted">
-              Refund ID:
-              ${escapeEarningsHtml(
-                payment.refundId
-              )}
-            </p>
-          `
-          : ""
-      }
-
-      ${
-        Number(payment.refundAmount || 0) > 0
-          ? `
-            <p class="muted">
-              Refund Amount:
-              ${escapeEarningsHtml(
-                formatMoney(
-                  payment.refundAmount,
-                  payment.currency || "INR"
-                )
-              )}
-            </p>
-          `
-          : ""
-      }
-
+      <span class="tag">
+        ${escapeEarningsHtml(status)}
+      </span>
     </div>
-  `;
-})
-.join("");
 
+    <p>
+      <strong>Work:</strong>
+      ${escapeEarningsHtml(
+        job.title || "Work booking"
+      )}
+    </p>
+
+    <p>
+      <strong>Booking ID:</strong>
+      ${escapeEarningsHtml(
+        String(booking.id || "Not available")
+      )}
+    </p>
+
+    <p>
+      <strong>Transaction ID:</strong>
+      ${escapeEarningsHtml(
+        String(transactionId)
+      )}
+    </p>
+
+    <p>
+      <strong>Work status:</strong>
+      ${escapeEarningsHtml(
+        String(booking.status || "Unknown")
+      )}
+    </p>
+
+    <p>
+      <strong>Payment method:</strong>
+      ${escapeEarningsHtml(
+        String(payment.method || "Unknown")
+      )}
+    </p>
+
+    ${
+      payment.razorpayPaymentId
+        ? `
+          <p>
+            <strong>Razorpay Payment ID:</strong>
+            ${escapeEarningsHtml(
+              payment.razorpayPaymentId
+            )}
+          </p>
+        `
+        : ""
+    }
+
+    ${
+      payment.razorpayOrderId
+        ? `
+          <p>
+            <strong>Razorpay Order ID:</strong>
+            ${escapeEarningsHtml(
+              payment.razorpayOrderId
+            )}
+          </p>
+        `
+        : ""
+    }
+
+    ${
+      payment.paidAt
+        ? `
+          <p class="muted">
+            Paid:
+            ${escapeEarningsHtml(
+              formatDate(payment.paidAt)
+            )}
+          </p>
+        `
+        : ""
+    }
+
+    ${
+      payment.refundedAt
+        ? `
+          <p class="muted">
+            Refunded:
+            ${escapeEarningsHtml(
+              formatDate(payment.refundedAt)
+            )}
+          </p>
+        `
+        : ""
+    }
+
+    ${
+      payment.refundId
+        ? `
+          <p class="muted">
+            Refund ID:
+            ${escapeEarningsHtml(
+              payment.refundId
+            )}
+          </p>
+        `
+        : ""
+    }
+
+  </div>
+`;
+
+}).join("");
 }
 
 function renderPagination(pagination) {
@@ -382,19 +316,15 @@ if (!container) {
 return;
 }
 
-const page =
-Number(pagination?.page || 1);
+const page = Number(
+pagination?.page || 1
+);
 
-const totalPages =
-Number(pagination?.totalPages || 0);
+const totalPages = Number(
+pagination?.totalPages || 0
+);
 
-const total =
-Number(pagination?.total || 0);
-
-if (
-total <= 0 ||
-totalPages <= 1
-) {
+if (totalPages <= 1) {
 container.innerHTML = "";
 return;
 }
@@ -431,36 +361,28 @@ container.innerHTML = `
 
 `;
 
-const previous =
-document.querySelector(
+const previous = document.querySelector(
 "#earningsPrevious"
 );
 
-const next =
-document.querySelector(
+const next = document.querySelector(
 "#earningsNext"
 );
 
 if (previous) {
-previous.addEventListener(
-"click",
-() => {
+previous.addEventListener("click", () => {
 if (page > 1) {
 loadEarnings(page - 1);
 }
-}
-);
+});
 }
 
 if (next) {
-next.addEventListener(
-"click",
-() => {
+next.addEventListener("click", () => {
 if (page < totalPages) {
 loadEarnings(page + 1);
 }
-}
-);
+});
 }
 }
 
@@ -472,9 +394,7 @@ typeof window.SWN.request === "function"
 return window.SWN.request(endpoint);
 }
 
-if (
-typeof window.apiFetch === "function"
-) {
+if (typeof window.apiFetch === "function") {
 return window.apiFetch(endpoint);
 }
 
@@ -493,13 +413,12 @@ if (!user) {
 return;
 }
 
-const earningsMessage =
-document.querySelector(
+const message = document.querySelector(
 "#earningsMessage"
 );
 
-if (earningsMessage) {
-earningsMessage.innerHTML = "";
+if (message) {
+message.innerHTML = "";
 }
 
 try {
@@ -508,15 +427,11 @@ const endpoint =
 
 /*
  * SWN.request() already returns parsed JSON.
- * Do NOT call response.json() here.
  */
 const result =
   await earningsRequest(endpoint);
 
-if (
-  !result ||
-  !result.success
-) {
+if (!result || !result.success) {
   throw new Error(
     result?.message ||
     "Unable to load earnings."
@@ -564,34 +479,6 @@ error?.message ||
 "Unable to load earnings.",
 true
 );
-
-const stats =
-  document.querySelector(
-    "#earningsStats"
-  );
-
-const payments =
-  document.querySelector(
-    "#earningsPayments"
-  );
-
-const pagination =
-  document.querySelector(
-    "#earningsPagination"
-  );
-
-if (stats) {
-  stats.innerHTML = "";
-}
-
-if (payments) {
-  payments.innerHTML = "";
-}
-
-if (pagination) {
-  pagination.innerHTML = "";
-}
-
 }
 }
 
