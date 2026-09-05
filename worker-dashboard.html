@@ -189,8 +189,6 @@
       ></div>
 
 
-      <!-- WORKER PROFILE / EARNINGS -->
-
       <div
         class="container worker-dashboard-extra"
         id="workerDashboardExtra"
@@ -231,9 +229,7 @@
           </div>
 
 
-          <div
-            class="worker-dashboard-actions"
-          >
+          <div class="worker-dashboard-actions">
 
             <a
               class="btn"
@@ -307,15 +303,9 @@
   </footer>
 
 
-  <!-- AUTH -->
-
   <script src="js/auth.js"></script>
 
-  <!-- CENTRAL API -->
-
   <script src="js/app.js"></script>
-
-  <!-- MAIN DASHBOARD -->
 
   <script src="js/dashboard.js"></script>
 
@@ -323,6 +313,11 @@
   <script>
 
     "use strict";
+
+
+    let workerDashboardExtraStarted = false;
+
+    let workerDashboardExtraLoaded = false;
 
 
     function workerDashboardEscape(
@@ -333,9 +328,11 @@
         typeof window.escapeHtml ===
         "function"
       ) {
+
         return window.escapeHtml(
           value
         );
+
       }
 
       return String(value)
@@ -370,7 +367,7 @@
       if (
         window.SWN &&
         typeof window.SWN.request ===
-          "function"
+        "function"
       ) {
 
         return window.SWN.request(
@@ -378,6 +375,7 @@
         );
 
       }
+
 
       if (
         typeof window.apiFetch ===
@@ -389,6 +387,7 @@
         );
 
       }
+
 
       throw new Error(
         "Central API client is not available."
@@ -404,18 +403,24 @@
       if (
         !result ||
         typeof result !==
-          "object"
+        "object"
       ) {
+
         return {};
+
       }
+
 
       if (
         result.data !==
-          undefined &&
+        undefined &&
         result.data !== null
       ) {
+
         return result.data;
+
       }
+
 
       return result;
 
@@ -429,11 +434,15 @@
       const amount =
         Number(value);
 
+
       if (
         !Number.isFinite(amount)
       ) {
+
         return "₹0";
+
       }
+
 
       return `₹${new Intl.NumberFormat(
         "en-IN",
@@ -442,26 +451,6 @@
           maximumFractionDigits: 2
         }
       ).format(amount)}`;
-
-    }
-
-
-    function workerDashboardMoneyPaise(
-      value
-    ) {
-
-      const amount =
-        Number(value);
-
-      if (
-        !Number.isFinite(amount)
-      ) {
-        return "₹0";
-      }
-
-      return workerDashboardMoney(
-        amount / 100
-      );
 
     }
 
@@ -483,8 +472,10 @@
 
       }
 
+
       const seen =
         new Set();
+
 
       return skills
         .map(
@@ -500,11 +491,15 @@
             const key =
               skill.toLowerCase();
 
+
             if (
               seen.has(key)
             ) {
+
               return false;
+
             }
+
 
             seen.add(key);
 
@@ -529,7 +524,50 @@
     }
 
 
+    function getWorkerDashboardUser() {
+
+      let user = null;
+
+
+      if (
+        window.SWN &&
+        typeof window.SWN.user ===
+        "function"
+      ) {
+
+        user =
+          window.SWN.user();
+
+      }
+
+
+      if (
+        !user &&
+        typeof window.getCurrentUser ===
+        "function"
+      ) {
+
+        user =
+          window.getCurrentUser();
+
+      }
+
+
+      return user;
+
+    }
+
+
     async function loadWorkerDashboardExtra() {
+
+      if (
+        workerDashboardExtraLoaded
+      ) {
+
+        return;
+
+      }
+
 
       const extra =
         document.getElementById(
@@ -546,40 +584,20 @@
           "workerDashboardSkills"
         );
 
+
       if (
         !extra ||
         !cards ||
         !skills
       ) {
+
         return;
-      }
-
-
-      let user = null;
-
-
-      if (
-        window.SWN &&
-        typeof window.SWN.user ===
-          "function"
-      ) {
-
-        user =
-          window.SWN.user();
 
       }
 
 
-      if (
-        !user &&
-        typeof window.getCurrentUser ===
-          "function"
-      ) {
-
-        user =
-          window.getCurrentUser();
-
-      }
+      let user =
+        getWorkerDashboardUser();
 
 
       if (!user) {
@@ -591,10 +609,12 @@
               "/auth/me"
             );
 
+
           const authData =
             workerDashboardData(
               authResult
             );
+
 
           user =
             authData?.user ||
@@ -635,8 +655,16 @@
       }
 
 
-      extra.hidden =
-        false;
+      if (
+        workerDashboardExtraLoaded
+      ) {
+
+        return;
+
+      }
+
+
+      extra.hidden = false;
 
 
       cards.innerHTML = `
@@ -657,275 +685,318 @@
       `;
 
 
-      const [
-        profileResult,
-        earningsResult
-      ] = await Promise.all([
+      try {
 
-        workerDashboardRequest(
-          "/workers/me/profile"
-        ),
-
-        workerDashboardRequest(
-          "/earnings/me"
-        )
-
-      ]);
-
-
-      const profileData =
-        workerDashboardData(
-          profileResult
-        );
-
-      const earningsData =
-        workerDashboardData(
+        const [
+          profileResult,
           earningsResult
+        ] = await Promise.all([
+
+          workerDashboardRequest(
+            "/workers/me/profile"
+          ),
+
+          workerDashboardRequest(
+            "/earnings/me"
+          )
+
+        ]);
+
+
+        const profileData =
+          workerDashboardData(
+            profileResult
+          );
+
+
+        const earningsData =
+          workerDashboardData(
+            earningsResult
+          );
+
+
+        const worker =
+          profileData?.worker ||
+          profileData?.profile ||
+          profileData;
+
+
+        const earnings =
+          earningsData?.earnings ||
+          earningsData;
+
+
+        if (
+          !worker ||
+          typeof worker !==
+          "object"
+        ) {
+
+          throw new Error(
+            "Worker profile could not be loaded."
+          );
+
+        }
+
+
+        /*
+         * IMPORTANT:
+         *
+         * earnings.js/backend returns:
+         *
+         * grossAmount
+         * completedAmount
+         * pendingWorkAmount
+         * totalPaidBookings
+         *
+         * These values are already RUPEES.
+         *
+         * Do NOT divide them by 100.
+         */
+
+
+        const grossAmount =
+          Number(
+            earnings?.grossAmount ?? 0
+          );
+
+
+        const completedAmount =
+          Number(
+            earnings?.completedAmount ?? 0
+          );
+
+
+        const pendingWorkAmount =
+          Number(
+            earnings?.pendingWorkAmount ?? 0
+          );
+
+
+        const totalPaidBookings =
+          Number(
+            earnings?.totalPaidBookings ?? 0
+          );
+
+
+        const isAvailable =
+          worker.isAvailable === true;
+
+
+        const isVerified =
+          worker.verified === true;
+
+
+        const profileCompleted =
+          worker.profileCompleted === true;
+
+
+        cards.innerHTML = `
+
+          <div class="worker-info-card">
+
+            <h3>
+              Availability
+            </h3>
+
+            <div
+              class="
+                worker-dashboard-tag
+                ${
+                  isAvailable
+                    ? "available"
+                    : "unavailable"
+                }
+              "
+            >
+
+              ${
+                isAvailable
+                  ? "Available for New Bookings"
+                  : "Currently Unavailable"
+              }
+
+            </div>
+
+          </div>
+
+
+          <div class="worker-info-card">
+
+            <h3>
+              Verification
+            </h3>
+
+            <div
+              class="
+                worker-dashboard-tag
+                ${
+                  isVerified
+                    ? "verified"
+                    : ""
+                }
+              "
+            >
+
+              ${
+                isVerified
+                  ? "Verified Worker"
+                  : "Verification Pending"
+              }
+
+            </div>
+
+          </div>
+
+
+          <div class="worker-info-card">
+
+            <h3>
+              Profile
+            </h3>
+
+            <div class="worker-info-value">
+
+              ${
+                profileCompleted
+                  ? "Complete"
+                  : "Incomplete"
+              }
+
+            </div>
+
+          </div>
+
+
+          <div class="worker-info-card">
+
+            <h3>
+              Gross Earnings
+            </h3>
+
+            <div class="worker-info-value">
+
+              ${workerDashboardMoney(
+                grossAmount
+              )}
+
+            </div>
+
+          </div>
+
+
+          <div class="worker-info-card">
+
+            <h3>
+              Completed Earnings
+            </h3>
+
+            <div class="worker-info-value">
+
+              ${workerDashboardMoney(
+                completedAmount
+              )}
+
+            </div>
+
+          </div>
+
+
+          <div class="worker-info-card">
+
+            <h3>
+              Pending Work
+            </h3>
+
+            <div class="worker-info-value">
+
+              ${workerDashboardMoney(
+                pendingWorkAmount
+              )}
+
+            </div>
+
+          </div>
+
+
+          <div class="worker-info-card">
+
+            <h3>
+              Paid Bookings
+            </h3>
+
+            <div class="worker-info-value">
+
+              ${workerDashboardEscape(
+                totalPaidBookings
+              )}
+
+            </div>
+
+          </div>
+
+        `;
+
+
+        skills.innerHTML =
+          workerDashboardSkills(
+            worker.skills
+          );
+
+
+        workerDashboardExtraLoaded =
+          true;
+
+      } catch (error) {
+
+        console.error(
+          "WORKER DASHBOARD ERROR:",
+          error
         );
 
-
-      const worker =
-        profileData?.worker ||
-        profileData?.profile ||
-        profileData;
-
-
-      const earnings =
-        earningsData?.earnings ||
-        earningsData;
-
-
-      if (
-        !worker ||
-        typeof worker !==
-          "object"
-      ) {
 
         cards.innerHTML = `
           <div
             class="worker-dashboard-error"
           >
-            Worker profile could not
-            be loaded.
+            ${workerDashboardEscape(
+              error?.message ||
+              "Unable to load worker information."
+            )}
           </div>
         `;
 
-        return;
+
+        skills.innerHTML = `
+          <span
+            class="worker-dashboard-tag"
+          >
+            Unable to load skills
+          </span>
+        `;
 
       }
-
-
-      const isAvailable =
-        worker.isAvailable === true;
-
-
-      const isVerified =
-        worker.verified === true;
-
-
-      const profileCompleted =
-        worker.profileCompleted === true;
-
-
-      const gross =
-        earnings?.gross ??
-        earnings?.totalGross ??
-        earnings?.total ??
-        0;
-
-
-      const completedEarnings =
-        earnings?.completed ??
-        earnings?.completedAmount ??
-        earnings?.completedEarnings ??
-        0;
-
-
-      const pendingWork =
-        earnings?.pendingWork ??
-        earnings?.pending ??
-        0;
-
-
-      const bookingCount =
-        earnings?.count ??
-        earnings?.bookingCount ??
-        0;
-
-
-      cards.innerHTML = `
-
-        <div class="worker-info-card">
-
-          <h3>
-            Availability
-          </h3>
-
-          <div
-            class="
-              worker-dashboard-tag
-              ${
-                isAvailable
-                  ? "available"
-                  : "unavailable"
-              }
-            "
-          >
-            ${
-              isAvailable
-                ? "Available for New Bookings"
-                : "Currently Unavailable"
-            }
-          </div>
-
-        </div>
-
-
-        <div class="worker-info-card">
-
-          <h3>
-            Verification
-          </h3>
-
-          <div
-            class="
-              worker-dashboard-tag
-              ${
-                isVerified
-                  ? "verified"
-                  : ""
-              }
-            "
-          >
-            ${
-              isVerified
-                ? "Verified Worker"
-                : "Verification Pending"
-            }
-          </div>
-
-        </div>
-
-
-        <div class="worker-info-card">
-
-          <h3>
-            Profile
-          </h3>
-
-          <div class="worker-info-value">
-
-            ${
-              profileCompleted
-                ? "Complete"
-                : "Incomplete"
-            }
-
-          </div>
-
-        </div>
-
-
-        <div class="worker-info-card">
-
-          <h3>
-            Gross Earnings
-          </h3>
-
-          <div class="worker-info-value">
-
-            ${workerDashboardMoney(
-              gross
-            )}
-
-          </div>
-
-        </div>
-
-
-        <div class="worker-info-card">
-
-          <h3>
-            Completed Earnings
-          </h3>
-
-          <div class="worker-info-value">
-
-            ${workerDashboardMoney(
-              completedEarnings
-            )}
-
-          </div>
-
-        </div>
-
-
-        <div class="worker-info-card">
-
-          <h3>
-            Pending Work
-          </h3>
-
-          <div class="worker-info-value">
-
-            ${workerDashboardMoney(
-              pendingWork
-            )}
-
-          </div>
-
-        </div>
-
-
-        <div class="worker-info-card">
-
-          <h3>
-            Earnings Records
-          </h3>
-
-          <div class="worker-info-value">
-
-            ${workerDashboardEscape(
-              bookingCount
-            )}
-
-          </div>
-
-        </div>
-
-      `;
-
-
-      skills.innerHTML =
-        workerDashboardSkills(
-          worker.skills
-        );
 
     }
 
 
-    /*
-     * dashboard.js and this section
-     * initialize independently.
-     * A short observer ensures the worker
-     * information is loaded after the
-     * dashboard has identified the user.
-     */
-
     function startWorkerDashboardExtra() {
 
-      loadWorkerDashboardExtra();
+      if (
+        workerDashboardExtraStarted
+      ) {
 
-      const target =
-        document.getElementById(
-          "dashboardContent"
-        );
-
-      if (!target) {
         return;
+
       }
 
+
+      workerDashboardExtraStarted =
+        true;
+
+
       let attempts = 0;
+
 
       const timer =
         setInterval(
@@ -933,20 +1004,21 @@
 
             attempts++;
 
-            const currentUser =
-              window.SWN &&
-              typeof window.SWN.user ===
-                "function"
-                ? window.SWN.user()
-                : null;
+
+            const user =
+              getWorkerDashboardUser();
+
 
             const role =
               String(
-                currentUser?.role ||
+                user?.role ||
+                user?.userType ||
+                user?.accountType ||
                 ""
               )
                 .trim()
                 .toLowerCase();
+
 
             if (
               role === "worker"
@@ -956,11 +1028,13 @@
                 timer
               );
 
+
               await loadWorkerDashboardExtra();
 
               return;
 
             }
+
 
             if (
               attempts >= 20
@@ -986,7 +1060,10 @@
 
       document.addEventListener(
         "DOMContentLoaded",
-        startWorkerDashboardExtra
+        startWorkerDashboardExtra,
+        {
+          once: true
+        }
       );
 
     } else {
