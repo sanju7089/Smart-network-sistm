@@ -15,7 +15,10 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
       lowercase: true,
-      trim: true
+      trim: true,
+      maxlength: 254,
+      match:
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     },
 
     password: {
@@ -27,25 +30,33 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["customer", "worker", "admin"],
-      default: "customer"
+      enum: [
+        "customer",
+        "worker",
+        "admin"
+      ],
+      default: "customer",
+      index: true
     },
 
     phone: {
       type: String,
       default: "",
-      trim: true
+      trim: true,
+      maxlength: 30
     },
 
     location: {
       type: String,
       default: "",
-      trim: true
+      trim: true,
+      maxlength: 200
     },
 
     isActive: {
       type: Boolean,
-      default: true
+      default: true,
+      index: true
     }
   },
   {
@@ -53,11 +64,22 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-userSchema.index(
-  { email: 1 },
-  { unique: true }
-);
+/*
+ * email: unique:true already creates
+ * the unique index. No duplicate index
+ * declaration is needed.
+ */
 
-const User = mongoose.model("User", userSchema);
+userSchema.index({
+  role: 1,
+  isActive: 1,
+  createdAt: -1
+});
+
+const User =
+  mongoose.model(
+    "User",
+    userSchema
+  );
 
 export default User;
