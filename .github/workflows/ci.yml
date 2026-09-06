@@ -4,7 +4,6 @@ on:
 push:
 branches:
 - main
-
 pull_request:
 branches:
 - main
@@ -15,7 +14,6 @@ contents: read
 jobs:
 backend-checks:
 name: Backend Tests & Checks
-
 runs-on: ubuntu-latest
 
 defaults:
@@ -49,7 +47,6 @@ steps:
     run: |
       set -e
       shopt -s nullglob
-
       files=(controllers/*.js)
 
       for file in "${files[@]}"; do
@@ -62,7 +59,6 @@ steps:
     run: |
       set -e
       shopt -s nullglob
-
       files=(middleware/*.js)
 
       for file in "${files[@]}"; do
@@ -75,7 +71,6 @@ steps:
     run: |
       set -e
       shopt -s nullglob
-
       files=(models/*.js)
 
       for file in "${files[@]}"; do
@@ -88,7 +83,6 @@ steps:
     run: |
       set -e
       shopt -s nullglob
-
       files=(routes/*.js)
 
       for file in "${files[@]}"; do
@@ -101,7 +95,6 @@ steps:
     run: |
       set -e
       shopt -s globstar nullglob
-
       files=(tests/**/*.js)
 
       if [ "${#files[@]}" -eq 0 ]; then
