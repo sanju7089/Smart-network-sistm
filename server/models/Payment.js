@@ -145,6 +145,13 @@ const paymentSchema =
     }
   );
 
+
+/*
+========================================
+INDEXES
+========================================
+*/
+
 paymentSchema.index({
   userId: 1,
   createdAt: -1
@@ -201,9 +208,10 @@ paymentSchema.index(
   }
 );
 
+
 /*
 ========================================
-NOTIFICATION TRIGGER STATE
+SAVE NOTIFICATION TRIGGER
 ========================================
 */
 
@@ -217,9 +225,10 @@ paymentSchema.pre(
   }
 );
 
+
 /*
 ========================================
-AUTOMATIC PAYMENT NOTIFICATIONS
+SAVE PAYMENT NOTIFICATION
 ========================================
 */
 
@@ -245,7 +254,147 @@ paymentSchema.post(
   }
 );
 
+
+/*
+========================================
+FIND ONE AND UPDATE
+NOTIFICATION TRIGGER
+========================================
+
+This covers payment status changes
+made through:
+
+findOneAndUpdate()
+findByIdAndUpdate()
+========================================
+*/
+
+paymentSchema.pre(
+  "findOneAndUpdate",
+  async function () {
+    try {
+      const update =
+        this.getUpdate() || {};
+
+      const nextStatus =
+        update?.$set?.status ??
+        update?.status;
+
+      this.$notificationStatusChanged =
+        nextStatus !== undefined;
+
+      this.$notificationPreviousStatus =
+        undefined;
+
+      if (
+        !this.$notificationStatusChanged
+      ) {
+        return;
+      }
+
+      const existingPayment =
+        await this.model
+          .findOne(
+            this.getQuery()
+          )
+          .select("status")
+          .lean();
+
+      if (!existingPayment) {
+        this.$notificationStatusChanged =
+          false;
+
+        return;
+      }
+
+      this.$notificationPreviousStatus =
+        existingPayment.status;
+
+      if (
+        String(
+          existingPayment.status
+        ) ===
+        String(nextStatus)
+      ) {
+        this.$notificationStatusChanged =
+          false;
+      }
+    } catch (error) {
+      console.error(
+        "PAYMENT PRE-UPDATE NOTIFICATION ERROR:",
+        error?.stack ||
+          error?.message ||
+          error
+      );
+
+      /*
+        Never block payment processing
+        because notification preparation
+        failed.
+      */
+
+      this.$notificationStatusChanged =
+        false;
+    }
+  }
+);
+
+
+/*
+========================================
+FIND ONE AND UPDATE
+POST NOTIFICATION
+========================================
+*/
+
+paymentSchema.post(
+  "findOneAndUpdate",
+  async function (payment) {
+    try {
+      if (
+        !payment ||
+        !this.$notificationStatusChanged
+      ) {
+        return;
+      }
+
+      const previousStatus =
+        this.$notificationPreviousStatus;
+
+      const currentStatus =
+        payment.status;
+
+      if (
+        !currentStatus ||
+        previousStatus ===
+          currentStatus
+      ) {
+        return;
+      }
+
+      await notifyPaymentEvent(
+        payment
+      );
+    } catch (error) {
+      console.error(
+        "PAYMENT POST-UPDATE NOTIFICATION ERROR:",
+        error?.stack ||
+          error?.message ||
+          error
+      );
+    }
+  }
+);
+
+
+/*
+========================================
+MODEL
+========================================
+*/
+
 const Payment =
+  mongoose.models.Payment ||
   mongoose.model(
     "Payment",
     paymentSchema
