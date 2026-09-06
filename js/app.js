@@ -30,9 +30,8 @@ return SWN_CONFIG.API_URL;
 
 api(path = "") {
 const base = SWN_CONFIG.API_URL;
-
 const cleanPath =
-  String(path || "").trim();
+String(path || "").trim();
 
 if (!cleanPath) {
   return base;
@@ -94,14 +93,9 @@ return window.getCurrentUser();
 
 },
 
-/*
-
-* JWT is HttpOnly.
-* JavaScript must never read it.
-  */
-  token() {
-  return null;
-  },
+token() {
+return null;
+},
 
 clearAuth() {
 localStorage.removeItem(
@@ -178,10 +172,6 @@ requestOptions.headers =
     hasBody && !isFormData
   );
 
-/*
- * Sends the HttpOnly authentication
- * cookie to the backend.
- */
 requestOptions.credentials =
   "include";
 
@@ -350,20 +340,24 @@ return "worker-dashboard.html";
 return "customer-dashboard.html";
 }
 
-function escapeHtml(
-value = ""
-) {
-return String(value)
-.split("&")
-.join("&")
-.split("<")
-.join("<")
-.split(">")
-.join(">")
-.split('"')
-.join(""")
-.split("'")
-.join("'");
+/*
+
+* Safe HTML escaping without regex
+* and without manually writing HTML
+* entity strings.
+  */
+  function escapeHtml(
+  value = ""
+  ) {
+  const element =
+  document.createElement(
+  "div"
+  );
+
+element.textContent =
+String(value);
+
+return element.innerHTML;
 }
 
 function authBox() {
@@ -380,43 +374,109 @@ const user =
 SWN.user();
 
 if (user) {
-element.innerHTML =
-'<span class="muted">' +
-"Hi, " +
-escapeHtml(
-user.name || "User"
-) +
-"</span>" +
-'<a href="' +
-dashboardUrl(user) +
-'">' +
-"Dashboard" +
-"</a>" +
-'<button type="button" class="btn btn-primary" id="logoutButton">' +
-"Logout" +
-"</button>";
+const greeting =
+document.createElement(
+"span"
+);
+
+greeting.className =
+  "muted";
+
+greeting.textContent =
+  "Hi, " +
+  String(
+    user.name || "User"
+  );
+
+const dashboard =
+  document.createElement(
+    "a"
+  );
+
+dashboard.href =
+  dashboardUrl(user);
+
+dashboard.textContent =
+  "Dashboard";
 
 const logoutButton =
-  document.querySelector(
-    "#logoutButton"
+  document.createElement(
+    "button"
   );
 
-if (logoutButton) {
-  logoutButton.addEventListener(
-    "click",
-    () => {
-      SWN.logout();
-    }
-  );
-}
+logoutButton.type =
+  "button";
+
+logoutButton.className =
+  "btn btn-primary";
+
+logoutButton.id =
+  "logoutButton";
+
+logoutButton.textContent =
+  "Logout";
+
+element.innerHTML =
+  "";
+
+element.appendChild(
+  greeting
+);
+
+element.appendChild(
+  dashboard
+);
+
+element.appendChild(
+  logoutButton
+);
+
+logoutButton.addEventListener(
+  "click",
+  () => {
+    SWN.logout();
+  }
+);
 
 return;
 
 }
 
 element.innerHTML =
-'<a href="login.html">Login</a>' +
-'<a class="btn btn-primary" href="signup.html">Get Started</a>';
+"";
+
+const loginLink =
+document.createElement(
+"a"
+);
+
+loginLink.href =
+"login.html";
+
+loginLink.textContent =
+"Login";
+
+const signupLink =
+document.createElement(
+"a"
+);
+
+signupLink.className =
+"btn btn-primary";
+
+signupLink.href =
+"signup.html";
+
+signupLink.textContent =
+"Get Started";
+
+element.appendChild(
+loginLink
+);
+
+element.appendChild(
+signupLink
+);
 }
 
 function redirectToCorrectDashboard(
