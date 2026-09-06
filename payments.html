@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Payment History | Smart Work Network</title>
+  <link rel="stylesheet" href="css/main.css">
+</head>
+
+<body>
+
+<header class="header">
+  <div class="container nav">
+    <a class="brand" href="index.html">Smart Work Network</a>
+
+    <nav class="navlinks">
+      <a href="services.html">Services</a>
+      <a href="find-help.html">Find Help</a>
+      <a href="workers.html">Workers</a>
+      <span data-auth></span>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="section">
+    <div class="container">
+
+      <h1>Payment History</h1>
+
+      <p class="lead">
+        View your Smart Work Network payment history.
+      </p>
+
+      <div id="paymentsMessage" class="notice">
+        Loading payments...
+      </div>
+
+      <div
+        id="paymentsList"
+        class="grid"
+        style="margin-top:20px;"
+      ></div>
+
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <b>Smart Work Network</b>
+
+    <p>
+      Services • Workers • Work opportunities
+    </p>
+
+    <div class="row">
+      <a href="customer-dashboard.html">Dashboard</a>
+      <a href="support.html">Support</a>
+      <a href="profile.html">Profile</a>
+    </div>
+  </div>
+</footer>
+
+<script src="js/auth.js"></script>
+<script src="js/app.js"></script>
+
+<script>
+"use strict";
+
+(() => {
+
+  const message =
+    document.getElementById("paymentsMessage");
+
+  const list =
+    document.getElementById("paymentsList");
+
+  function escapeHtml(value) {
+
+    if (
+      typeof window.escapeHtml === "function"
+    ) {
+      return window.escapeHtml(value);
+    }
+
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function formatAmount(value) {
+
+    const amount = Number(value);
+
+    if (!Number.isFinite(amount)) {
+      return "₹0";
+    }
+
+    /*
+      Backend stores Razorpay amounts in paise.
+    */
+    return "₹" + new Intl.NumberFormat("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount / 100);
+  }
+
+  function formatDate(value) {
+
+    if (!value) {
+      return "—";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return "—";
+    }
+
+    return date.toLocaleString("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short"
+    });
+  }
+
+  function formatStatus(value) {
+
+    return String(value || "unknown")
+      .replace(/_/g, " ")
+      .replace(
+        /\b\w/g,
+        character => character.toUpperCase()
+      );
+  }
+
+  function getPayments(result) {
+
+    if (Array.isArray(result?.data)) {
+      return result.data;
+    }
+
+    if (
+      Array.isArray(
+        result?.data?.payments
+      )
+    ) {
+      return result.data.payments;
+    }
+
+    if (Array.isArray(result?.payments)) {
+      return result.payments;
+    }
+
+    return [];
+  }
+
+  function renderPayments(payments) {
+
+    if (!payments.length) {
+
+      message.textContent =
+        "No payment records found.";
+
+      list.innerHTML = `
+        <div class="card">
+          <h2>No Payments Yet</h2>
+
+          <p>
+            Your payment history will appear here
+            after a payment is created.
+          </p>
+
+          <a
+            class="btn btn-primary"
+            href="customer-dashboard.html"
+          >
+            Go to Dashboard
+          </a>
+        </div>
+      `;
+
+      return;
+    }
+
+    message.textContent =
+      `${payments.length} payment record${
+        payments.length === 1 ? "" : "s"
+      } found.`;
+
+    list.innerHTML =
+      payments.map(payment => {
+
+        const id =
+          payment?._id ||
+          payment?.id;
+
+        const transaction =
+          payment?.transactionId ||
+          payment?.gatewayPaymentId ||
+          payment?.razorpayPaymentId ||
+          payment?.razorpayOrderId ||
+          "—";
+
+        return `
+          <article class="card">
+
+            <h2>
+              ${escapeHtml(
+                formatAmount(payment?.amount)
+              )}
+            </h2>
+
+            <p>
+              <strong>Status:</strong>
+              ${escapeHtml(
+                formatStatus(payment?.status)
+              )}
+            </p>
+
+            <p>
+              <strong>Method:</strong>
+              ${escapeHtml(
+                payment?.method || "—"
+              )}
+            </p>
+
+            <p>
+              <strong>Currency:</strong>
+              ${escapeHtml(
+                payment?.currency || "INR"
+              )}
+            </p>
+
+            <p>
+              <strong>Transaction:</strong>
+              ${escapeHtml(transaction)}
+            </p>
+
+            <p>
+              <strong>Date:</strong>
+              ${escapeHtml(
+                formatDate(
+                  payment?.paidAt ||
+                  payment?.createdAt
+                )
+              )}
+            </p>
+
+            ${
+              id
+                ? `
+                  <a
+                    class="btn btn-primary"
+                    href="payment.html?id=${encodeURIComponent(id)}"
+                  >
+                    View Payment
+                  </a>
+                `
+                : ""
+            }
+
+          </article>
+        `;
+
+      }).join("");
+  }
+
+  async function loadPayments() {
+
+    try {
+
+      const result =
+        await window.SWN.request(
+          "/payments"
+        );
+
+      const payments =
+        getPayments(result);
+
+      renderPayments(payments);
+
+    } catch (error) {
+
+      console.error(
+        "PAYMENT HISTORY ERROR:",
+        error
+      );
+
+      message.textContent =
+        "Unable to load payment history.";
+
+      list.innerHTML = `
+        <div
+          class="card"
+          role="alert"
+        >
+          <h2>
+            Payment History Unavailable
+          </h2>
+
+          <p>
+            ${escapeHtml(
+              error?.message ||
+              "Please try again."
+            )}
+          </p>
+
+          <button
+            type="button"
+            class="btn btn-primary"
+            id="retryPayments"
+          >
+            Retry
+          </button>
+        </div>
+      `;
+
+      document
+        .getElementById("retryPayments")
+        ?.addEventListener(
+          "click",
+          loadPayments
+        );
+    }
+  }
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    loadPayments
+  );
+
+})();
+</script>
+
+</body>
+</html>
