@@ -1,315 +1,305 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
+const COOKIE_NAME = "swn_auth";
+
 function getJwtSecret() {
-  const secret = String(
-    process.env.JWT_SECRET || ""
-  ).trim();
+const secret = String(
+process.env.JWT_SECRET || ""
+).trim();
 
-  if (!secret) {
-    const error = new Error(
-      "JWT_SECRET is not configured."
-    );
+if (!secret) {
+const error = new Error(
+"JWT_SECRET is not configured."
+);
 
-    error.statusCode = 500;
+error.statusCode = 500;
 
-    throw error;
-  }
+throw error;
 
-  return secret;
+}
+
+return secret;
 }
 
 function getToken(req) {
-  const authorization =
-    String(
-      req.headers.authorization || ""
-    ).trim();
+const authorization =
+String(
+req.headers.authorization || ""
+).trim();
 
-  if (!authorization) {
-    return null;
-  }
+if (authorization) {
+const parts =
+authorization.split(/\s+/);
 
-  const parts =
-    authorization.split(/\s+/);
-
-  if (
-    parts.length !== 2 ||
-    parts[0].toLowerCase() !==
-      "bearer" ||
-    !parts[1]
-  ) {
-    return null;
-  }
-
+if (
+  parts.length === 2 &&
+  parts[0].toLowerCase() ===
+    "bearer" &&
+  parts[1]
+) {
   return parts[1].trim();
 }
 
-async function authenticateRequest(
-  req,
-  res
+}
+
+const cookieToken =
+req.cookies?.[COOKIE_NAME];
+
+if (
+cookieToken &&
+typeof cookieToken ===
+"string"
 ) {
-  const token = getToken(req);
+return cookieToken.trim();
+}
 
-  if (!token) {
-    return {
-      authenticated: false
-    };
-  }
+return null;
+}
 
-  const payload = jwt.verify(
-    token,
-    getJwtSecret(),
-    {
-      issuer: "smart-work-network",
-      audience:
-        "smart-work-network-users"
-    }
-  );
+async function authenticateRequest(
+req,
+res
+) {
+const token =
+getToken(req);
 
-  if (!payload?.id) {
-    const error = new Error(
-      "Invalid authentication token."
-    );
+if (!token) {
+return {
+authenticated: false
+};
+}
 
-    error.statusCode = 401;
+const payload =
+jwt.verify(
+token,
+getJwtSecret(),
+{
+issuer:
+"smart-work-network",
+audience:
+"smart-work-network-users"
+}
+);
 
-    throw error;
-  }
+if (!payload?.id) {
+const error = new Error(
+"Invalid authentication token."
+);
 
-  const user =
-    await User.findById(
-      payload.id
-    ).select(
-      "_id name email role phone location isActive"
-    );
+error.statusCode = 401;
 
-  if (!user) {
-    const error = new Error(
-      "Authentication is no longer valid."
-    );
+throw error;
 
-    error.statusCode = 401;
+}
 
-    throw error;
-  }
+const user =
+await User.findById(
+payload.id
+).select(
+"_id name email role phone location isActive"
+);
 
-  if (!user.isActive) {
-    const error = new Error(
-      "This account is inactive."
-    );
+if (!user) {
+const error = new Error(
+"Authentication is no longer valid."
+);
 
-    error.statusCode = 403;
+error.statusCode = 401;
 
-    throw error;
-  }
+throw error;
 
-  req.user = {
-    id: user._id.toString(),
-    email: user.email,
-    role: user.role
-  };
+}
 
-  req.authUser = user;
+if (!user.isActive) {
+const error = new Error(
+"This account is inactive."
+);
 
-  return {
-    authenticated: true
-  };
+error.statusCode = 403;
+
+throw error;
+
+}
+
+req.user = {
+id:
+user._id.toString(),
+email:
+user.email,
+role:
+user.role
+};
+
+req.authUser = user;
+
+return {
+authenticated: true
+};
+}
+
+function handleAuthError(
+error,
+res,
+label
+) {
+if (
+error?.name ===
+"TokenExpiredError"
+) {
+return res.status(401).json({
+success: false,
+message:
+"Authentication token has expired."
+});
+}
+
+if (
+error?.name ===
+"JsonWebTokenError" ||
+error?.name ===
+"NotBeforeError"
+) {
+return res.status(401).json({
+success: false,
+message:
+"Invalid authentication token."
+});
+}
+
+console.error(
+"${label}:",
+error.message
+);
+
+return res.status(
+error.statusCode || 500
+).json({
+success: false,
+message:
+error.statusCode
+? error.message
+: "Authentication failed."
+});
 }
 
 export async function requireAuth(
-  req,
-  res,
-  next
+req,
+res,
+next
 ) {
-  try {
-    const token = getToken(req);
+try {
+const token =
+getToken(req);
 
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message:
-          "Authentication token is required."
-      });
-    }
-
-    await authenticateRequest(
-      req,
-      res
-    );
-
-    return next();
-
-  } catch (error) {
-    if (
-      error?.name ===
-      "TokenExpiredError"
-    ) {
-      return res.status(401).json({
-        success: false,
-        message:
-          "Authentication token has expired."
-      });
-    }
-
-    if (
-      error?.name ===
-        "JsonWebTokenError" ||
-      error?.name ===
-        "NotBeforeError"
-    ) {
-      return res.status(401).json({
-        success: false,
-        message:
-          "Invalid authentication token."
-      });
-    }
-
-    console.error(
-      "AUTHENTICATION ERROR:",
-      error.message
-    );
-
-    return res.status(
-      error.statusCode || 500
-    ).json({
-      success: false,
-      message:
-        error.statusCode
-          ? error.message
-          : "Authentication failed."
-    });
-  }
+if (!token) {
+  return res.status(401).json({
+    success: false,
+    message:
+      "Authentication token is required."
+  });
 }
 
-/*
-========================================
-OPTIONAL AUTH
-========================================
+await authenticateRequest(
+  req,
+  res
+);
 
-Public requests are allowed.
+return next();
 
-If a valid Bearer token is supplied,
-req.user is populated.
-
-Invalid supplied tokens are rejected
-rather than silently treated as public.
-*/
+} catch (error) {
+return handleAuthError(
+error,
+res,
+"AUTHENTICATION ERROR"
+);
+}
+}
 
 export async function optionalAuth(
-  req,
-  res,
-  next
+req,
+res,
+next
 ) {
-  try {
-    const token = getToken(req);
+try {
+const token =
+getToken(req);
 
-    if (!token) {
-      return next();
-    }
+if (!token) {
+  return next();
+}
 
-    await authenticateRequest(
-      req,
-      res
-    );
+await authenticateRequest(
+  req,
+  res
+);
 
-    return next();
+return next();
 
-  } catch (error) {
-    if (
-      error?.name ===
-      "TokenExpiredError"
-    ) {
-      return res.status(401).json({
-        success: false,
-        message:
-          "Authentication token has expired."
-      });
-    }
-
-    if (
-      error?.name ===
-        "JsonWebTokenError" ||
-      error?.name ===
-        "NotBeforeError"
-    ) {
-      return res.status(401).json({
-        success: false,
-        message:
-          "Invalid authentication token."
-      });
-    }
-
-    console.error(
-      "OPTIONAL AUTH ERROR:",
-      error.message
-    );
-
-    return res.status(
-      error.statusCode || 500
-    ).json({
-      success: false,
-      message:
-        error.statusCode
-          ? error.message
-          : "Authentication failed."
-    });
-  }
+} catch (error) {
+return handleAuthError(
+error,
+res,
+"OPTIONAL AUTH ERROR"
+);
+}
 }
 
 export function requireRole(
-  ...allowedRoles
+...allowedRoles
 ) {
-  const validRoles =
-    allowedRoles
-      .map((role) =>
-        String(role)
-          .trim()
-          .toLowerCase()
-      )
-      .filter(Boolean);
+const validRoles =
+allowedRoles
+.map((role) =>
+String(role)
+.trim()
+.toLowerCase()
+)
+.filter(Boolean);
 
-  return (
-    req,
-    res,
-    next
-  ) => {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message:
-          "Authentication required."
-      });
-    }
+return (
+req,
+res,
+next
+) => {
+if (!req.user) {
+return res.status(401).json({
+success: false,
+message:
+"Authentication required."
+});
+}
 
-    if (
-      validRoles.length === 0
-    ) {
-      return res.status(500).json({
-        success: false,
-        message:
-          "Server role configuration error."
-      });
-    }
+if (
+  validRoles.length === 0
+) {
+  return res.status(500).json({
+    success: false,
+    message:
+      "Server role configuration error."
+  });
+}
 
-    const userRole =
-      String(
-        req.user.role || ""
-      )
-        .trim()
-        .toLowerCase();
+const userRole =
+  String(
+    req.user.role || ""
+  )
+    .trim()
+    .toLowerCase();
 
-    if (
-      !validRoles.includes(
-        userRole
-      )
-    ) {
-      return res.status(403).json({
-        success: false,
-        message:
-          "You do not have permission to perform this action."
-      });
-    }
+if (
+  !validRoles.includes(
+    userRole
+  )
+) {
+  return res.status(403).json({
+    success: false,
+    message:
+      "You do not have permission to perform this action."
+  });
+}
 
-    return next();
-  };
+return next();
+
+};
 }
