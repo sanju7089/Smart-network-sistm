@@ -1,49 +1,97 @@
 name: Smart Work Network CI
 
 on:
-  push:
-    branches:
-      - main
+push:
+branches:
+- main
 
-  pull_request:
-    branches:
-      - main
+pull_request:
+branches:
+- main
 
 permissions:
-  contents: read
+contents: read
 
 jobs:
-  backend-checks:
-    name: Backend Tests & Checks
+backend-checks:
+name: Backend Tests & Checks
 
-    runs-on: ubuntu-latest
+runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: server
+defaults:
+  run:
+    working-directory: server
 
-    strategy:
-      fail-fast: true
-      matrix:
-        node-version:
-          - 20
-          - 22
+strategy:
+  fail-fast: false
+  matrix:
+    node-version:
+      - 20
+      - 22
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+steps:
+  - name: Checkout repository
+    uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: npm
+  - name: Setup Node.js
+    uses: actions/setup-node@v4
+    with:
+      node-version: ${{ matrix.node-version }}
 
-      - name: Install dependencies
-        run: npm install
+  - name: Install dependencies
+    run: npm install
 
-      - name: Syntax check
-        run: npm run syntax
+  - name: Check server syntax
+    run: node --check server.js
 
-      - name: Run automated tests
-        run: npm test
+  - name: Check controllers syntax
+    run: |
+      for file in controllers/*.js; do
+        echo "Checking $file"
+        node --check "$file"
+      done
+
+  - name: Check middleware syntax
+    run: |
+      for file in middleware/*.js; do
+        echo "Checking $file"
+        node --check "$file"
+      done
+
+  - name: Check models syntax
+    run: |
+      for file in models/*.js; do
+        echo "Checking $file"
+        node --check "$file"
+      done
+
+  - name: Check routes syntax
+    run: |
+      for file in routes/*.js; do
+        echo "Checking $file"
+        node --check "$file"
+      done
+
+  - name: Check test files syntax
+    run: |
+      for file in tests/**/*.js tests/*.js; do
+        if [ -f "$file" ]; then
+          echo "Checking $file"
+          node --check "$file"
+        fi
+      done
+
+  - name: Run automated tests
+    run: npm test
+
+  - name: Run authentication tests
+    run: npm run test:auth
+
+  - name: Run booking tests
+    run: npm run test:booking
+
+  - name: Run payment tests
+    run: npm run test:payment
+
+  - name: Run API tests
+    run: npm run test:api
