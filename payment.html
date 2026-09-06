@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <title>Payment Details | Smart Work Network</title>
+
+  <link
+    rel="stylesheet"
+    href="css/main.css"
+  >
+</head>
+
+<body>
+
+  <header class="header">
+
+    <div class="container nav">
+
+      <a
+        class="brand"
+        href="index.html"
+      >
+        Smart Work Network
+      </a>
+
+      <nav class="navlinks">
+
+        <a href="services.html">
+          Services
+        </a>
+
+        <a href="find-help.html">
+          Find Help
+        </a>
+
+        <a href="workers.html">
+          Workers
+        </a>
+
+        <span data-auth></span>
+
+      </nav>
+
+    </div>
+
+  </header>
+
+
+  <main>
+
+    <section class="section">
+
+      <div
+        class="container"
+        id="paymentContent"
+      >
+
+        <div class="card">
+
+          <h1>
+            Payment Details
+          </h1>
+
+          <p class="muted">
+            Loading payment details...
+          </p>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <footer class="footer">
+
+    <div class="container">
+
+      <b>
+        Smart Work Network
+      </b>
+
+      <p>
+        Services • Workers • Work opportunities
+      </p>
+
+      <div class="row">
+
+        <a href="payments.html">
+          Payment History
+        </a>
+
+        <a href="support.html">
+          Support
+        </a>
+
+        <a href="profile.html">
+          Profile
+        </a>
+
+      </div>
+
+    </div>
+
+  </footer>
+
+
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+
+  <script>
+    "use strict";
+
+    (() => {
+
+      const params =
+        new URLSearchParams(
+          window.location.search
+        );
+
+      const id =
+        String(
+          params.get("id") || ""
+        ).trim();
+
+      const content =
+        document.getElementById(
+          "paymentContent"
+        );
+
+
+      const escapeHtml =
+        value => {
+
+          if (
+            typeof window.escapeHtml ===
+            "function"
+          ) {
+            return window.escapeHtml(
+              value
+            );
+          }
+
+          return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+        };
+
+
+      const money =
+        paise => {
+
+          const amount =
+            Number(paise);
+
+          if (
+            !Number.isFinite(amount)
+          ) {
+            return "₹0";
+          }
+
+          return `₹${new Intl.NumberFormat(
+            "en-IN",
+            {
+              maximumFractionDigits: 2
+            }
+          ).format(amount / 100)}`;
+        };
+
+
+      const date =
+        value => {
+
+          if (!value) {
+            return "—";
+          }
+
+          const d =
+            new Date(value);
+
+          if (
+            Number.isNaN(
+              d.getTime()
+            )
+          ) {
+            return "—";
+          }
+
+          return d.toLocaleString(
+            "en-IN",
+            {
+              dateStyle: "medium",
+              timeStyle: "short"
+            }
+          );
+
+        };
+
+
+      const status =
+        value =>
+          String(
+            value || "unknown"
+          )
+            .replace(/_/g, " ")
+            .replace(
+              /\b\w/g,
+              c => c.toUpperCase()
+            );
+
+
+      async function load() {
+
+        if (!id) {
+
+          content.innerHTML = `
+            <div class="card">
+
+              <h1>
+                Payment Not Found
+              </h1>
+
+              <p>
+                A valid payment ID was not provided.
+              </p>
+
+              <a
+                class="btn btn-primary"
+                href="payments.html"
+              >
+                Payment History
+              </a>
+
+            </div>
+          `;
+
+          return;
+
+        }
+
+
+        try {
+
+          const result =
+            await window.SWN.request(
+              `/payments/${encodeURIComponent(id)}`
+            );
+
+          const payment =
+            result?.data ||
+            result?.payment ||
+            result;
+
+
+          if (
+            !payment ||
+            typeof payment !== "object"
+          ) {
+            throw new Error(
+              "Payment details were not found."
+            );
+          }
+
+
+          const transaction =
+            payment.transactionId ||
+            payment.gatewayPaymentId ||
+            payment.razorpayPaymentId ||
+            payment.razorpayOrderId ||
+            "—";
+
+
+          content.innerHTML = `
+
+            <div class="card">
+
+              <h1>
+                Payment Details
+              </h1>
+
+              <div class="grid grid-2">
+
+                <div>
+                  <strong>
+                    Amount
+                  </strong>
+
+                  <p>
+                    ${escapeHtml(
+                      money(
+                        payment.amount
+                      )
+                    )}
+                  </p>
+                </div>
+
+
+                <div>
+                  <strong>
+                    Status
+                  </strong>
+
+                  <p>
+                    ${escapeHtml(
+                      status(
+                        payment.status
+                      )
+                    )}
+                  </p>
+                </div>
+
+
+                <div>
+                  <strong>
+                    Payment Method
+                  </strong>
+
+                  <p>
+                    ${escapeHtml(
+                      payment.method ||
+                      "—"
+                    )}
+                  </p>
+                </div>
+
+
+                <div>
+                  <strong>
+                    Currency
+                  </strong>
+
+                  <p>
+                    ${escapeHtml(
+                      payment.currency ||
+                      "INR"
+                    )}
+                  </p>
+                </div>
+
+
+                <div>
+                  <strong>
+                    Transaction
+                  </strong>
+
+                  <p>
+                    ${escapeHtml(
+                      transaction
+                    )}
+                  </p>
+                </div>
+
+
+                <div>
+                  <strong>
+                    Created
+                  </strong>
+
+                  <p>
+                    ${escapeHtml(
+                      date(
+                        payment.createdAt
+                      )
+                    )}
+                  </p>
+                </div>
+
+
+                ${
+                  payment.paidAt
+                    ? `
+                      <div>
+                        <strong>
+                          Paid At
+                        </strong>
+
+                        <p>
+                          ${escapeHtml(
+                            date(
+                              payment.paidAt
+                            )
+                          )}
+                        </p>
+                      </div>
+                    `
+                    : ""
+                }
+
+
+                ${
+                  payment.refundedAt
+                    ? `
+                      <div>
+                        <strong>
+                          Refunded At
+                        </strong>
+
+                        <p>
+                          ${escapeHtml(
+                            date(
+                              payment.refundedAt
+                            )
+                          )}
+                        </p>
+                      </div>
+                    `
+                    : ""
+                }
+
+              </div>
+
+
+              <div
+                class="row"
+                style="margin-top:20px;"
+              >
+
+                <a
+                  class="btn btn-primary"
+                  href="payments.html"
+                >
+                  Payment History
+                </a>
+
+                <a
+                  class="btn"
+                  href="customer-dashboard.html"
+                >
+                  Dashboard
+                </a>
+
+              </div>
+
+            </div>
+          `;
+
+        } catch (error) {
+
+          console.error(
+            "PAYMENT DETAILS ERROR:",
+            error
+          );
+
+          content.innerHTML = `
+
+            <div
+              class="card"
+              role="alert"
+            >
+
+              <h1>
+                Unable to Load Payment
+              </h1>
+
+              <p>
+                ${escapeHtml(
+                  error?.message ||
+                  "Payment details could not be loaded."
+                )}
+              </p>
+
+              <a
+                class="btn btn-primary"
+                href="payments.html"
+              >
+                Payment History
+              </a>
+
+            </div>
+
+          `;
+
+        }
+
+      }
+
+
+      document.addEventListener(
+        "DOMContentLoaded",
+        load
+      );
+
+    })();
+  </script>
+
+</body>
+</html>
