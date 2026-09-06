@@ -56,22 +56,14 @@ const jobSchema =
       },
 
       customerId: {
-        type:
-          mongoose.Schema.Types.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true,
         index: true
       },
 
-      /*
-       * Optional worker assignment.
-       *
-       * Existing jobs without workerId
-       * continue to work normally.
-       */
       workerId: {
-        type:
-          mongoose.Schema.Types.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: "Worker",
         default: null,
         index: true
@@ -89,45 +81,32 @@ const jobSchema =
     }
   );
 
-/*
- * Public jobs:
- * status=open + newest first.
- */
+/* Public jobs */
 jobSchema.index({
   status: 1,
   createdAt: -1
 });
 
-/*
- * Customer dashboard:
- * customer's jobs + newest first.
- */
+/* Customer dashboard */
 jobSchema.index({
   customerId: 1,
   createdAt: -1
 });
 
-/*
- * Worker dashboard:
- * worker's assigned jobs + newest first.
- */
+/* Worker dashboard */
 jobSchema.index({
   workerId: 1,
   createdAt: -1
 });
 
-/*
- * Category/location filtering.
- */
+/* Category/location filtering */
 jobSchema.index({
   category: 1,
   location: 1,
   createdAt: -1
 });
 
-/*
- * Text search.
- */
+/* Text search */
 jobSchema.index({
   title: "text",
   description: "text",
@@ -137,34 +116,41 @@ jobSchema.index({
 });
 
 /*
- * --------------------------------------------------
- * SAVE NOTIFICATION
- * --------------------------------------------------
- *
- * Handles:
- * - Job creation
- * - Job status changes
- */
-jobSchema.pre("save", function (next) {
-  this.$notificationPreviousStatus =
-    this.isNew
-      ? null
-      : this.get("status");
+==================================================
+SAVE NOTIFICATION
+==================================================
+*/
 
-  this.$notificationStatusChanged =
-    this.isNew ||
-    this.isModified("status") ||
-    this.isModified("workerId");
+jobSchema.pre(
+  "save",
+  function (next) {
+    /*
+     * IMPORTANT:
+     *
+     * isModified() must be checked before save.
+     * For existing documents, get("status")
+     * is the OLD value at this point.
+     */
+    this.$notificationPreviousStatus =
+      this.isNew
+        ? null
+        : this.get("status");
 
-  next();
-});
+    this.$notificationShouldRun =
+      this.isNew ||
+      this.isModified("status") ||
+      this.isModified("workerId");
+
+    next();
+  }
+);
 
 jobSchema.post(
   "save",
   async function (job) {
     try {
       if (
-        !this.$notificationStatusChanged
+        !this.$notificationShouldRun
       ) {
         return;
       }
@@ -174,6 +160,10 @@ jobSchema.post(
         this.$notificationPreviousStatus
       );
     } catch (error) {
+      /*
+       * Notification failure must never
+       * break the successful job save.
+       */
       console.error(
         "JOB SAVE NOTIFICATION ERROR:",
         error?.stack ||
@@ -185,17 +175,18 @@ jobSchema.post(
 );
 
 /*
- * --------------------------------------------------
- * FIND ONE AND UPDATE NOTIFICATION
- * --------------------------------------------------
- *
- * Important because many controllers use:
- *
- * findOneAndUpdate()
- * findByIdAndUpdate()
- *
- * Normal save() middleware does NOT catch those.
- */
+==================================================
+FIND ONE AND UPDATE NOTIFICATION
+==================================================
+
+Covers controllers using:
+
+findOneAndUpdate()
+findByIdAndUpdate()
+
+Normal save middleware does not run for
+these query-based updates.
+*/
 
 jobSchema.pre(
   "findOneAndUpdate",
@@ -207,31 +198,29 @@ jobSchema.pre(
       const $set =
         update.$set || {};
 
-      const newStatus =
+      const statusProvided =
         Object.prototype.hasOwnProperty.call(
           $set,
           "status"
-        )
-          ? $set.status
-          : update.status;
+        ) ||
+        Object.prototype.hasOwnProperty.call(
+          update,
+          "status"
+        );
 
-      const newWorkerId =
+      const workerProvided =
         Object.prototype.hasOwnProperty.call(
           $set,
           "workerId"
-        )
-          ? $set.workerId
-          : update.workerId;
-
-      const statusChanging =
-        newStatus !== undefined;
-
-      const workerChanging =
-        newWorkerId !== undefined;
+        ) ||
+        Object.prototype.hasOwnProperty.call(
+          update,
+          "workerId"
+        );
 
       this.$notificationShouldRun =
-        statusChanging ||
-        workerChanging;
+        statusProvided ||
+        workerProvided;
 
       if (
         !this.$notificationShouldRun
@@ -239,15 +228,16 @@ jobSchema.pre(
         return next();
       }
 
-      const currentJob =
+      /*
+       * Read the OLD job before MongoDB updates it.
+       */
+      const oldJob =
         await this.model
-          .findOne(
-            this.getQuery()
-          )
+          .findOne(this.getQuery())
           .lean();
 
       this.$notificationPreviousStatus =
-        currentJob?.status ?? null;
+        oldJob?.status ?? null;
 
       next();
     } catch (error) {
@@ -259,8 +249,8 @@ jobSchema.pre(
       );
 
       /*
-       * Notification failure must never
-       * break the actual job update.
+       * Notification middleware must never
+       * block the actual database update.
        */
       next();
     }
