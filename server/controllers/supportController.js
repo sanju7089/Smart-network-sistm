@@ -1,547 +1,421 @@
-import mongoose from "mongoose";
+"use strict";
 
+import mongoose from "mongoose";
 import SupportTicket, {
   SUPPORT_TICKET_STATUSES
 } from "../models/SupportTicket.js";
 
-function validId(id) {
-  return mongoose.Types.ObjectId.isValid(id);
-}
+const validId = (id) =>
+  mongoose.Types.ObjectId.isValid(String(id || ""));
 
-function text(value, max = 5000) {
-  return String(value ?? "")
-    .trim()
-    .slice(0, max);
-}
+const isValidationError = (error) =>
+  error?.name === "ValidationError";
 
-function safeTicket(ticket) {
-  if (!ticket) {
-    return null;
+const isDuplicateKeyError = (error) =>
+  error?.code === 11000;
+
+const isCastError = (error) =>
+  error?.name === "CastError";
+
+const getValidationErrors = (error) => {
+  const errors = {};
+
+  for (const [field, detail] of Object.entries(error?.errors || {})) {
+    errors[field] = detail?.message || "Invalid value.";
   }
 
-  const replyHistory =
-    Array.isArray(
-      ticket.replyHistory
-    )
-      ? ticket.replyHistory.map(
-          function (reply) {
-            return {
-              id: reply._id,
-              message: reply.message,
-              repliedBy:
-                reply.repliedBy,
-              repliedAt:
-                reply.repliedAt
-            };
-          }
-        )
-      : [];
+  return errors;
+};
+
+const isPlainObject = (value) =>
+  value !== null &&
+  typeof value === "object" &&
+  !Array.isArray(value);
+
+const getBody = (req) =>
+  isPlainObject(req.body) ? req.body : {};
+
+const safeTicket = (ticket) => {
+  if (!ticket) return null;
 
   return {
-    id: ticket._id,
-    userId: ticket.userId,
-    subject: ticket.subject,
-    message: ticket.message,
-    status: ticket.status,
-
-    /*
-     * Latest reply remains available
-     * for existing frontend compatibility.
-     */
-    adminReply:
-      ticket.adminReply || "",
-
-    /*
-     * Complete conversation history.
-     */
-    replyHistory,
-
-    resolvedAt:
-      ticket.resolvedAt,
-
-    closedAt:
-      ticket.closedAt,
-
-    createdAt:
-      ticket.createdAt,
-
-    updatedAt:
-      ticket.updatedAt
+    ...ticket,
+    replyHistory: Array.isArray(ticket.replyHistory)
+      ? ticket.replyHistory
+      : []
   };
-}
+};
 
-/*
-========================================
-CREATE SUPPORT TICKET
-========================================
-*/
-
-export async function createTicket(
-  req,
-  res
-) {
+export const createTicket = async (req, res) => {
   try {
-    const subject =
-      text(
-        req.body?.subject,
-        200
-      );
+    if (!req.user?._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required."
+      });
+    }
 
-    const message =
-      text(
-        req.body?.message,
-        5000
-      );
+    const body = getBody(req);
 
     if (
-      subject.length < 3 ||
-      message.length < 3
+      body.subject !== undefined &&
+      typeof body.subject !== "string"
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Subject and message are required."
+        message: "Subject must be a text value."
       });
     }
 
     if (
-      !req.user ||
-      !req.user.id
+      body.message !== undefined &&
+      typeof body.message !== "string"
     ) {
-      return res.status(401).json({
+      return res.status(400).json({
         success: false,
-        message:
-          "Authentication required."
+        message: "Message must be a text value."
       });
     }
 
-    const ticket =
-      await SupportTicket.create({
-        userId: req.user.id,
-        subject,
-        message,
-        status: "open"
+    const subject = String(body.subject || "").trim();
+    const message = String(body.message || "").trim();
+
+    if (subject.length < 3) {
+      return res.status(400).json({
+        success: false,
+        message: "Subject must be at least 3 characters long."
       });
+    }
+
+    if (subject.length > 200) {
+      return res.status(400).json({
+        success: false,
+        message: "Subject must not exceed 200 characters."
+      });
+    }
+
+    if (message.length < 3) {
+      return res.status(400).json({
+        success: false,
+        message: "Message must be at least 3 characters long."
+      });
+    }
+
+    if (message.length > 5000) {
+      return res.status(400).json({
+        success: false,
+        message: "Message must not exceed 5000 characters."
+      });
+    }
+
+    const ticket = await SupportTicket.create({
+      userId: req.user._id,
+      subject,
+      message,
+      status: "open"
+    });
 
     return res.status(201).json({
       success: true,
-      message:
-        "Support ticket created successfully.",
-      data: safeTicket(ticket)
+      message: "Support ticket created successfully.",
+      ticket: safeTicket(ticket.toObject())
     });
   } catch (error) {
-    console.error(
-      "CREATE SUPPORT TICKET ERROR:",
-      error
-    );
+    console.error("createTicket error:", error);
 
-    return res.status(500).json({
-      success: false,
-      message:
-        "Unable to create support ticket."
-    });
-  }
-}
-
-/*
-========================================
-MY SUPPORT TICKETS
-CUSTOMER + WORKER
-========================================
-*/
-
-export async function getMyTickets(
-  req,
-  res
-) {
-  try {
-    if (
-      !req.user ||
-      !req.user.id
-    ) {
-      return res.status(401).json({
-        success: false,
-        message:
-          "Authentication required."
-      });
-    }
-
-    const tickets =
-      await SupportTicket.find({
-        userId: req.user.id
-      })
-        .sort({
-          createdAt: -1
-        })
-        .lean();
-
-    return res.status(200).json({
-      success: true,
-      count: tickets.length,
-      data: tickets.map(
-        safeTicket
-      )
-    });
-  } catch (error) {
-    console.error(
-      "GET MY SUPPORT TICKETS ERROR:",
-      error
-    );
-
-    return res.status(500).json({
-      success: false,
-      message:
-        "Unable to fetch support tickets."
-    });
-  }
-}
-
-/*
-========================================
-ADMIN: ALL TICKETS
-========================================
-*/
-
-export async function getAllTickets(
-  req,
-  res
-) {
-  try {
-    const filter = {};
-
-    if (req.query.status) {
-      const status =
-        text(
-          req.query.status,
-          50
-        ).toLowerCase();
-
-      if (
-        !SUPPORT_TICKET_STATUSES.includes(
-          status
-        )
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Invalid support ticket status."
-        });
-      }
-
-      filter.status = status;
-    }
-
-    const tickets =
-      await SupportTicket.find(
-        filter
-      )
-        .populate(
-          "userId",
-          "name email phone role"
-        )
-        .populate(
-          "replyHistory.repliedBy",
-          "name email role"
-        )
-        .sort({
-          createdAt: -1
-        });
-
-    return res.status(200).json({
-      success: true,
-      count: tickets.length,
-      data: tickets.map(
-        function (ticket) {
-          return {
-            ...safeTicket(ticket),
-
-            user: ticket.userId
-              ? {
-                  id:
-                    ticket.userId._id,
-                  name:
-                    ticket.userId.name,
-                  email:
-                    ticket.userId.email,
-                  phone:
-                    ticket.userId.phone,
-                  role:
-                    ticket.userId.role
-                }
-              : null,
-
-            replyHistory:
-              Array.isArray(
-                ticket.replyHistory
-              )
-                ? ticket.replyHistory.map(
-                    function (reply) {
-                      return {
-                        id: reply._id,
-                        message:
-                          reply.message,
-                        repliedBy:
-                          reply.repliedBy
-                            ? {
-                                id:
-                                  reply
-                                    .repliedBy
-                                    ._id,
-                                name:
-                                  reply
-                                    .repliedBy
-                                    .name,
-                                email:
-                                  reply
-                                    .repliedBy
-                                    .email,
-                                role:
-                                  reply
-                                    .repliedBy
-                                    .role
-                              }
-                            : null,
-                        repliedAt:
-                          reply.repliedAt
-                      };
-                    }
-                  )
-                : []
-          };
-        }
-      )
-    });
-  } catch (error) {
-    console.error(
-      "GET ALL SUPPORT TICKETS ERROR:",
-      error
-    );
-
-    return res.status(500).json({
-      success: false,
-      message:
-        "Unable to fetch support tickets."
-    });
-  }
-}
-
-/*
-========================================
-ADMIN: UPDATE TICKET
-STATUS + REPLY
-========================================
-*/
-
-export async function updateTicket(
-  req,
-  res
-) {
-  try {
-    const { id } =
-      req.params;
-
-    if (!validId(id)) {
+    if (isValidationError(error)) {
       return res.status(400).json({
         success: false,
-        message:
-          "Invalid support ticket ID."
+        message: "Support ticket validation failed.",
+        errors: getValidationErrors(error)
+      });
+    }
+
+    if (isDuplicateKeyError(error)) {
+      return res.status(409).json({
+        success: false,
+        message: "A duplicate support ticket already exists."
+      });
+    }
+
+    if (isCastError(error)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid support ticket data."
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to create support ticket."
+    });
+  }
+};
+
+export const getMyTickets = async (req, res) => {
+  try {
+    if (!req.user?._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required."
+      });
+    }
+
+    const tickets = await SupportTicket.find({
+      userId: req.user._id
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      tickets: tickets.map(safeTicket)
+    });
+  } catch (error) {
+    console.error("getMyTickets error:", error);
+
+    if (isCastError(error)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user identifier."
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to load support tickets."
+    });
+  }
+};
+
+export const getAllTickets = async (req, res) => {
+  try {
+    if (!req.user?._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required."
+      });
+    }
+
+    const rawStatus = req.query?.status;
+
+    if (
+      rawStatus !== undefined &&
+      typeof rawStatus !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid ticket status."
+      });
+    }
+
+    const status =
+      typeof rawStatus === "string"
+        ? rawStatus.trim()
+        : "";
+
+    if (
+      status &&
+      !SUPPORT_TICKET_STATUSES.includes(status)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid ticket status."
+      });
+    }
+
+    const filter = status ? { status } : {};
+
+    const tickets = await SupportTicket.find(filter)
+      .populate("userId", "name email phone")
+      .populate("replyHistory.repliedBy", "name email role")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      tickets: tickets.map(safeTicket)
+    });
+  } catch (error) {
+    console.error("getAllTickets error:", error);
+
+    if (isCastError(error)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid support ticket data."
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to load support tickets."
+    });
+  }
+};
+
+export const updateTicket = async (req, res) => {
+  try {
+    if (!req.user?._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required."
+      });
+    }
+
+    const ticketId = req.params?.id;
+
+    if (!validId(ticketId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid support ticket identifier."
+      });
+    }
+
+    const body = getBody(req);
+
+    if (
+      body.status !== undefined &&
+      typeof body.status !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Ticket status must be a text value."
       });
     }
 
     if (
-      !req.user ||
-      !req.user.id
+      body.adminReply !== undefined &&
+      typeof body.adminReply !== "string"
     ) {
-      return res.status(401).json({
+      return res.status(400).json({
         success: false,
-        message:
-          "Authentication required."
+        message: "Admin reply must be a text value."
       });
     }
 
-    const ticket =
-      await SupportTicket.findById(id);
+    const ticket = await SupportTicket.findById(ticketId);
 
     if (!ticket) {
       return res.status(404).json({
         success: false,
-        message:
-          "Support ticket not found."
+        message: "Support ticket not found."
       });
     }
 
-    const hasStatus =
-      req.body?.status !==
-      undefined;
+    const statusProvided = body.status !== undefined;
+    const replyProvided = body.adminReply !== undefined;
 
-    const hasReply =
-      req.body?.adminReply !==
-      undefined;
+    const status = statusProvided
+      ? String(body.status).trim()
+      : "";
 
-    const status =
-      hasStatus
-        ? text(
-            req.body.status,
-            50
-          ).toLowerCase()
-        : null;
-
-    const adminReply =
-      hasReply
-        ? text(
-            req.body.adminReply,
-            5000
-          )
-        : null;
+    const adminReply = replyProvided
+      ? String(body.adminReply).trim()
+      : "";
 
     if (
-      hasStatus &&
-      !SUPPORT_TICKET_STATUSES.includes(
-        status
-      )
+      statusProvided &&
+      !SUPPORT_TICKET_STATUSES.includes(status)
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Invalid support ticket status."
+        message: "Invalid ticket status."
       });
     }
 
-    if (
-      !hasStatus &&
-      !hasReply
-    ) {
+    if (replyProvided && !adminReply) {
       return res.status(400).json({
         success: false,
-        message:
-          "Status or admin reply is required."
+        message: "Admin reply cannot be empty."
       });
     }
 
-    /*
-     * Do not allow adding an empty reply
-     * to the conversation history.
-     */
-    if (
-      hasReply &&
-      adminReply.length === 0
-    ) {
+    if (adminReply.length > 5000) {
       return res.status(400).json({
         success: false,
-        message:
-          "Admin reply cannot be empty."
+        message: "Admin reply must not exceed 5000 characters."
       });
     }
 
-    if (hasReply) {
-      ticket.adminReply =
-        adminReply;
+    if (replyProvided) {
+      if (!Array.isArray(ticket.replyHistory)) {
+        ticket.replyHistory = [];
+      }
 
       ticket.replyHistory.push({
         message: adminReply,
-        repliedBy:
-          req.user.id,
-        repliedAt:
-          new Date()
+        repliedBy: req.user._id,
+        repliedAt: new Date()
       });
 
-      /*
-       * A new reply re-opens a resolved
-       * or closed ticket for active handling,
-       * unless the admin explicitly sends
-       * another status in the same request.
-       */
-      if (
-        !hasStatus &&
-        [
-          "resolved",
-          "closed"
-        ].includes(
-          ticket.status
-        )
-      ) {
-        ticket.status =
-          "in_progress";
+      ticket.adminReply = adminReply;
 
-        ticket.resolvedAt =
-          null;
-
-        ticket.closedAt =
-          null;
+      if (!statusProvided) {
+        ticket.status = "in_progress";
       }
     }
 
-    if (hasStatus) {
-      ticket.status =
-        status;
+    if (statusProvided) {
+      ticket.status = status;
+    }
 
-      if (
-        status === "resolved"
-      ) {
-        ticket.resolvedAt =
-          ticket.resolvedAt ||
-          new Date();
-
-        ticket.closedAt =
-          null;
-      }
-
-      if (
-        status === "closed"
-      ) {
-        ticket.resolvedAt =
-          ticket.resolvedAt ||
-          new Date();
-
-        ticket.closedAt =
-          new Date();
-      }
-
-      if (
-        status === "open" ||
-        status === "in_progress"
-      ) {
-        ticket.resolvedAt =
-          null;
-
-        ticket.closedAt =
-          null;
-      }
+    if (ticket.status === "resolved") {
+      ticket.resolvedAt = ticket.resolvedAt || new Date();
+      ticket.closedAt = null;
+    } else if (ticket.status === "closed") {
+      ticket.closedAt = ticket.closedAt || new Date();
+      ticket.resolvedAt = ticket.resolvedAt || new Date();
+    } else {
+      ticket.resolvedAt = null;
+      ticket.closedAt = null;
     }
 
     await ticket.save();
 
-    const populatedTicket =
-      await SupportTicket.findById(
-        ticket._id
-      )
-        .populate(
-          "userId",
-          "name email phone role"
-        )
-        .populate(
-          "replyHistory.repliedBy",
-          "name email role"
-        );
+    await ticket.populate([
+      {
+        path: "userId",
+        select: "name email phone"
+      },
+      {
+        path: "replyHistory.repliedBy",
+        select: "name email role"
+      }
+    ]);
 
     return res.status(200).json({
       success: true,
-      message:
-        "Support ticket updated successfully.",
-      data: safeTicket(
-        populatedTicket
-      )
+      message: "Support ticket updated successfully.",
+      ticket: safeTicket(ticket.toObject())
     });
   } catch (error) {
-    console.error(
-      "UPDATE SUPPORT TICKET ERROR:",
-      error
-    );
+    console.error("updateTicket error:", error);
+
+    if (isValidationError(error)) {
+      return res.status(400).json({
+        success: false,
+        message: "Support ticket validation failed.",
+        errors: getValidationErrors(error)
+      });
+    }
+
+    if (isDuplicateKeyError(error)) {
+      return res.status(409).json({
+        success: false,
+        message: "Duplicate support ticket data."
+      });
+    }
+
+    if (isCastError(error)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid support ticket data."
+      });
+    }
 
     return res.status(500).json({
       success: false,
-      message:
-        "Unable to update support ticket."
+      message: "Unable to update support ticket."
     });
   }
-}
+};
