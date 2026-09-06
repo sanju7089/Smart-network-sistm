@@ -4,6 +4,7 @@ import rateLimit from "express-rate-limit";
 import {
 signup,
 login,
+logout,
 getCurrentUser
 } from "../controllers/authController.js";
 
@@ -11,20 +12,18 @@ import {
 requireAuth
 } from "../middleware/authMiddleware.js";
 
-const router = express.Router();
+const router =
+express.Router();
 
-/*
-
-AUTH RATE LIMITERS
-
-*/
-
-const registerLimiter = rateLimit({
-windowMs: 15 * 60 * 1000,
+const registerLimiter =
+rateLimit({
+windowMs:
+15 * 60 * 1000,
 limit: 10,
-standardHeaders: "draft-7",
-legacyHeaders: false,
-
+standardHeaders:
+"draft-7",
+legacyHeaders:
+false,
 message: {
 success: false,
 message:
@@ -32,24 +31,21 @@ message:
 }
 });
 
-const loginLimiter = rateLimit({
-windowMs: 15 * 60 * 1000,
+const loginLimiter =
+rateLimit({
+windowMs:
+15 * 60 * 1000,
 limit: 10,
-standardHeaders: "draft-7",
-legacyHeaders: false,
-
+standardHeaders:
+"draft-7",
+legacyHeaders:
+false,
 message: {
 success: false,
 message:
 "Too many login attempts. Please try again later."
 }
 });
-
-/*
-
-PUBLIC AUTH ROUTES
-
-*/
 
 router.post(
 "/register",
@@ -63,23 +59,16 @@ loginLimiter,
 login
 );
 
-/*
-
-PROTECTED CURRENT USER
-
-*/
+router.post(
+"/logout",
+logout
+);
 
 router.get(
 "/me",
 requireAuth,
 getCurrentUser
 );
-
-/*
-
-AUTH STATUS
-
-*/
 
 router.get(
 "/status",
