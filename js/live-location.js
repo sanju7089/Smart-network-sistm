@@ -241,7 +241,8 @@
 
     const radius = Math.max(
       DEFAULT_RADIUS_KM,
-      Number(radiusKm) || DEFAULT_RADIUS_KM
+      Number(radiusKm) ||
+        DEFAULT_RADIUS_KM
     );
 
     return window.SWN.request(
@@ -269,7 +270,8 @@
 
     const radius = Math.max(
       DEFAULT_RADIUS_KM,
-      Number(radiusKm) || DEFAULT_RADIUS_KM
+      Number(radiusKm) ||
+        DEFAULT_RADIUS_KM
     );
 
     return window.SWN.request(
@@ -286,11 +288,15 @@
   function createLocationButton(
     input
   ) {
-    if (!input || input.dataset.swnGpsReady) {
+    if (
+      !input ||
+      input.dataset.swnGpsReady
+    ) {
       return;
     }
 
-    input.dataset.swnGpsReady = "true";
+    input.dataset.swnGpsReady =
+      "true";
 
     const wrapper =
       document.createElement("div");
@@ -311,26 +317,36 @@
       document.createElement("button");
 
     button.type = "button";
+
     button.textContent =
       "📍 मेरी वर्तमान लोकेशन इस्तेमाल करें";
 
-    button.style.cursor = "pointer";
-    button.style.padding = "10px 14px";
-    button.style.borderRadius = "8px";
+    button.style.cursor =
+      "pointer";
+
+    button.style.padding =
+      "10px 14px";
+
+    button.style.borderRadius =
+      "8px";
+
     button.style.border =
       "1px solid #ccc";
+
     button.style.background =
       "#fff";
 
     const status =
       document.createElement("small");
 
-    status.style.display = "block";
+    status.style.display =
+      "block";
 
     button.addEventListener(
       "click",
       async () => {
         button.disabled = true;
+
         status.textContent =
           "📍 Location प्राप्त की जा रही है...";
 
@@ -345,10 +361,6 @@
               5
             )})`;
 
-          /*
-           * Existing manual location text
-           * को automatically replace नहीं करते।
-           */
         } catch (error) {
           status.textContent =
             error?.message ||
@@ -370,21 +382,25 @@
       "#location"
     ];
 
-    selectors.forEach((selector) => {
-      document
-        .querySelectorAll(selector)
-        .forEach(createLocationButton);
-    });
+    selectors.forEach(
+      (selector) => {
+        document
+          .querySelectorAll(selector)
+          .forEach(
+            createLocationButton
+          );
+      }
+    );
   }
 
   /*
    * Existing SWN.request को wrap करके
-   * POST /jobs successful होने के बाद
-   * GPS location automatically save करते हैं।
+   * Job और Worker दोनों की GPS location
+   * automatically save करते हैं।
    *
-   * Existing work.js को modify करने की जरूरत नहीं।
+   * Existing files/flows को remove नहीं करते।
    */
-  function setupJobAutoLocation() {
+  function setupAutoLocation() {
     if (
       !window.SWN ||
       typeof window.SWN.request !==
@@ -416,10 +432,16 @@
           );
 
         try {
-          const method = String(
-            options?.method || "GET"
-          ).toUpperCase();
+          const method =
+            String(
+              options?.method ||
+                "GET"
+            ).toUpperCase();
 
+          /*
+           * CUSTOMER → CREATE JOB
+           * GPS → JOB LIVE LOCATION
+           */
           if (
             method === "POST" &&
             endpoint === "/jobs" &&
@@ -436,19 +458,63 @@
               jobId &&
               location
             ) {
-              await saveJobLocation(
-                jobId,
-                location
-              );
+              try {
+                await saveJobLocation(
+                  jobId,
+                  location
+                );
+              } catch (error) {
+                console.warn(
+                  "AUTO JOB LOCATION ERROR:",
+                  error
+                );
+              }
+            }
+          }
+
+          /*
+           * WORKER → PROFILE UPDATE
+           * GPS → WORKER LIVE LOCATION
+           *
+           * worker-profile.html existing
+           * PATCH /workers/:id flow को
+           * touch किए बिना GPS sync होता है।
+           */
+          if (
+            method === "PATCH" &&
+            typeof endpoint ===
+              "string" &&
+            endpoint.startsWith(
+              "/workers/"
+            ) &&
+            !endpoint.startsWith(
+              "/workers/me/"
+            )
+          ) {
+            const location =
+              getSavedLocation();
+
+            if (location) {
+              try {
+                await saveWorkerLocation(
+                  location
+                );
+              } catch (error) {
+                console.warn(
+                  "AUTO WORKER LOCATION ERROR:",
+                  error
+                );
+              }
             }
           }
         } catch (error) {
           /*
-           * GPS save fail होने पर
-           * existing job creation fail नहीं होगी।
+           * Location fail होने पर
+           * existing Job/Worker operation
+           * कभी fail नहीं होगी।
            */
           console.warn(
-            "AUTO JOB LOCATION ERROR:",
+            "AUTO LIVE LOCATION ERROR:",
             error
           );
         }
@@ -463,19 +529,27 @@
   function exposeAPI() {
     window.SWNLiveLocation = {
       DEFAULT_RADIUS_KM,
+
       getCurrentLocation,
+
       getSavedLocation,
+
       saveJobLocation,
+
       saveWorkerLocation,
+
       findNearbyJobs,
+
       findNearbyWorkers
     };
   }
 
   function init() {
     exposeAPI();
+
     setupLocationButtons();
-    setupJobAutoLocation();
+
+    setupAutoLocation();
   }
 
   if (
