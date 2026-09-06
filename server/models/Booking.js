@@ -121,6 +121,13 @@ const bookingSchema =
     }
   );
 
+
+/*
+========================================
+INDEXES
+========================================
+*/
+
 bookingSchema.index(
   {
     jobId: 1,
@@ -152,18 +159,10 @@ bookingSchema.index({
   status: 1
 });
 
+
 /*
 ========================================
-NOTIFICATION TRIGGER STATE
-========================================
-
-pre-save runs before MongoDB save.
-
-We capture:
-- whether this is a new booking
-- whether booking status changed
-
-Then post-save sends the notification.
+SAVE NOTIFICATION TRIGGER STATE
 ========================================
 */
 
@@ -180,9 +179,10 @@ bookingSchema.pre(
   }
 );
 
+
 /*
 ========================================
-AUTOMATIC BOOKING NOTIFICATIONS
+SAVE NOTIFICATION
 ========================================
 */
 
@@ -209,7 +209,148 @@ bookingSchema.post(
   }
 );
 
+
+/*
+========================================
+FIND ONE AND UPDATE
+NOTIFICATION TRIGGER
+========================================
+
+This is important because some payment
+and administrative flows update booking
+status using findOneAndUpdate().
+
+Without this hook, those status changes
+would bypass the save notification hook.
+========================================
+*/
+
+bookingSchema.pre(
+  "findOneAndUpdate",
+  async function () {
+    try {
+      const update =
+        this.getUpdate() || {};
+
+      const nextStatus =
+        update?.$set?.status ??
+        update?.status;
+
+      this.$notificationStatusChanged =
+        nextStatus !== undefined;
+
+      this.$notificationPreviousStatus =
+        undefined;
+
+      if (
+        !this.$notificationStatusChanged
+      ) {
+        return;
+      }
+
+      const existingBooking =
+        await this.model
+          .findOne(
+            this.getQuery()
+          )
+          .select("status")
+          .lean();
+
+      if (!existingBooking) {
+        this.$notificationStatusChanged =
+          false;
+
+        return;
+      }
+
+      this.$notificationPreviousStatus =
+        existingBooking.status;
+
+      if (
+        String(
+          existingBooking.status
+        ) ===
+        String(nextStatus)
+      ) {
+        this.$notificationStatusChanged =
+          false;
+      }
+    } catch (error) {
+      console.error(
+        "BOOKING PRE-UPDATE NOTIFICATION ERROR:",
+        error?.stack ||
+          error?.message ||
+          error
+      );
+
+      /*
+        Do not block the actual booking
+        update because notification
+        preparation failed.
+      */
+
+      this.$notificationStatusChanged =
+        false;
+    }
+  }
+);
+
+
+/*
+========================================
+FIND ONE AND UPDATE
+POST NOTIFICATION
+========================================
+*/
+
+bookingSchema.post(
+  "findOneAndUpdate",
+  async function (booking) {
+    try {
+      if (
+        !booking ||
+        !this.$notificationStatusChanged
+      ) {
+        return;
+      }
+
+      const previousStatus =
+        this.$notificationPreviousStatus;
+
+      const currentStatus =
+        booking.status;
+
+      if (
+        !currentStatus ||
+        previousStatus ===
+          currentStatus
+      ) {
+        return;
+      }
+
+      await notifyBookingEvent(
+        booking
+      );
+    } catch (error) {
+      console.error(
+        "BOOKING POST-UPDATE NOTIFICATION ERROR:",
+        error?.stack ||
+          error?.message ||
+          error
+      );
+    }
+  }
+);
+
+
+/*
+========================================
+MODEL
+========================================
+*/
+
 const Booking =
+  mongoose.models.Booking ||
   mongoose.model(
     "Booking",
     bookingSchema
