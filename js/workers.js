@@ -493,6 +493,24 @@
       `;
     }
 
+    const jobId =
+      getJobId();
+
+    if (!jobId) {
+      return `
+        <a
+          class="btn btn-primary"
+          href="${escapeWorkerHtml(
+            makeProfileUrl(
+              workerId
+            )
+          )}"
+        >
+          View Profile
+        </a>
+      `;
+    }
+
     return `
       <a
         class="btn btn-primary"
@@ -1257,4 +1275,4 @@
   window.loadWorkerDetail =
     loadWorkerDetail;
 
-})();
+})();11
