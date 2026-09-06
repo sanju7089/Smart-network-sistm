@@ -45,43 +45,76 @@ steps:
     run: node --check server.js
 
   - name: Check controllers syntax
+    shell: bash
     run: |
-      for file in controllers/*.js; do
+      set -e
+      shopt -s nullglob
+
+      files=(controllers/*.js)
+
+      for file in "${files[@]}"; do
         echo "Checking $file"
         node --check "$file"
       done
 
   - name: Check middleware syntax
+    shell: bash
     run: |
-      for file in middleware/*.js; do
+      set -e
+      shopt -s nullglob
+
+      files=(middleware/*.js)
+
+      for file in "${files[@]}"; do
         echo "Checking $file"
         node --check "$file"
       done
 
   - name: Check models syntax
+    shell: bash
     run: |
-      for file in models/*.js; do
+      set -e
+      shopt -s nullglob
+
+      files=(models/*.js)
+
+      for file in "${files[@]}"; do
         echo "Checking $file"
         node --check "$file"
       done
 
   - name: Check routes syntax
+    shell: bash
     run: |
-      for file in routes/*.js; do
+      set -e
+      shopt -s nullglob
+
+      files=(routes/*.js)
+
+      for file in "${files[@]}"; do
         echo "Checking $file"
         node --check "$file"
       done
 
   - name: Check test files syntax
+    shell: bash
     run: |
-      for file in tests/**/*.js tests/*.js; do
-        if [ -f "$file" ]; then
-          echo "Checking $file"
-          node --check "$file"
-        fi
+      set -e
+      shopt -s globstar nullglob
+
+      files=(tests/**/*.js)
+
+      if [ "${#files[@]}" -eq 0 ]; then
+        echo "No test files found."
+        exit 1
+      fi
+
+      for file in "${files[@]}"; do
+        echo "Checking $file"
+        node --check "$file"
       done
 
-  - name: Run automated tests
+  - name: Run all automated tests
     run: npm test
 
   - name: Run authentication tests
