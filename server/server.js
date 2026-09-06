@@ -8,20 +8,20 @@ import { fileURLToPath } from "url";
 import path from "path";
 
 import {
-connectDatabase,
-getDatabaseStatus,
-disconnectDatabase
+  connectDatabase,
+  getDatabaseStatus,
+  disconnectDatabase
 } from "./config/database.js";
 
 import {
-securityHeaders,
-requestLogger,
-notFound,
-errorHandler
+  securityHeaders,
+  requestLogger,
+  notFound,
+  errorHandler
 } from "./middleware/securityMiddleware.js";
 
 import {
-razorpayWebhook
+  razorpayWebhook
 } from "./controllers/paymentController.js";
 
 import authRoutes from "./routes/auth.js";
@@ -39,132 +39,130 @@ dotenv.config();
 const app = express();
 
 const PORT =
-Number(process.env.PORT) || 3000;
+  Number(process.env.PORT) || 3000;
 
 const isProduction =
-process.env.NODE_ENV === "production";
+  process.env.NODE_ENV === "production";
 
 const allowedOrigins =
-String(process.env.ALLOWED_ORIGINS || "")
-.split(",")
-.map((origin) => origin.trim())
-.filter(Boolean);
+  String(process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
 if (
-isProduction &&
-allowedOrigins.length === 0
+  isProduction &&
+  allowedOrigins.length === 0
 ) {
-throw new Error(
-"ALLOWED_ORIGINS must be configured in production."
-);
+  throw new Error(
+    "ALLOWED_ORIGINS must be configured in production."
+  );
 }
 
 if (isProduction) {
-app.set("trust proxy", 1);
+  app.set("trust proxy", 1);
 }
 
 app.disable("x-powered-by");
 
 app.use(
-helmet({
-crossOriginResourcePolicy: false
-})
+  helmet({
+    crossOriginResourcePolicy: false
+  })
 );
 
 app.use(securityHeaders);
 
 app.use(
-cors({
-origin(origin, callback) {
-if (!origin) {
-return callback(null, true);
-}
+  cors({
+    origin(origin, callback) {
+      if (!origin) {
+        return callback(null, true);
+      }
 
-  if (
-    !isProduction &&
-    allowedOrigins.length === 0
-  ) {
-    return callback(null, true);
-  }
+      if (
+        !isProduction &&
+        allowedOrigins.length === 0
+      ) {
+        return callback(null, true);
+      }
 
-  if (allowedOrigins.includes(origin)) {
-    return callback(null, true);
-  }
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
 
-  const error = new Error(
-    "Origin not allowed by CORS."
-  );
+      const error = new Error(
+        "Origin not allowed by CORS."
+      );
 
-  error.status = 403;
+      error.status = 403;
 
-  return callback(error);
-},
+      return callback(error);
+    },
 
-credentials: true,
+    credentials: true,
 
-methods: [
-  "GET",
-  "POST",
-  "PATCH",
-  "PUT",
-  "DELETE",
-  "OPTIONS"
-],
+    methods: [
+      "GET",
+      "POST",
+      "PATCH",
+      "PUT",
+      "DELETE",
+      "OPTIONS"
+    ],
 
-allowedHeaders: [
-  "Content-Type",
-  "Authorization"
-],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization"
+    ],
 
-optionsSuccessStatus: 204
-
-})
+    optionsSuccessStatus: 204
+  })
 );
 
 const globalApiLimiter =
-rateLimit({
-windowMs: 15 * 60 * 1000,
-limit: 300,
-standardHeaders: "draft-7",
-legacyHeaders: false,
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 300,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
 
-skip(req) {
-  return req.path === "/health";
-},
+    skip(req) {
+      return req.path === "/health";
+    },
 
-message: {
-  success: false,
-  message:
-    "Too many requests. Please try again later."
-}
-
-});
+    message: {
+      success: false,
+      message:
+        "Too many requests. Please try again later."
+    }
+  });
 
 app.use(
-"/api",
-globalApiLimiter
+  "/api",
+  globalApiLimiter
 );
 
 app.post(
-"/api/payments/razorpay/webhook",
-express.raw({
-type: "application/json",
-limit: "1mb"
-}),
-razorpayWebhook
+  "/api/payments/razorpay/webhook",
+  express.raw({
+    type: "application/json",
+    limit: "1mb"
+  }),
+  razorpayWebhook
 );
 
 app.use(
-express.json({
-limit: "1mb"
-})
+  express.json({
+    limit: "1mb"
+  })
 );
 
 app.use(
-express.urlencoded({
-extended: true,
-limit: "1mb"
-})
+  express.urlencoded({
+    extended: true,
+    limit: "1mb"
+  })
 );
 
 app.use(cookieParser());
@@ -172,102 +170,101 @@ app.use(cookieParser());
 app.use(requestLogger);
 
 app.get(
-"/",
-(req, res) => {
-return res.status(200).json({
-success: true,
-message:
-"Smart Work Network API is running",
-version: "2.0.0",
-timestamp:
-new Date().toISOString()
-});
-}
+  "/",
+  (req, res) => {
+    return res.status(200).json({
+      success: true,
+      message:
+        "Smart Work Network API is running",
+      version: "2.0.0",
+      timestamp:
+        new Date().toISOString()
+    });
+  }
 );
 
 app.get(
-"/api/health",
-(req, res) => {
-const database =
-getDatabaseStatus();
+  "/api/health",
+  (req, res) => {
+    const database =
+      getDatabaseStatus();
 
-const healthy =
-  database.status === "connected";
+    const healthy =
+      database.status === "connected";
 
-return res
-  .status(healthy ? 200 : 503)
-  .json({
-    success: healthy,
+    return res
+      .status(healthy ? 200 : 503)
+      .json({
+        success: healthy,
 
-    status:
-      healthy
-        ? "healthy"
-        : "unhealthy",
+        status:
+          healthy
+            ? "healthy"
+            : "unhealthy",
 
-    application:
-      "Smart Work Network API",
+        application:
+          "Smart Work Network API",
 
-    environment:
-      process.env.NODE_ENV ||
-      "development",
+        environment:
+          process.env.NODE_ENV ||
+          "development",
 
-    database,
+        database,
 
-    uptime:
-      Math.floor(
-        process.uptime()
-      ),
+        uptime:
+          Math.floor(
+            process.uptime()
+          ),
 
-    timestamp:
-      new Date().toISOString()
-  });
-
-}
+        timestamp:
+          new Date().toISOString()
+      });
+  }
 );
 
 app.use(
-"/api/auth",
-authRoutes
+  "/api/auth",
+  authRoutes
 );
 
 app.use(
-"/api/admin",
-adminRoutes
+  "/api/admin",
+  adminRoutes
 );
 
 app.use(
-"/api/bookings",
-bookingRoutes
+  "/api/bookings",
+  bookingRoutes
 );
 
 app.use(
-"/api/jobs",
-jobRoutes
+  "/api/jobs",
+  jobRoutes
 );
 
 app.use(
-"/api/payments",
-paymentRoutes
+  "/api/payments",
+  paymentRoutes
 );
 
 app.use(
-"/api/users",
-userRoutes
+  "/api/users",
+  userRoutes
 );
 
 app.use(
-"/api/workers",
-workerRoutes
+  "/api/workers",
+  workerRoutes
 );
 
 app.use(
-"/api/support",
-supportRoutes
+  "/api/support",
+  supportRoutes
 );
 
 app.use(
-"/api/earnings",
-earningsRoutes
+  "/api/earnings",
+  earningsRoutes
 );
 
 app.use(notFound);
@@ -278,155 +275,149 @@ let server = null;
 let shuttingDown = false;
 
 async function startServer() {
-try {
-await connectDatabase();
+  try {
+    await connectDatabase();
 
-server =
-  app.listen(
-    PORT,
-    () => {
-      console.log(
-        `Smart Work Network API running on port ${PORT}`
+    server =
+      app.listen(
+        PORT,
+        () => {
+          console.log(
+            `Smart Work Network API running on port ${PORT}`
+          );
+
+          console.log(
+            `Environment: ${
+              process.env.NODE_ENV ||
+              "development"
+            }`
+          );
+        }
       );
 
-      console.log(
-        `Environment: ${
-          process.env.NODE_ENV ||
-          "development"
-        }`
-      );
-    }
-  );
+    return server;
+  } catch (error) {
+    console.error(
+      "Failed to start server:",
+      error?.stack ||
+        error?.message ||
+        error
+    );
 
-return server;
-
-} catch (error) {
-console.error(
-"Failed to start server:",
-error?.stack ||
-error?.message ||
-error
-);
-
-process.exit(1);
-
-}
+    process.exit(1);
+  }
 }
 
 async function shutdown(signal) {
-if (shuttingDown) {
-return;
-}
+  if (shuttingDown) {
+    return;
+  }
 
-shuttingDown = true;
+  shuttingDown = true;
 
-console.log(
-"\n${signal} received. Starting graceful shutdown..."
-);
+  console.log(
+    `\n${signal} received. Starting graceful shutdown...`
+  );
 
-try {
-if (server) {
-await new Promise(
-(resolve, reject) => {
-server.close(
-(error) => {
-if (error) {
-return reject(error);
-}
+  try {
+    if (server) {
+      await new Promise(
+        (resolve, reject) => {
+          server.close(
+            (error) => {
+              if (error) {
+                return reject(error);
+              }
 
-          resolve();
+              resolve();
+            }
+          );
         }
       );
     }
-  );
-}
 
-await disconnectDatabase();
+    await disconnectDatabase();
 
-console.log(
-  "Graceful shutdown completed."
-);
+    console.log(
+      "Graceful shutdown completed."
+    );
 
-process.exit(0);
+    process.exit(0);
+  } catch (error) {
+    console.error(
+      "Graceful shutdown failed:",
+      error?.stack ||
+        error?.message ||
+        error
+    );
 
-} catch (error) {
-console.error(
-"Graceful shutdown failed:",
-error?.stack ||
-error?.message ||
-error
-);
-
-process.exit(1);
-
-}
+    process.exit(1);
+  }
 }
 
 process.on(
-"SIGTERM",
-() => {
-shutdown("SIGTERM");
-}
+  "SIGTERM",
+  () => {
+    shutdown("SIGTERM");
+  }
 );
 
 process.on(
-"SIGINT",
-() => {
-shutdown("SIGINT");
-}
+  "SIGINT",
+  () => {
+    shutdown("SIGINT");
+  }
 );
 
 process.on(
-"unhandledRejection",
-(reason) => {
-console.error(
-"Unhandled Promise Rejection:",
-reason
-);
+  "unhandledRejection",
+  (reason) => {
+    console.error(
+      "Unhandled Promise Rejection:",
+      reason
+    );
 
-shutdown(
-  "UNHANDLED_REJECTION"
-);
-
-}
+    shutdown(
+      "UNHANDLED_REJECTION"
+    );
+  }
 );
 
 process.on(
-"uncaughtException",
-(error) => {
-console.error(
-"Uncaught Exception:",
-error?.stack ||
-error?.message ||
-error
-);
+  "uncaughtException",
+  (error) => {
+    console.error(
+      "Uncaught Exception:",
+      error?.stack ||
+        error?.message ||
+        error
+    );
 
-shutdown(
-  "UNCAUGHT_EXCEPTION"
-);
-
-}
+    shutdown(
+      "UNCAUGHT_EXCEPTION"
+    );
+  }
 );
 
 const currentFile =
-fileURLToPath(import.meta.url);
+  fileURLToPath(import.meta.url);
 
 const executedFile =
-process.argv[1]
-? path.resolve(process.argv[1])
-: "";
+  process.argv[1]
+    ? path.resolve(process.argv[1])
+    : "";
 
 if (
-executedFile ===
-path.resolve(currentFile)
+  executedFile ===
+  path.resolve(currentFile)
 ) {
-startServer();
+  startServer();
 }
 
 export {
-app,
-startServer,
-shutdown
+  app,
+  startServer,
+  shutdown
 };
 
 export default app;
