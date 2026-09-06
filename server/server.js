@@ -34,6 +34,7 @@ import workerRoutes from "./routes/workers.js";
 import supportRoutes from "./routes/support.js";
 import earningsRoutes from "./routes/earnings.js";
 import notificationRoutes from "./routes/notifications.js";
+import liveLocationRoutes from "./routes/liveLocation.js";
 
 dotenv.config();
 
@@ -356,6 +357,17 @@ NOTIFICATIONS
 app.use(
   "/api/notifications",
   notificationRoutes
+);
+
+/*
+========================================
+LIVE LOCATION
+========================================
+*/
+
+app.use(
+  "/api/live-location",
+  liveLocationRoutes
 );
 
 /*
