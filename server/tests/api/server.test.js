@@ -5,7 +5,8 @@ import "../../tests/helpers/test-env.js";
 import app from "../../server.js";
 
 async function startTestServer() {
-const server = app.listen(
+const server =
+app.listen(
 0,
 "127.0.0.1"
 );
@@ -41,7 +42,9 @@ baseUrl:
 };
 }
 
-async function stopTestServer(server) {
+async function stopTestServer(
+server
+) {
 await new Promise(
 (resolve, reject) => {
 server.close(
