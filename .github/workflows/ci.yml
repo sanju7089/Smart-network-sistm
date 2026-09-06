@@ -1,0 +1,48 @@
+name: Smart Work Network CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  backend-checks:
+    name: Backend Tests & Checks
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: server
+
+    strategy:
+      fail-fast: true
+      matrix:
+        node-version:
+          - 20
+          - 22
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Syntax check
+        run: npm run syntax
+
+      - name: Run automated tests
+        run: npm test
