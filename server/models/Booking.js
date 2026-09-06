@@ -1,5 +1,9 @@
 import mongoose from "mongoose";
 
+import {
+  notifyBookingEvent
+} from "../services/notificationService.js";
+
 export const BOOKING_STATUSES = [
   "pending",
   "accepted",
@@ -117,14 +121,6 @@ const bookingSchema =
     }
   );
 
-/*
- * One worker can have only one
- * booking for a particular job.
- *
- * This is the database-level duplicate
- * protection, so two simultaneous
- * requests cannot create duplicates.
- */
 bookingSchema.index(
   {
     jobId: 1,
@@ -135,39 +131,65 @@ bookingSchema.index(
   }
 );
 
-/*
- * Customer booking history.
- */
 bookingSchema.index({
   customerId: 1,
   createdAt: -1
 });
 
-/*
- * Worker dashboard:
- * worker + status + newest first.
- */
 bookingSchema.index({
   workerId: 1,
   status: 1,
   createdAt: -1
 });
 
-/*
- * Admin/status queries.
- */
 bookingSchema.index({
   status: 1,
   createdAt: -1
 });
 
-/*
- * Date/status queries.
- */
 bookingSchema.index({
   date: 1,
   status: 1
 });
+
+/*
+========================================
+AUTOMATIC BOOKING NOTIFICATIONS
+========================================
+
+Every newly created booking and every
+booking status change automatically
+creates notifications.
+
+Notification failures are isolated so
+they never break the booking operation.
+========================================
+*/
+
+bookingSchema.post(
+  "save",
+  async function (
+    booking
+  ) {
+    try {
+      if (
+        booking?.isNew ||
+        booking?.isModified("status")
+      ) {
+        await notifyBookingEvent(
+          booking
+        );
+      }
+    } catch (error) {
+      console.error(
+        "BOOKING POST-SAVE NOTIFICATION ERROR:",
+        error?.stack ||
+          error?.message ||
+          error
+      );
+    }
+  }
+);
 
 const Booking =
   mongoose.model(
