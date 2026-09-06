@@ -1,3 +1,5 @@
+1. "customer-dashboard.html"
+
 <!doctype html>
 <html>
 
@@ -32,11 +34,17 @@
 
       <nav class="navlinks">
 
-        <a href="services.html">Services</a>
+        <a href="services.html">
+          Services
+        </a>
 
-        <a href="find-help.html">Find Help</a>
+        <a href="find-help.html">
+          Find Help
+        </a>
 
-        <a href="workers.html">Workers</a>
+        <a href="workers.html">
+          Workers
+        </a>
 
         <span data-auth></span>
 
@@ -65,7 +73,9 @@
 
     <div class="container">
 
-      <b>Smart Work Network</b>
+      <b>
+        Smart Work Network
+      </b>
 
       <p>
         Services • Workers • Work opportunities
@@ -73,11 +83,17 @@
 
       <div class="row">
 
-        <a href="support.html">Support</a>
+        <a href="support.html">
+          Support
+        </a>
 
-        <a href="profile.html">Profile</a>
+        <a href="profile.html">
+          Profile
+        </a>
 
-        <a href="urgent-help.html">Urgent Help</a>
+        <a href="urgent-help.html">
+          Urgent Help
+        </a>
 
       </div>
 
@@ -86,9 +102,1214 @@
   </footer>
 
 
+  <!-- AUTH -->
   <script src="js/auth.js"></script>
-<script src="js/app.js"></script>
-<script src="js/dashboard.js"></script>
+
+  <!-- CENTRAL API -->
+  <script src="js/app.js"></script>
+
+  <!-- MAIN DASHBOARD -->
+  <script src="js/dashboard.js"></script>
+
+  <!-- NOTIFICATIONS -->
+  <script src="js/notifications.js"></script>
+
+</body>
+
+</html>
+
+2. "worker-dashboard.html"
+
+<!doctype html>
+<html lang="en">
+
+<head>
+
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <meta
+    name="description"
+    content="Smart Work Network Worker Dashboard"
+  >
+
+  <title>
+    Worker Dashboard | Smart Work Network
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="css/main.css"
+  >
+
+  <style>
+
+    .worker-dashboard-extra {
+      margin-top: 24px;
+    }
+
+    .worker-dashboard-grid {
+      display: grid;
+      grid-template-columns:
+        repeat(
+          auto-fit,
+          minmax(220px, 1fr)
+        );
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .worker-info-card {
+      padding: 18px;
+      border-radius: 12px;
+      border: 1px solid
+        rgba(0, 0, 0, .08);
+      background: #fff;
+    }
+
+    .worker-info-card h3 {
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+
+    .worker-info-value {
+      font-size: 24px;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
+    .worker-dashboard-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 10px;
+    }
+
+    .worker-dashboard-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f1f3f5;
+      font-size: 13px;
+    }
+
+    .worker-dashboard-tag.available {
+      background: #e8f7ed;
+      color: #176b35;
+    }
+
+    .worker-dashboard-tag.unavailable {
+      background: #fff0f0;
+      color: #a51d2d;
+    }
+
+    .worker-dashboard-tag.verified {
+      background: #e8f7ed;
+      color: #176b35;
+    }
+
+    .worker-dashboard-loading {
+      padding: 16px;
+      border-radius: 10px;
+      background: #f7f7f7;
+    }
+
+    .worker-dashboard-error {
+      padding: 16px;
+      border-radius: 10px;
+      background: #fff0f0;
+      color: #8b1e2d;
+    }
+
+    .worker-dashboard-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .worker-dashboard-section {
+      margin-top: 24px;
+    }
+
+    .worker-dashboard-section h2 {
+      margin-bottom: 8px;
+    }
+
+    @media (max-width: 600px) {
+
+      .worker-info-card {
+        padding: 15px;
+      }
+
+      .worker-dashboard-actions {
+        flex-direction: column;
+      }
+
+      .worker-dashboard-actions a {
+        width: 100%;
+        text-align: center;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+
+  <header class="header">
+
+    <div class="container nav">
+
+      <a
+        class="brand"
+        href="index.html"
+      >
+        Smart Work Network
+      </a>
+
+
+      <nav class="navlinks">
+
+        <a href="services.html">
+          Services
+        </a>
+
+        <a href="find-help.html">
+          Find Help
+        </a>
+
+        <a href="workers.html">
+          Workers
+        </a>
+
+        <span data-auth></span>
+
+      </nav>
+
+    </div>
+
+  </header>
+
+
+  <main>
+
+    <section class="section">
+
+      <div
+        class="container"
+        id="dashboardContent"
+      ></div>
+
+
+      <div
+        class="container worker-dashboard-extra"
+        id="workerDashboardExtra"
+        hidden
+      >
+
+        <section class="worker-dashboard-section">
+
+          <h2>
+            My Worker Overview
+          </h2>
+
+          <p>
+            Your profile, availability and earnings.
+          </p>
+
+
+          <div
+            class="worker-dashboard-grid"
+            id="workerDashboardCards"
+          ></div>
+
+
+          <div
+            class="worker-dashboard-section"
+            id="workerSkillsSection"
+          >
+
+            <h3>
+              My Skills
+            </h3>
+
+            <div
+              class="worker-dashboard-tags"
+              id="workerDashboardSkills"
+            ></div>
+
+          </div>
+
+
+          <div class="worker-dashboard-actions">
+
+            <a
+              class="btn"
+              href="worker-profile.html?edit=1"
+            >
+              Edit Worker Profile
+            </a>
+
+            <a
+              class="btn"
+              href="earnings.html"
+            >
+              View Full Earnings
+            </a>
+
+            <a
+              class="btn"
+              href="bookings.html"
+            >
+              My Bookings
+            </a>
+
+            <a
+              class="btn"
+              href="find-work.html"
+            >
+              Find Work
+            </a>
+
+          </div>
+
+        </section>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <footer class="footer">
+
+    <div class="container">
+
+      <b>
+        Smart Work Network
+      </b>
+
+      <p>
+        Services • Workers • Work opportunities
+      </p>
+
+      <div class="row">
+
+        <a href="support.html">
+          Support
+        </a>
+
+        <a href="profile.html">
+          Profile
+        </a>
+
+        <a href="urgent-help.html">
+          Urgent Help
+        </a>
+
+      </div>
+
+    </div>
+
+  </footer>
+
+
+  <!-- AUTH -->
+  <script src="js/auth.js"></script>
+
+  <!-- CENTRAL API -->
+  <script src="js/app.js"></script>
+
+  <!-- MAIN DASHBOARD -->
+  <script src="js/dashboard.js"></script>
+
+  <!-- NOTIFICATIONS -->
+  <script src="js/notifications.js"></script>
+
+
+  <script>
+
+    "use strict";
+
+
+    let workerDashboardExtraStarted = false;
+
+    let workerDashboardExtraLoaded = false;
+
+
+    function workerDashboardEscape(
+      value = ""
+    ) {
+
+      if (
+        typeof window.escapeHtml ===
+        "function"
+      ) {
+
+        return window.escapeHtml(
+          value
+        );
+
+      }
+
+      return String(value)
+        .replace(
+          /&/g,
+          "&amp;"
+        )
+        .replace(
+          /</g,
+          "&lt;"
+        )
+        .replace(
+          />/g,
+          "&gt;"
+        )
+        .replace(
+          /"/g,
+          "&quot;"
+        )
+        .replace(
+          /'/g,
+          "&#039;"
+        );
+
+    }
+
+
+    async function workerDashboardRequest(
+      endpoint
+    ) {
+
+      if (
+        window.SWN &&
+        typeof window.SWN.request ===
+        "function"
+      ) {
+
+        return window.SWN.request(
+          endpoint
+        );
+
+      }
+
+
+      if (
+        typeof window.apiFetch ===
+        "function"
+      ) {
+
+        return window.apiFetch(
+          endpoint
+        );
+
+      }
+
+
+      throw new Error(
+        "Central API client is not available."
+      );
+
+    }
+
+
+    function workerDashboardData(
+      result
+    ) {
+
+      if (
+        !result ||
+        typeof result !==
+        "object"
+      ) {
+
+        return {};
+
+      }
+
+
+      if (
+        result.data !==
+        undefined &&
+        result.data !== null
+      ) {
+
+        return result.data;
+
+      }
+
+
+      return result;
+
+    }
+
+
+    function workerDashboardMoney(
+      value
+    ) {
+
+      const amount =
+        Number(value);
+
+
+      if (
+        !Number.isFinite(amount)
+      ) {
+
+        return "₹0";
+
+      }
+
+
+      return `₹${new Intl.NumberFormat(
+        "en-IN",
+        {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        }
+      ).format(amount)}`;
+
+    }
+
+
+    function workerDashboardSkills(
+      skills
+    ) {
+
+      if (
+        !Array.isArray(skills) ||
+        !skills.length
+      ) {
+
+        return `
+          <span class="worker-dashboard-tag">
+            No skills added
+          </span>
+        `;
+
+      }
+
+
+      const seen =
+        new Set();
+
+
+      return skills
+        .map(
+          skill =>
+            String(
+              skill ?? ""
+            ).trim()
+        )
+        .filter(Boolean)
+        .filter(
+          skill => {
+
+            const key =
+              skill.toLowerCase();
+
+
+            if (
+              seen.has(key)
+            ) {
+
+              return false;
+
+            }
+
+
+            seen.add(key);
+
+            return true;
+
+          }
+        )
+        .slice(0, 50)
+        .map(
+          skill => `
+            <span
+              class="worker-dashboard-tag"
+            >
+              ${workerDashboardEscape(
+                skill
+              )}
+            </span>
+          `
+        )
+        .join("");
+
+    }
+
+
+    function getWorkerDashboardUser() {
+
+      let user = null;
+
+
+      if (
+        window.SWN &&
+        typeof window.SWN.user ===
+        "function"
+      ) {
+
+        user =
+          window.SWN.user();
+
+      }
+
+
+      if (
+        !user &&
+        typeof window.getCurrentUser ===
+        "function"
+      ) {
+
+        user =
+          window.getCurrentUser();
+
+      }
+
+
+      return user;
+
+    }
+
+
+    async function loadWorkerDashboardExtra() {
+
+      if (
+        workerDashboardExtraLoaded
+      ) {
+
+        return;
+
+      }
+
+
+      const extra =
+        document.getElementById(
+          "workerDashboardExtra"
+        );
+
+      const cards =
+        document.getElementById(
+          "workerDashboardCards"
+        );
+
+      const skills =
+        document.getElementById(
+          "workerDashboardSkills"
+        );
+
+
+      if (
+        !extra ||
+        !cards ||
+        !skills
+      ) {
+
+        return;
+
+      }
+
+
+      let user =
+        getWorkerDashboardUser();
+
+
+      if (!user) {
+
+        try {
+
+          const authResult =
+            await workerDashboardRequest(
+              "/auth/me"
+            );
+
+
+          const authData =
+            workerDashboardData(
+              authResult
+            );
+
+
+          user =
+            authData?.user ||
+            authData?.data?.user ||
+            authData;
+
+        } catch (error) {
+
+          console.error(
+            "WORKER AUTH ERROR:",
+            error
+          );
+
+          return;
+
+        }
+
+      }
+
+
+      const role =
+        String(
+          user?.role ||
+          user?.userType ||
+          user?.accountType ||
+          ""
+        )
+          .trim()
+          .toLowerCase();
+
+
+      if (
+        role !== "worker"
+      ) {
+
+        return;
+
+      }
+
+
+      if (
+        workerDashboardExtraLoaded
+      ) {
+
+        return;
+
+      }
+
+
+      extra.hidden = false;
+
+
+      cards.innerHTML = `
+        <div
+          class="worker-dashboard-loading"
+        >
+          Loading worker information...
+        </div>
+      `;
+
+
+      skills.innerHTML = `
+        <span
+          class="worker-dashboard-tag"
+        >
+          Loading skills...
+        </span>
+      `;
+
+
+      try {
+
+        const [
+          profileResult,
+          earningsResult
+        ] = await Promise.all([
+
+          workerDashboardRequest(
+            "/workers/me/profile"
+          ),
+
+          workerDashboardRequest(
+            "/earnings/me"
+          )
+
+        ]);
+
+
+        const profileData =
+          workerDashboardData(
+            profileResult
+          );
+
+
+        const earningsData =
+          workerDashboardData(
+            earningsResult
+          );
+
+
+        const worker =
+          profileData?.worker ||
+          profileData?.profile ||
+          profileData;
+
+
+        const earnings =
+          earningsData?.earnings ||
+          earningsData;
+
+
+        if (
+          !worker ||
+          typeof worker !==
+          "object"
+        ) {
+
+          throw new Error(
+            "Worker profile could not be loaded."
+          );
+
+        }
+
+
+        const grossAmount =
+          Number(
+            earnings?.grossAmount ?? 0
+          );
+
+
+        const completedAmount =
+          Number(
+            earnings?.completedAmount ?? 0
+          );
+
+
+        const pendingWorkAmount =
+          Number(
+            earnings?.pendingWorkAmount ?? 0
+          );
+
+
+        const totalPaidBookings =
+          Number(
+            earnings?.totalPaidBookings ?? 0
+          );
+
+
+        const isAvailable =
+          worker.isAvailable === true;
+
+
+        const isVerified =
+          worker.verified === true;
+
+
+        const profileCompleted =
+          worker.profileCompleted === true;
+
+
+        cards.innerHTML = `
+
+          <div class="worker-info-card">
+
+            <h3>
+              Availability
+            </h3>
+
+            <div
+              class="
+                worker-dashboard-tag
+                ${
+                  isAvailable
+                    ? "available"
+                    : "unavailable"
+                }
+              "
+            >
+
+              ${
+                isAvailable
+                  ? "Available for New Bookings"
+                  : "Currently Unavailable"
+              }
+
+            </div>
+
+          </div>
+
+
+          <div class="worker-info-card">
+
+            <h3>
+              Verification
+            </h3>
+
+            <div
+              class="
+                worker-dashboard-tag
+                ${
+                  isVerified
+                    ? "verified"
+                    : ""
+                }
+              "
+            >
+
+              ${
+                isVerified
+                  ? "Verified Worker"
+                  : "Verification Pending"
+              }
+
+            </div>
+
+          </div>
+
+
+          <div class="worker-info-card">
+
+            <h3>
+              Profile
+            </h3>
+
+            <div class="worker-info-value">
+
+              ${
+                profileCompleted
+                  ? "Complete"
+                  : "Incomplete"
+              }
+
+            </div>
+
+          </div>
+
+
+          <div class="worker-info-card">
+
+            <h3>
+              Gross Earnings
+            </h3>
+
+            <div class="worker-info-value">
+
+              ${workerDashboardMoney(
+                grossAmount
+              )}
+
+            </div>
+
+          </div>
+
+
+          <div class="worker-info-card">
+
+            <h3>
+              Completed Earnings
+            </h3>
+
+            <div class="worker-info-value">
+
+              ${workerDashboardMoney(
+                completedAmount
+              )}
+
+            </div>
+
+          </div>
+
+
+          <div class="worker-info-card">
+
+            <h3>
+              Pending Work
+            </h3>
+
+            <div class="worker-info-value">
+
+              ${workerDashboardMoney(
+                pendingWorkAmount
+              )}
+
+            </div>
+
+          </div>
+
+
+          <div class="worker-info-card">
+
+            <h3>
+              Paid Bookings
+            </h3>
+
+            <div class="worker-info-value">
+
+              ${workerDashboardEscape(
+                totalPaidBookings
+              )}
+
+            </div>
+
+          </div>
+
+        `;
+
+
+        skills.innerHTML =
+          workerDashboardSkills(
+            worker.skills
+          );
+
+
+        workerDashboardExtraLoaded =
+          true;
+
+      } catch (error) {
+
+        console.error(
+          "WORKER DASHBOARD ERROR:",
+          error
+        );
+
+
+        cards.innerHTML = `
+          <div
+            class="worker-dashboard-error"
+          >
+            ${workerDashboardEscape(
+              error?.message ||
+              "Unable to load worker information."
+            )}
+          </div>
+        `;
+
+
+        skills.innerHTML = `
+          <span
+            class="worker-dashboard-tag"
+          >
+            Unable to load skills
+          </span>
+        `;
+
+      }
+
+    }
+
+
+    function startWorkerDashboardExtra() {
+
+      if (
+        workerDashboardExtraStarted
+      ) {
+
+        return;
+
+      }
+
+
+      workerDashboardExtraStarted =
+        true;
+
+
+      let attempts = 0;
+
+
+      const timer =
+        setInterval(
+          async () => {
+
+            attempts++;
+
+
+            const user =
+              getWorkerDashboardUser();
+
+
+            const role =
+              String(
+                user?.role ||
+                user?.userType ||
+                user?.accountType ||
+                ""
+              )
+                .trim()
+                .toLowerCase();
+
+
+            if (
+              role === "worker"
+            ) {
+
+              clearInterval(
+                timer
+              );
+
+
+              await loadWorkerDashboardExtra();
+
+              return;
+
+            }
+
+
+            if (
+              attempts >= 20
+            ) {
+
+              clearInterval(
+                timer
+              );
+
+            }
+
+          },
+          300
+        );
+
+    }
+
+
+    if (
+      document.readyState ===
+      "loading"
+    ) {
+
+      document.addEventListener(
+        "DOMContentLoaded",
+        startWorkerDashboardExtra,
+        {
+          once: true
+        }
+      );
+
+    } else {
+
+      startWorkerDashboardExtra();
+
+    }
+
+  </script>
+
+</body>
+
+</html>
+
+3. "admin.html"
+
+<!doctype html>
+<html lang="en">
+
+<head>
+
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <title>
+    Admin Dashboard | Smart Work Network
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="css/main.css"
+  >
+
+</head>
+
+
+<body data-admin-page="dashboard">
+
+
+  <header class="header">
+
+    <div class="container nav">
+
+      <a
+        class="brand"
+        href="index.html"
+      >
+        Smart Work Network
+      </a>
+
+
+      <nav class="navlinks">
+
+        <a href="admin.html">
+          Dashboard
+        </a>
+
+        <a href="admin-users.html">
+          Users
+        </a>
+
+        <a href="admin-jobs.html">
+          Jobs
+        </a>
+
+        <a href="admin-payments.html">
+          Payments
+        </a>
+
+        <a href="admin-reports.html">
+          Reports
+        </a>
+
+        <a href="admin-verification.html">
+          Verification
+        </a>
+
+        <span data-auth></span>
+
+      </nav>
+
+    </div>
+
+  </header>
+
+
+  <main>
+
+    <section class="section">
+
+      <div class="container">
+
+        <h1>
+          Admin Dashboard
+        </h1>
+
+        <p
+          id="adminStatus"
+          class="muted"
+        >
+          Connecting…
+        </p>
+
+        <div
+          id="adminCards"
+          class="grid grid-3"
+        ></div>
+
+        <div
+          id="adminTable"
+        ></div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <!-- AUTH -->
+  <script src="js/auth.js"></script>
+
+  <!-- CENTRAL API -->
+  <script src="js/app.js"></script>
+
+  <!-- ADMIN DASHBOARD -->
+  <script src="js/admin.js"></script>
+
+  <!-- NOTIFICATIONS -->
+  <script src="js/notifications.js"></script>
 
 </body>
 
