@@ -30,8 +30,7 @@ return SWN_CONFIG.API_URL;
 
 api(path = "") {
 const base = SWN_CONFIG.API_URL;
-const cleanPath =
-String(path || "").trim();
+const cleanPath = String(path || "").trim();
 
 if (!cleanPath) {
   return base;
@@ -47,8 +46,7 @@ return base + "/" + cleanPath;
 
 get(key, defaultValue = null) {
 try {
-const value =
-localStorage.getItem(key);
+const value = localStorage.getItem(key);
 
   if (!value) {
     return defaultValue;
@@ -78,9 +76,7 @@ return window.getCurrentUser();
 }
 
   const value =
-    localStorage.getItem(
-      "swn_user"
-    );
+    localStorage.getItem("swn_user");
 
   if (!value) {
     return null;
@@ -98,9 +94,7 @@ return null;
 },
 
 clearAuth() {
-localStorage.removeItem(
-"swn_user"
-);
+localStorage.removeItem("swn_user");
 },
 
 authHeaders(
@@ -108,15 +102,11 @@ extraHeaders = {},
 hasBody = false
 ) {
 const headers =
-new Headers(
-extraHeaders || {}
-);
+new Headers(extraHeaders || {});
 
 if (
   hasBody &&
-  !headers.has(
-    "Content-Type"
-  )
+  !headers.has("Content-Type")
 ) {
   headers.set(
     "Content-Type",
@@ -133,31 +123,23 @@ return headers;
 
 },
 
-async raw(
-path,
-options = {}
-) {
+async raw(path, options = {}) {
 const requestOptions = {
 ...options
 };
 
 const hasBody =
-  requestOptions.body !==
-    undefined &&
-  requestOptions.body !==
-    null;
+  requestOptions.body !== undefined &&
+  requestOptions.body !== null;
 
 const isFormData =
-  typeof FormData !==
-    "undefined" &&
-  requestOptions.body instanceof
-    FormData;
+  typeof FormData !== "undefined" &&
+  requestOptions.body instanceof FormData;
 
 if (isFormData) {
   requestOptions.headers =
     new Headers(
-      requestOptions.headers ||
-        {}
+      requestOptions.headers || {}
     );
 
   requestOptions.headers.delete(
@@ -167,8 +149,7 @@ if (isFormData) {
 
 requestOptions.headers =
   this.authHeaders(
-    requestOptions.headers ||
-      {},
+    requestOptions.headers || {},
     hasBody && !isFormData
   );
 
@@ -178,19 +159,17 @@ requestOptions.credentials =
 let response;
 
 try {
-  response =
-    await fetch(
-      this.api(path),
-      requestOptions
-    );
+  response = await fetch(
+    this.api(path),
+    requestOptions
+  );
 } catch (error) {
   const networkError =
     new Error(
       "Unable to connect to the server. Please check your internet connection and try again."
     );
 
-  networkError.cause =
-    error;
+  networkError.cause = error;
 
   throw networkError;
 }
@@ -206,9 +185,7 @@ return response;
 
 },
 
-async parseResponse(
-response
-) {
+async parseResponse(response) {
 if (!response) {
 return null;
 }
@@ -247,10 +224,7 @@ try {
 
 },
 
-async request(
-path,
-options = {}
-) {
+async request(path, options = {}) {
 const response =
 await this.raw(
 path,
@@ -266,9 +240,9 @@ if (!response.ok) {
   const error =
     new Error(
       data?.message ||
-        data?.error ||
-        "Request failed with status " +
-          response.status
+      data?.error ||
+      "Request failed with status " +
+        response.status
     );
 
   error.status =
@@ -311,9 +285,7 @@ window.location.href =
 
 flash(message) {
 alert(
-String(
-message || ""
-)
+String(message || "")
 );
 }
 };
@@ -323,36 +295,20 @@ if (!user) {
 return "login.html";
 }
 
-if (
-user.role ===
-"admin"
-) {
+if (user.role === "admin") {
 return "admin.html";
 }
 
-if (
-user.role ===
-"worker"
-) {
+if (user.role === "worker") {
 return "worker-dashboard.html";
 }
 
 return "customer-dashboard.html";
 }
 
-/*
-
-* Safe HTML escaping without regex
-* and without manually writing HTML
-* entity strings.
-  */
-  function escapeHtml(
-  value = ""
-  ) {
-  const element =
-  document.createElement(
-  "div"
-  );
+function escapeHtml(value = "") {
+const element =
+document.createElement("div");
 
 element.textContent =
 String(value);
@@ -416,8 +372,7 @@ logoutButton.id =
 logoutButton.textContent =
   "Logout";
 
-element.innerHTML =
-  "";
+element.innerHTML = "";
 
 element.appendChild(
   greeting
@@ -442,8 +397,7 @@ return;
 
 }
 
-element.innerHTML =
-"";
+element.innerHTML = "";
 
 const loginLink =
 document.createElement(
@@ -486,9 +440,7 @@ window.location.href =
 dashboardUrl(user);
 }
 
-function protect(
-role = null
-) {
+function protect(role = null) {
 const user =
 SWN.user();
 
