@@ -6,11 +6,17 @@ export const NOTIFICATION_TYPES = [
   "booking_rejected",
   "booking_confirmed",
   "booking_cancelled",
+
+  "work_open",
+  "work_assigned",
   "work_started",
   "work_completed",
+  "work_cancelled",
+
   "payment_success",
   "payment_failure",
   "payment_refunded",
+
   "admin_update"
 ];
 
@@ -94,6 +100,10 @@ const notificationSchema =
     }
   );
 
+/* ==================================================
+   PERFORMANCE INDEXES
+================================================== */
+
 notificationSchema.index({
   recipientId: 1,
   read: 1,
@@ -125,7 +135,12 @@ notificationSchema.index({
   createdAt: -1
 });
 
+/* ==================================================
+   MODEL
+================================================== */
+
 const Notification =
+  mongoose.models.Notification ||
   mongoose.model(
     "Notification",
     notificationSchema
