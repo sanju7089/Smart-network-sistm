@@ -1,4 +1,4 @@
-import express from "express";
+1import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import helmet from "helmet";
@@ -33,6 +33,7 @@ import userRoutes from "./routes/users.js";
 import workerRoutes from "./routes/workers.js";
 import supportRoutes from "./routes/support.js";
 import earningsRoutes from "./routes/earnings.js";
+import notificationRoutes from "./routes/notifications.js";
 
 dotenv.config();
 
@@ -143,6 +144,13 @@ app.use(
   globalApiLimiter
 );
 
+/*
+========================================
+RAZORPAY WEBHOOK
+RAW BODY MUST COME BEFORE JSON PARSER
+========================================
+*/
+
 app.post(
   "/api/payments/razorpay/webhook",
   express.raw({
@@ -151,6 +159,12 @@ app.post(
   }),
   razorpayWebhook
 );
+
+/*
+========================================
+BODY PARSERS
+========================================
+*/
 
 app.use(
   express.json({
@@ -169,6 +183,12 @@ app.use(cookieParser());
 
 app.use(requestLogger);
 
+/*
+========================================
+API ROOT
+========================================
+*/
+
 app.get(
   "/",
   (req, res) => {
@@ -182,6 +202,12 @@ app.get(
     });
   }
 );
+
+/*
+========================================
+HEALTH
+========================================
+*/
 
 app.get(
   "/api/health",
@@ -222,54 +248,131 @@ app.get(
   }
 );
 
+/*
+========================================
+AUTH
+========================================
+*/
+
 app.use(
   "/api/auth",
   authRoutes
 );
+
+/*
+========================================
+ADMIN
+========================================
+*/
 
 app.use(
   "/api/admin",
   adminRoutes
 );
 
+/*
+========================================
+BOOKINGS
+========================================
+*/
+
 app.use(
   "/api/bookings",
   bookingRoutes
 );
+
+/*
+========================================
+JOBS
+========================================
+*/
 
 app.use(
   "/api/jobs",
   jobRoutes
 );
 
+/*
+========================================
+PAYMENTS
+========================================
+*/
+
 app.use(
   "/api/payments",
   paymentRoutes
 );
+
+/*
+========================================
+USERS
+========================================
+*/
 
 app.use(
   "/api/users",
   userRoutes
 );
 
+/*
+========================================
+WORKERS
+========================================
+*/
+
 app.use(
   "/api/workers",
   workerRoutes
 );
+
+/*
+========================================
+SUPPORT
+========================================
+*/
 
 app.use(
   "/api/support",
   supportRoutes
 );
 
+/*
+========================================
+EARNINGS
+========================================
+*/
+
 app.use(
   "/api/earnings",
   earningsRoutes
 );
 
+/*
+========================================
+NOTIFICATIONS
+========================================
+*/
+
+app.use(
+  "/api/notifications",
+  notificationRoutes
+);
+
+/*
+========================================
+404 + ERROR HANDLER
+========================================
+*/
+
 app.use(notFound);
 
 app.use(errorHandler);
+
+/*
+========================================
+SERVER
+========================================
+*/
 
 let server = null;
 let shuttingDown = false;
@@ -307,6 +410,12 @@ async function startServer() {
     process.exit(1);
   }
 }
+
+/*
+========================================
+GRACEFUL SHUTDOWN
+========================================
+*/
 
 async function shutdown(signal) {
   if (shuttingDown) {
@@ -355,6 +464,12 @@ async function shutdown(signal) {
   }
 }
 
+/*
+========================================
+PROCESS SIGNALS
+========================================
+*/
+
 process.on(
   "SIGTERM",
   () => {
@@ -399,6 +514,12 @@ process.on(
   }
 );
 
+/*
+========================================
+START ONLY WHEN EXECUTED DIRECTLY
+========================================
+*/
+
 const currentFile =
   fileURLToPath(import.meta.url);
 
@@ -413,6 +534,12 @@ if (
 ) {
   startServer();
 }
+
+/*
+========================================
+EXPORTS
+========================================
+*/
 
 export {
   app,
