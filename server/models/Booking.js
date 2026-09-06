@@ -154,27 +154,45 @@ bookingSchema.index({
 
 /*
 ========================================
-AUTOMATIC BOOKING NOTIFICATIONS
+NOTIFICATION TRIGGER STATE
 ========================================
 
-Every newly created booking and every
-booking status change automatically
-creates notifications.
+pre-save runs before MongoDB save.
 
-Notification failures are isolated so
-they never break the booking operation.
+We capture:
+- whether this is a new booking
+- whether booking status changed
+
+Then post-save sends the notification.
+========================================
+*/
+
+bookingSchema.pre(
+  "save",
+  function (next) {
+    this.$notificationIsNew =
+      this.isNew;
+
+    this.$notificationStatusChanged =
+      this.isModified("status");
+
+    next();
+  }
+);
+
+/*
+========================================
+AUTOMATIC BOOKING NOTIFICATIONS
 ========================================
 */
 
 bookingSchema.post(
   "save",
-  async function (
-    booking
-  ) {
+  async function (booking) {
     try {
       if (
-        booking?.isNew ||
-        booking?.isModified("status")
+        booking.$notificationIsNew ||
+        booking.$notificationStatusChanged
       ) {
         await notifyBookingEvent(
           booking
