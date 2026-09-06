@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import cookieParser from "cookie-parser";
 
 import {
 connectDatabase,
@@ -33,20 +34,24 @@ import earningsRoutes from "./routes/earnings.js";
 
 dotenv.config();
 
-const app = express();
+const app =
+express();
 
 const PORT =
 Number(process.env.PORT) || 3000;
 
 const isProduction =
-process.env.NODE_ENV === "production";
+process.env.NODE_ENV ===
+"production";
 
 const allowedOrigins =
 String(
 process.env.ALLOWED_ORIGINS || ""
 )
 .split(",")
-.map((origin) => origin.trim())
+.map((origin) =>
+origin.trim()
+)
 .filter(Boolean);
 
 if (
@@ -58,7 +63,22 @@ throw new Error(
 );
 }
 
-app.disable("x-powered-by");
+/*
+
+REVERSE PROXY
+
+*/
+
+if (isProduction) {
+app.set(
+"trust proxy",
+1
+);
+}
+
+app.disable(
+"x-powered-by"
+);
 
 /*
 
@@ -68,11 +88,14 @@ SECURITY HEADERS
 
 app.use(
 helmet({
-crossOriginResourcePolicy: false
+crossOriginResourcePolicy:
+false
 })
 );
 
-app.use(securityHeaders);
+app.use(
+securityHeaders
+);
 
 /*
 
@@ -82,22 +105,36 @@ CORS
 
 app.use(
 cors({
-origin(origin, callback) {
+origin(
+origin,
+callback
+) {
 if (!origin) {
-return callback(null, true);
+return callback(
+null,
+true
+);
 }
 
   if (
     !isProduction &&
     allowedOrigins.length === 0
   ) {
-    return callback(null, true);
+    return callback(
+      null,
+      true
+    );
   }
 
   if (
-    allowedOrigins.includes(origin)
+    allowedOrigins.includes(
+      origin
+    )
   ) {
-    return callback(null, true);
+    return callback(
+      null,
+      true
+    );
   }
 
   const error =
@@ -105,10 +142,16 @@ return callback(null, true);
       "Origin not allowed by CORS."
     );
 
-  error.status = 403;
+  error.status =
+    403;
 
-  return callback(error);
+  return callback(
+    error
+  );
 },
+
+credentials:
+  true,
 
 methods: [
   "GET",
@@ -124,7 +167,8 @@ allowedHeaders: [
   "Authorization"
 ],
 
-optionsSuccessStatus: 204
+optionsSuccessStatus:
+  204
 
 })
 );
@@ -133,28 +177,26 @@ optionsSuccessStatus: 204
 
 GLOBAL API RATE LIMIT
 
-Protects the API from basic request
-flooding and automated abuse.
-
-Auth routes have stricter limits
-inside routes/auth.js.
-
 */
 
 const globalApiLimiter =
 rateLimit({
-windowMs: 15 * 60 * 1000,
-limit: 300,
-standardHeaders: "draft-7",
-legacyHeaders: false,
+windowMs:
+15 * 60 * 1000,
+
+limit:
+  300,
+
+standardHeaders:
+  "draft-7",
+
+legacyHeaders:
+  false,
 
 skip(req) {
-  /*
-    Health checks should remain
-    available for monitoring.
-  */
   return (
-    req.path === "/health"
+    req.path ===
+    "/health"
   );
 },
 
@@ -175,15 +217,15 @@ globalApiLimiter
 
 RAZORPAY WEBHOOK
 
-MUST BE BEFORE express.json()
-
 */
 
 app.post(
 "/api/payments/razorpay/webhook",
 express.raw({
-type: "application/json",
-limit: "1mb"
+type:
+"application/json",
+limit:
+"1mb"
 }),
 razorpayWebhook
 );
@@ -196,15 +238,22 @@ BODY PARSERS
 
 app.use(
 express.json({
-limit: "1mb"
+limit:
+"1mb"
 })
 );
 
 app.use(
 express.urlencoded({
-extended: true,
-limit: "1mb"
+extended:
+true,
+limit:
+"1mb"
 })
+);
+
+app.use(
+cookieParser()
 );
 
 /*
@@ -213,7 +262,9 @@ REQUEST LOGGER
 
 */
 
-app.use(requestLogger);
+app.use(
+requestLogger
+);
 
 /*
 
@@ -228,7 +279,8 @@ return res.status(200).json({
 success: true,
 message:
 "Smart Work Network API is running",
-version: "2.0.0",
+version:
+"2.0.0",
 timestamp:
 new Date().toISOString()
 });
@@ -254,11 +306,13 @@ const healthy =
 return res.status(
   healthy ? 200 : 503
 ).json({
-  success: healthy,
+  success:
+    healthy,
 
-  status: healthy
-    ? "healthy"
-    : "unhealthy",
+  status:
+    healthy
+      ? "healthy"
+      : "unhealthy",
 
   application:
     "Smart Work Network API",
@@ -338,7 +392,9 @@ earningsRoutes
 
 */
 
-app.use(notFound);
+app.use(
+notFound
+);
 
 /*
 
@@ -346,10 +402,13 @@ ERROR HANDLER
 
 */
 
-app.use(errorHandler);
+app.use(
+errorHandler
+);
 
 let server;
-let shuttingDown = false;
+let shuttingDown =
+false;
 
 async function startServer() {
 try {
@@ -386,9 +445,12 @@ process.exit(1);
 async function shutdown(
 signal
 ) {
-if (shuttingDown) return;
+if (shuttingDown) {
+return;
+}
 
-shuttingDown = true;
+shuttingDown =
+true;
 
 console.log(
 "\n${signal} received. Starting graceful shutdown..."
@@ -397,7 +459,10 @@ console.log(
 try {
 if (server) {
 await new Promise(
-(resolve, reject) => {
+(
+resolve,
+reject
+) => {
 server.close(
 (error) => {
 if (error) {
@@ -434,12 +499,18 @@ process.exit(1);
 
 process.on(
 "SIGTERM",
-() => shutdown("SIGTERM")
+() =>
+shutdown(
+"SIGTERM"
+)
 );
 
 process.on(
 "SIGINT",
-() => shutdown("SIGINT")
+() =>
+shutdown(
+"SIGINT"
+)
 );
 
 process.on(
