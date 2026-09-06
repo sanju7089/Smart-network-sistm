@@ -45,9 +45,7 @@ const isProduction =
 process.env.NODE_ENV === "production";
 
 const allowedOrigins =
-String(
-process.env.ALLOWED_ORIGINS || ""
-)
+String(process.env.ALLOWED_ORIGINS || "")
 .split(",")
 .map((origin) => origin.trim())
 .filter(Boolean);
@@ -61,21 +59,11 @@ throw new Error(
 );
 }
 
-/*
-
-* REVERSE PROXY
-  */
-
 if (isProduction) {
 app.set("trust proxy", 1);
 }
 
 app.disable("x-powered-by");
-
-/*
-
-* SECURITY HEADERS
-  */
 
 app.use(
 helmet({
@@ -84,11 +72,6 @@ crossOriginResourcePolicy: false
 );
 
 app.use(securityHeaders);
-
-/*
-
-* CORS
-  */
 
 app.use(
 cors({
@@ -104,16 +87,13 @@ return callback(null, true);
     return callback(null, true);
   }
 
-  if (
-    allowedOrigins.includes(origin)
-  ) {
+  if (allowedOrigins.includes(origin)) {
     return callback(null, true);
   }
 
-  const error =
-    new Error(
-      "Origin not allowed by CORS."
-    );
+  const error = new Error(
+    "Origin not allowed by CORS."
+  );
 
   error.status = 403;
 
@@ -141,28 +121,16 @@ optionsSuccessStatus: 204
 })
 );
 
-/*
-
-* GLOBAL API RATE LIMIT
-  */
-
 const globalApiLimiter =
 rateLimit({
-windowMs:
-15 * 60 * 1000,
-
+windowMs: 15 * 60 * 1000,
 limit: 300,
 
-standardHeaders:
-  "draft-7",
-
-legacyHeaders:
-  false,
+standardHeaders: "draft-7",
+legacyHeaders: false,
 
 skip(req) {
-  return (
-    req.path === "/health"
-  );
+  return req.path === "/health";
 },
 
 message: {
@@ -178,13 +146,6 @@ app.use(
 globalApiLimiter
 );
 
-/*
-
-* RAZORPAY WEBHOOK
-* 
-* Must remain before express.json().
-  */
-
 app.post(
 "/api/payments/razorpay/webhook",
 express.raw({
@@ -193,11 +154,6 @@ limit: "1mb"
 }),
 razorpayWebhook
 );
-
-/*
-
-* BODY PARSERS
-  */
 
 app.use(
 express.json({
@@ -214,17 +170,7 @@ limit: "1mb"
 
 app.use(cookieParser());
 
-/*
-
-* REQUEST LOGGER
-  */
-
 app.use(requestLogger);
-
-/*
-
-* ROOT
-  */
 
 app.get(
 "/",
@@ -240,11 +186,6 @@ new Date().toISOString()
 }
 );
 
-/*
-
-* HEALTH
-  */
-
 app.get(
 "/api/health",
 (req, res) => {
@@ -252,13 +193,10 @@ const database =
 getDatabaseStatus();
 
 const healthy =
-  database.status ===
-  "connected";
+  database.status === "connected";
 
 return res
-  .status(
-    healthy ? 200 : 503
-  )
+  .status(healthy ? 200 : 503)
   .json({
     success: healthy,
 
@@ -287,11 +225,6 @@ return res
 
 }
 );
-
-/*
-
-* API ROUTES
-  */
 
 app.use(
 "/api/auth",
@@ -338,27 +271,12 @@ app.use(
 earningsRoutes
 );
 
-/*
-
-* 404
-  */
-
 app.use(notFound);
-
-/*
-
-* GLOBAL ERROR HANDLER
-  */
 
 app.use(errorHandler);
 
 let server = null;
 let shuttingDown = false;
-
-/*
-
-* START SERVER
-  */
 
 async function startServer() {
 try {
@@ -395,11 +313,6 @@ process.exit(1);
 
 }
 }
-
-/*
-
-* GRACEFUL SHUTDOWN
-  */
 
 async function shutdown(signal) {
 if (shuttingDown) {
@@ -450,11 +363,6 @@ process.exit(1);
 }
 }
 
-/*
-
-* PROCESS SIGNALS
-  */
-
 process.on(
 "SIGTERM",
 () => {
@@ -468,11 +376,6 @@ process.on(
 shutdown("SIGINT");
 }
 );
-
-/*
-
-* UNHANDLED PROMISE REJECTION
-  */
 
 process.on(
 "unhandledRejection",
@@ -488,11 +391,6 @@ shutdown(
 
 }
 );
-
-/*
-
-* UNCAUGHT EXCEPTION
-  */
 
 process.on(
 "uncaughtException",
@@ -510,16 +408,6 @@ shutdown(
 
 }
 );
-
-/*
-
-* START ONLY WHEN THIS FILE
-* IS EXECUTED DIRECTLY.
-* 
-* This allows automated tests
-* to import the Express app
-* without starting MongoDB/server.
-  */
 
 const currentFile =
 fileURLToPath(import.meta.url);
