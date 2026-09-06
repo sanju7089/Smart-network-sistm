@@ -116,15 +116,3 @@ steps:
 
   - name: Run all automated tests
     run: npm test
-
-  - name: Run authentication tests
-    run: npm run test:auth
-
-  - name: Run booking tests
-    run: npm run test:booking
-
-  - name: Run payment tests
-    run: npm run test:payment
-
-  - name: Run API tests
-    run: npm run test:api
