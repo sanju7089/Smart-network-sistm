@@ -1,5 +1,6 @@
 <!doctype html>
-<html>
+<html lang="en">
+
 <head>
   <meta charset="utf-8">
 
@@ -8,17 +9,209 @@
     content="width=device-width, initial-scale=1"
   >
 
-  <title>Post Work | Smart Work Network</title>
+  <title>Find Help | Smart Work Network</title>
+
+  <meta
+    name="description"
+    content="Find verified and available workers on Smart Work Network."
+  >
 
   <link
     rel="stylesheet"
     href="css/main.css"
   >
+
+  <style>
+    .find-help-page {
+      padding: 28px 0 60px;
+    }
+
+    .find-help-filters {
+      display: grid;
+      grid-template-columns:
+        minmax(180px, 2fr)
+        minmax(150px, 1fr)
+        minmax(150px, 1fr)
+        minmax(150px, 1fr)
+        minmax(150px, 1fr);
+      gap: 12px;
+      margin: 22px 0;
+      padding: 18px;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .find-help-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .find-help-field label {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .find-help-field input,
+    .find-help-field select {
+      width: 100%;
+      min-height: 44px;
+      box-sizing: border-box;
+      padding: 9px 12px;
+      border: 1px solid #d7dce2;
+      border-radius: 9px;
+      background: #fff;
+      font: inherit;
+    }
+
+    .find-help-actions {
+      display: flex;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .find-help-actions button {
+      min-height: 44px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 9px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+    }
+
+    .find-help-search {
+      background: #111827;
+      color: #fff;
+    }
+
+    .find-help-reset {
+      background: #eef2f7;
+      color: #111827;
+    }
+
+    .find-help-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 18px 0;
+    }
+
+    .find-help-list {
+      min-height: 120px;
+    }
+
+    .find-help-card {
+      height: 100%;
+    }
+
+    .find-help-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+
+    .find-help-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: #eef2f7;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .find-help-badge.verified,
+    .find-help-badge.available {
+      background: #e8f7ed;
+      color: #176b35;
+    }
+
+    .find-help-badge.unavailable {
+      background: #fff0f0;
+      color: #a51d2d;
+    }
+
+    .find-help-skills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 12px 0;
+    }
+
+    .find-help-skill {
+      display: inline-flex;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .find-help-actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .find-help-actions-row a {
+      text-decoration: none;
+    }
+
+    .find-help-pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-top: 28px;
+      flex-wrap: wrap;
+    }
+
+    .find-help-pagination button {
+      min-height: 42px;
+      padding: 0 15px;
+      border: 0;
+      border-radius: 8px;
+      background: #111827;
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .find-help-pagination button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 1000px) {
+      .find-help-filters {
+        grid-template-columns:
+          repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 650px) {
+      .find-help-filters {
+        grid-template-columns: 1fr;
+      }
+
+      .find-help-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
   <header class="header">
+
     <div class="container nav">
 
       <a
@@ -29,113 +222,978 @@
       </a>
 
       <nav class="navlinks">
-        <a href="services.html">Services</a>
-        <a href="find-help.html">Find Help</a>
-        <a href="workers.html">Workers</a>
+
+        <a href="services.html">
+          Services
+        </a>
+
+        <a href="find-help.html">
+          Find Help
+        </a>
+
+        <a href="workers.html">
+          Workers
+        </a>
+
         <span data-auth></span>
+
       </nav>
 
     </div>
+
   </header>
 
-  <main>
 
-    <section class="section">
+  <main class="find-help-page">
 
-      <div
-        class="container"
-        style="max-width: 720px"
+    <div class="container">
+
+      <div class="page-head">
+
+        <h1>
+          Find Help
+        </h1>
+
+        <p class="lead">
+          Find verified and available workers
+          for the service you need.
+        </p>
+
+      </div>
+
+
+      <form
+        id="findHelpForm"
+        class="find-help-filters"
+        novalidate
       >
 
-        <div class="card">
+        <div class="find-help-field">
 
-          <h1>Post Work Request</h1>
+          <label for="findHelpSearch">
+            Search
+          </label>
 
-          <form
-            class="form"
-            id="workForm"
-            onsubmit="event.preventDefault(); postWork()"
+          <input
+            id="findHelpSearch"
+            type="search"
+            maxlength="200"
+            placeholder="Name, service, skill or location"
+            autocomplete="off"
           >
 
-            <label>
-              Title
-              <input name="title" required>
-            </label>
+        </div>
 
-            <label>
-              Service
 
-              <select name="service">
-                <option>Electrician</option>
-                <option>Plumber</option>
-                <option>Carpenter</option>
-                <option>Painter</option>
-                <option>Cleaner</option>
-                <option>AC Technician</option>
-                <option>Other</option>
-              </select>
-            </label>
+        <div class="find-help-field">
 
-            <label>
-              Location
-              <input name="location" required>
-            </label>
+          <label for="findHelpService">
+            Service
+          </label>
 
-            <label>
-              Budget ₹
-              <input
-                name="budget"
-                type="number"
-              >
-            </label>
+          <input
+            id="findHelpService"
+            type="text"
+            maxlength="100"
+            placeholder="e.g. Plumber"
+          >
 
-            <label>
-              Description
-              <textarea
-                name="description"
-                required
-              ></textarea>
-            </label>
+        </div>
 
-            <button
-              type="submit"
-              class="btn btn-primary"
-            >
-              Post Request
-            </button>
 
-          </form>
+        <div class="find-help-field">
+
+          <label for="findHelpLocation">
+            Location
+          </label>
+
+          <input
+            id="findHelpLocation"
+            type="text"
+            maxlength="200"
+            placeholder="City or area"
+          >
+
+        </div>
+
+
+        <div class="find-help-field">
+
+          <label for="findHelpAvailability">
+            Availability
+          </label>
+
+          <select id="findHelpAvailability">
+
+            <option value="">
+              Available Workers
+            </option>
+
+            <option value="false">
+              Currently Unavailable
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <div class="find-help-field">
+
+          <label for="findHelpVerified">
+            Verification
+          </label>
+
+          <select id="findHelpVerified">
+
+            <option value="">
+              All Verification
+            </option>
+
+            <option value="true">
+              Verified Only
+            </option>
+
+            <option value="false">
+              Verification Pending
+            </option>
+
+          </select>
+
+        </div>
+
+
+        <div class="find-help-actions">
+
+          <button
+            type="submit"
+            class="find-help-search"
+          >
+            Search
+          </button>
+
+          <button
+            type="button"
+            id="findHelpReset"
+            class="find-help-reset"
+          >
+            Reset
+          </button>
+
+        </div>
+
+      </form>
+
+
+      <div class="find-help-summary">
+
+        <div>
+
+          <strong id="findHelpResultsTitle">
+            Workers
+          </strong>
+
+          <span
+            id="findHelpResultsSummary"
+            class="muted"
+          >
+            Loading workers...
+          </span>
 
         </div>
 
       </div>
 
-    </section>
+
+      <section
+        id="findHelpList"
+        class="grid find-help-list"
+        aria-live="polite"
+      >
+
+        <div class="notice">
+          Loading workers...
+        </div>
+
+      </section>
+
+
+      <nav
+        id="findHelpPagination"
+        class="find-help-pagination"
+        hidden
+        aria-label="Find help pagination"
+      >
+
+        <button
+          type="button"
+          id="findHelpPrevious"
+        >
+          Previous
+        </button>
+
+        <span
+          id="findHelpPageInfo"
+        >
+          Page 1
+        </span>
+
+        <button
+          type="button"
+          id="findHelpNext"
+        >
+          Next
+        </button>
+
+      </nav>
+
+    </div>
 
   </main>
+
 
   <footer class="footer">
 
     <div class="container">
 
-      <b>Smart Work Network</b>
+      <b>
+        Smart Work Network
+      </b>
 
       <p>
         Services • Workers • Work opportunities
       </p>
 
       <div class="row">
-        <a href="support.html">Support</a>
-        <a href="profile.html">Profile</a>
-        <a href="urgent-help.html">Urgent Help</a>
+
+        <a href="support.html">
+          Support
+        </a>
+
+        <a href="profile.html">
+          Profile
+        </a>
+
+        <a href="urgent-help.html">
+          Urgent Help
+        </a>
+
       </div>
 
     </div>
 
   </footer>
 
+
   <script src="js/app.js"></script>
-  <script src="js/work.js"></script>
+
+  <script>
+    "use strict";
+
+    (() => {
+
+      const state = {
+        page: 1,
+        limit: 12,
+        total: 0,
+        totalPages: 1,
+        loading: false
+      };
+
+
+      const query =
+        new URLSearchParams(
+          window.location.search
+        );
+
+
+      const initialService =
+        String(
+          query.get("service") || ""
+        ).trim();
+
+
+      const $ = id =>
+        document.getElementById(id);
+
+
+      const escapeHtml =
+        value => {
+
+          if (
+            typeof window.escapeHtml ===
+            "function"
+          ) {
+            return window.escapeHtml(
+              value
+            );
+          }
+
+          return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+        };
+
+
+      function readFilters() {
+
+        return {
+          search:
+            String(
+              $("findHelpSearch")?.value ||
+              ""
+            ).trim(),
+
+          service:
+            String(
+              $("findHelpService")?.value ||
+              ""
+            ).trim(),
+
+          location:
+            String(
+              $("findHelpLocation")?.value ||
+              ""
+            ).trim(),
+
+          available:
+            String(
+              $("findHelpAvailability")?.value ||
+              ""
+            ).trim(),
+
+          verified:
+            String(
+              $("findHelpVerified")?.value ||
+              ""
+            ).trim()
+        };
+
+      }
+
+
+      function buildUrl() {
+
+        const filters =
+          readFilters();
+
+        const params =
+          new URLSearchParams();
+
+        if (filters.search) {
+          params.set(
+            "search",
+            filters.search
+          );
+        }
+
+        if (filters.service) {
+          params.set(
+            "service",
+            filters.service
+          );
+        }
+
+        if (filters.location) {
+          params.set(
+            "location",
+            filters.location
+          );
+        }
+
+        if (filters.available) {
+          params.set(
+            "available",
+            filters.available
+          );
+        }
+
+        if (filters.verified) {
+          params.set(
+            "verified",
+            filters.verified
+          );
+        }
+
+        params.set(
+          "page",
+          String(state.page)
+        );
+
+        params.set(
+          "limit",
+          String(state.limit)
+        );
+
+        return `/workers?${params.toString()}`;
+
+      }
+
+
+      function extractWorkers(result) {
+
+        if (
+          Array.isArray(
+            result?.data
+          )
+        ) {
+          return result.data;
+        }
+
+        if (
+          Array.isArray(
+            result?.data?.workers
+          )
+        ) {
+          return result.data.workers;
+        }
+
+        if (
+          Array.isArray(
+            result?.workers
+          )
+        ) {
+          return result.workers;
+        }
+
+        return [];
+
+      }
+
+
+      function getPagination(
+        result,
+        count
+      ) {
+
+        const p =
+          result?.pagination;
+
+        if (p) {
+
+          return {
+            page:
+              Number(p.page) || 1,
+
+            limit:
+              Number(p.limit) ||
+              state.limit,
+
+            total:
+              Number(p.total) || 0,
+
+            totalPages:
+              Math.max(
+                1,
+                Number(
+                  p.totalPages
+                ) || 1
+              )
+          };
+
+        }
+
+        return {
+          page: state.page,
+          limit: state.limit,
+          total: count,
+          totalPages:
+            Math.max(
+              1,
+              Math.ceil(
+                count / state.limit
+              )
+            )
+        };
+
+      }
+
+
+      function skillsHtml(
+        skills
+      ) {
+
+        if (
+          !Array.isArray(skills) ||
+          !skills.length
+        ) {
+          return "";
+        }
+
+        return `
+          <div class="find-help-skills">
+
+            ${skills
+              .slice(0, 20)
+              .map(
+                skill => `
+                  <span class="find-help-skill">
+                    ${escapeHtml(skill)}
+                  </span>
+                `
+              )
+              .join("")}
+
+          </div>
+        `;
+
+      }
+
+
+      function workerCard(
+        worker
+      ) {
+
+        const id =
+          worker?._id ||
+          worker?.id;
+
+        if (!id) {
+          return "";
+        }
+
+        const profileUrl =
+          `worker-profile.html?id=${encodeURIComponent(id)}`;
+
+        const checkoutUrl =
+          `checkout.html?workerId=${encodeURIComponent(id)}`;
+
+        const available =
+          worker?.isAvailable === true;
+
+        const verified =
+          worker?.verified === true;
+
+        return `
+          <article class="card find-help-card">
+
+            <div class="find-help-badges">
+
+              <span
+                class="find-help-badge ${
+                  verified
+                    ? "verified"
+                    : ""
+                }"
+              >
+                ${
+                  verified
+                    ? "Verified"
+                    : "Verification Pending"
+                }
+              </span>
+
+              <span
+                class="find-help-badge ${
+                  available
+                    ? "available"
+                    : "unavailable"
+                }"
+              >
+                ${
+                  available
+                    ? "Available"
+                    : "Unavailable"
+                }
+              </span>
+
+            </div>
+
+
+            <h3>
+              ${escapeHtml(
+                worker?.name ||
+                "Worker"
+              )}
+            </h3>
+
+
+            <p class="muted">
+
+              ${escapeHtml(
+                worker?.service ||
+                "General Service"
+              )}
+
+              ${
+                worker?.location
+                  ? ` • ${escapeHtml(
+                      worker.location
+                    )}`
+                  : ""
+              }
+
+            </p>
+
+
+            <p>
+              <strong>
+                Experience:
+              </strong>
+
+              ${escapeHtml(
+                worker?.experience ||
+                "Not specified"
+              )}
+            </p>
+
+
+            ${
+              worker?.bio
+                ? `
+                  <p>
+                    ${escapeHtml(
+                      worker.bio
+                    )}
+                  </p>
+                `
+                : ""
+            }
+
+
+            ${skillsHtml(
+              worker?.skills
+            )}
+
+
+            <div class="find-help-actions-row">
+
+              <a
+                class="btn"
+                href="${profileUrl}"
+              >
+                View Profile
+              </a>
+
+              ${
+                available
+                  ? `
+                    <a
+                      class="btn btn-primary"
+                      href="${checkoutUrl}"
+                    >
+                      Book Worker
+                    </a>
+                  `
+                  : `
+                    <button
+                      type="button"
+                      class="btn"
+                      disabled
+                    >
+                      Currently Unavailable
+                    </button>
+                  `
+              }
+
+            </div>
+
+          </article>
+        `;
+
+      }
+
+
+      function render(
+        workers
+      ) {
+
+        const list =
+          $("findHelpList");
+
+        if (!list) {
+          return;
+        }
+
+        if (!workers.length) {
+
+          list.innerHTML = `
+            <div class="notice">
+              No workers found for
+              the selected filters.
+            </div>
+          `;
+
+          return;
+        }
+
+        list.innerHTML =
+          workers
+            .map(workerCard)
+            .filter(Boolean)
+            .join("");
+
+      }
+
+
+      function updateSummary() {
+
+        const title =
+          $("findHelpResultsTitle");
+
+        const summary =
+          $("findHelpResultsSummary");
+
+        if (title) {
+
+          title.textContent =
+            state.total === 1
+              ? "1 Worker Found"
+              : `${state.total} Workers Found`;
+
+        }
+
+        if (!summary) {
+          return;
+        }
+
+        if (!state.total) {
+
+          summary.textContent =
+            "Try another service, location or search.";
+
+          return;
+        }
+
+        const start =
+          ((state.page - 1) *
+            state.limit) + 1;
+
+        const end =
+          Math.min(
+            state.page *
+              state.limit,
+            state.total
+          );
+
+        summary.textContent =
+          `Showing ${start}-${end} of ${state.total}`;
+
+      }
+
+
+      function updatePagination() {
+
+        const box =
+          $("findHelpPagination");
+
+        const previous =
+          $("findHelpPrevious");
+
+        const next =
+          $("findHelpNext");
+
+        const info =
+          $("findHelpPageInfo");
+
+        if (
+          !box ||
+          !previous ||
+          !next ||
+          !info
+        ) {
+          return;
+        }
+
+        box.hidden =
+          state.total <= state.limit;
+
+        info.textContent =
+          `Page ${state.page} of ${state.totalPages}`;
+
+        previous.disabled =
+          state.page <= 1;
+
+        next.disabled =
+          state.page >=
+          state.totalPages;
+
+      }
+
+
+      async function loadWorkers() {
+
+        const list =
+          $("findHelpList");
+
+        if (
+          !list ||
+          state.loading
+        ) {
+          return;
+        }
+
+        state.loading = true;
+
+        list.innerHTML = `
+          <div class="notice">
+            Loading workers...
+          </div>
+        `;
+
+        try {
+
+          const result =
+            await window.SWN.request(
+              buildUrl()
+            );
+
+          const workers =
+            extractWorkers(
+              result
+            );
+
+          const pagination =
+            getPagination(
+              result,
+              workers.length
+            );
+
+          state.page =
+            pagination.page;
+
+          state.limit =
+            pagination.limit;
+
+          state.total =
+            pagination.total;
+
+          state.totalPages =
+            pagination.totalPages;
+
+          render(workers);
+
+          updateSummary();
+
+          updatePagination();
+
+        } catch (error) {
+
+          console.error(
+            "FIND HELP ERROR:",
+            error
+          );
+
+          list.innerHTML = `
+            <div
+              class="notice"
+              role="alert"
+            >
+              ${escapeHtml(
+                error?.message ||
+                "Unable to load workers."
+              )}
+            </div>
+          `;
+
+        } finally {
+
+          state.loading = false;
+
+        }
+
+      }
+
+
+      $("findHelpForm")
+        ?.addEventListener(
+          "submit",
+          event => {
+
+            event.preventDefault();
+
+            state.page = 1;
+
+            loadWorkers();
+
+          }
+        );
+
+
+      $("findHelpReset")
+        ?.addEventListener(
+          "click",
+          () => {
+
+            $("findHelpForm")
+              ?.reset();
+
+            if (
+              $("findHelpService")
+            ) {
+              $("findHelpService").value =
+                "";
+            }
+
+            state.page = 1;
+
+            loadWorkers();
+
+          }
+        );
+
+
+      $("findHelpPrevious")
+        ?.addEventListener(
+          "click",
+          () => {
+
+            if (
+              state.page <= 1
+            ) {
+              return;
+            }
+
+            state.page -= 1;
+
+            loadWorkers();
+
+          }
+        );
+
+
+      $("findHelpNext")
+        ?.addEventListener(
+          "click",
+          () => {
+
+            if (
+              state.page >=
+              state.totalPages
+            ) {
+              return;
+            }
+
+            state.page += 1;
+
+            loadWorkers();
+
+          }
+        );
+
+
+      document.addEventListener(
+        "DOMContentLoaded",
+        () => {
+
+          if (
+            initialService &&
+            $("findHelpService")
+          ) {
+            $("findHelpService").value =
+              initialService;
+          }
+
+          loadWorkers();
+
+        }
+      );
+
+    })();
+  </script>
 
 </body>
-          </html>
+</html>
