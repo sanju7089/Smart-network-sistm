@@ -1,20 +1,31 @@
-<!DOCTYPE html><html lang="en"><head>
-  <meta charset="UTF-8"><meta
-name="viewport"
-content="width=device-width, initial-scale=1.0"
+<!DOCTYPE html>
+<html lang="en">
 
-«»
+<head>
 
-  <title>Worker Profile | Smart Work Network</title><meta
-name="description"
-content="Worker profile on Smart Work Network."
+  <meta charset="UTF-8">
 
-«»
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>
+    Worker Profile | Smart Work Network
+  </title>
+
+  <meta
+    name="description"
+    content="Worker profile on Smart Work Network."
+  >
 
   <link
     rel="stylesheet"
     href="css/main.css"
-  >  <style>
+  >
+
+  <style>
+
     .worker-profile-page {
       max-width: 1000px;
       margin: 0 auto;
@@ -25,16 +36,18 @@ content="Worker profile on Smart Work Network."
       background: #fff;
       border-radius: 16px;
       padding: 24px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+      box-shadow:
+        0 8px 30px rgba(0, 0, 0, 0.08);
       margin-bottom: 24px;
     }
 
     .worker-profile-grid {
       display: grid;
-      grid-template-columns: repeat(
-        2,
-        minmax(0, 1fr)
-      );
+      grid-template-columns:
+        repeat(
+          2,
+          minmax(0, 1fr)
+        );
       gap: 18px;
     }
 
@@ -134,19 +147,27 @@ content="Worker profile on Smart Work Network."
       background: #fff;
       border-radius: 50%;
       transition: 0.2s ease;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      box-shadow:
+        0 2px 5px rgba(0, 0, 0, 0.2);
     }
 
-    .worker-profile-switch input:checked + .worker-profile-slider {
+    .worker-profile-switch
+      input:checked
+      + .worker-profile-slider {
       background: #16a34a;
     }
 
-    .worker-profile-switch input:checked + .worker-profile-slider::before {
+    .worker-profile-switch
+      input:checked
+      + .worker-profile-slider::before {
       transform: translateX(22px);
     }
 
-    .worker-profile-switch input:focus-visible + .worker-profile-slider {
-      outline: 3px solid rgba(59, 130, 246, 0.25);
+    .worker-profile-switch
+      input:focus-visible
+      + .worker-profile-slider {
+      outline: 3px solid
+        rgba(59, 130, 246, 0.25);
       outline-offset: 2px;
     }
 
@@ -285,6 +306,7 @@ content="Worker profile on Smart Work Network."
     }
 
     @media (max-width: 700px) {
+
       .worker-profile-grid {
         grid-template-columns: 1fr;
       }
@@ -305,313 +327,420 @@ content="Worker profile on Smart Work Network."
       .worker-profile-detail-label {
         min-width: 0;
       }
+
     }
-  </style></head><body>  <main class="worker-profile-page"><div
-  id="workerProfileMessage"
-  class="worker-profile-message"
-  role="alert"
-  aria-live="polite"
-></div>
 
-<section
-  id="workerEditSection"
-  class="worker-profile-card"
-  hidden
->
+  </style>
 
-  <h1>Edit Worker Profile</h1>
+</head>
 
-  <p>
-    Update your worker information below.
-  </p>
+<body>
 
-  <form
-    id="workerProfileForm"
-    novalidate
-  >
+  <main class="worker-profile-page">
 
-    <div class="worker-profile-grid">
+    <div
+      id="workerProfileMessage"
+      class="worker-profile-message"
+      role="alert"
+      aria-live="polite"
+    ></div>
 
-      <div class="worker-profile-field">
-        <label for="workerName">
-          Name
-        </label>
 
-        <input
-          id="workerName"
-          name="name"
-          type="text"
-          maxlength="100"
-          autocomplete="name"
-          required
-        >
-      </div>
+    <section
+      id="workerEditSection"
+      class="worker-profile-card"
+      hidden
+    >
 
-      <div class="worker-profile-field">
-        <label for="workerService">
-          Service
-        </label>
+      <h1>
+        Edit Worker Profile
+      </h1>
 
-        <input
-          id="workerService"
-          name="service"
-          type="text"
-          maxlength="100"
-          required
-        >
-      </div>
+      <p>
+        Update your worker information below.
+      </p>
 
-      <div class="worker-profile-field">
-        <label for="workerLocation">
-          Location
-        </label>
+      <form
+        id="workerProfileForm"
+        novalidate
+      >
 
-        <input
-          id="workerLocation"
-          name="location"
-          type="text"
-          maxlength="200"
-          required
-        >
-      </div>
+        <div class="worker-profile-grid">
 
-      <div class="worker-profile-field">
-        <label for="workerPhone">
-          Phone
-        </label>
 
-        <input
-          id="workerPhone"
-          name="phone"
-          type="tel"
-          maxlength="30"
-          autocomplete="tel"
-          required
-        >
-      </div>
+          <div class="worker-profile-field">
 
-      <div class="worker-profile-field">
-        <label for="workerExperience">
-          Experience
-        </label>
+            <label for="workerName">
+              Name
+            </label>
 
-        <input
-          id="workerExperience"
-          name="experience"
-          type="text"
-          maxlength="100"
-        >
-      </div>
-
-      <div class="worker-profile-field">
-        <label for="workerSkills">
-          Skills
-        </label>
-
-        <input
-          id="workerSkills"
-          name="skills"
-          type="text"
-          maxlength="1000"
-          placeholder="e.g. Plumbing, Wiring, Painting"
-          autocomplete="off"
-        >
-
-        <p class="worker-profile-help">
-          Enter multiple skills separated by commas.
-        </p>
-      </div>
-
-      <div class="worker-profile-field full-width">
-
-        <div class="worker-profile-availability">
-
-          <div class="worker-profile-availability-info">
-
-            <p class="worker-profile-availability-title">
-              Available for New Bookings
-            </p>
-
-            <p
-              id="workerAvailabilityText"
-              class="worker-profile-availability-text"
+            <input
+              id="workerName"
+              name="name"
+              type="text"
+              maxlength="100"
+              autocomplete="name"
+              required
             >
-              You can receive new booking requests when this is ON.
+
+          </div>
+
+
+          <div class="worker-profile-field">
+
+            <label for="workerService">
+              Service
+            </label>
+
+            <input
+              id="workerService"
+              name="service"
+              type="text"
+              maxlength="100"
+              required
+            >
+
+          </div>
+
+
+          <div class="worker-profile-field">
+
+            <label for="workerLocation">
+              Location
+            </label>
+
+            <input
+              id="workerLocation"
+              name="location"
+              type="text"
+              maxlength="200"
+              required
+            >
+
+          </div>
+
+
+          <div class="worker-profile-field">
+
+            <label for="workerPhone">
+              Phone
+            </label>
+
+            <input
+              id="workerPhone"
+              name="phone"
+              type="tel"
+              maxlength="30"
+              autocomplete="tel"
+              required
+            >
+
+          </div>
+
+
+          <div class="worker-profile-field">
+
+            <label for="workerExperience">
+              Experience
+            </label>
+
+            <input
+              id="workerExperience"
+              name="experience"
+              type="text"
+              maxlength="100"
+            >
+
+          </div>
+
+
+          <div class="worker-profile-field">
+
+            <label for="workerSkills">
+              Skills
+            </label>
+
+            <input
+              id="workerSkills"
+              name="skills"
+              type="text"
+              maxlength="1000"
+              placeholder="e.g. Plumbing, Wiring, Painting"
+              autocomplete="off"
+            >
+
+            <p class="worker-profile-help">
+              Enter multiple skills separated by commas.
             </p>
 
           </div>
 
-          <label
-            class="worker-profile-switch"
-            for="workerAvailability"
-            aria-label="Worker availability"
-          >
 
-            <input
-              id="workerAvailability"
-              name="isAvailable"
-              type="checkbox"
-            >
+          <div class="worker-profile-field full-width">
 
-            <span class="worker-profile-slider"></span>
+            <div class="worker-profile-availability">
 
-          </label>
+              <div class="worker-profile-availability-info">
+
+                <p class="worker-profile-availability-title">
+                  Available for New Bookings
+                </p>
+
+                <p
+                  id="workerAvailabilityText"
+                  class="worker-profile-availability-text"
+                >
+                  You can receive new booking requests when this is ON.
+                </p>
+
+              </div>
+
+
+              <label
+                class="worker-profile-switch"
+                for="workerAvailability"
+                aria-label="Worker availability"
+              >
+
+                <input
+                  id="workerAvailability"
+                  name="isAvailable"
+                  type="checkbox"
+                >
+
+                <span
+                  class="worker-profile-slider"
+                ></span>
+
+              </label>
+
+            </div>
+
+          </div>
+
+
+          <div class="worker-profile-field full-width">
+
+            <label for="workerBio">
+              Bio
+            </label>
+
+            <textarea
+              id="workerBio"
+              name="bio"
+              maxlength="2000"
+              placeholder="Tell customers about your experience and services."
+            ></textarea>
+
+          </div>
 
         </div>
 
-      </div>
 
-      <div class="worker-profile-field full-width">
-        <label for="workerBio">
-          Bio
-        </label>
+        <div class="worker-profile-actions">
 
-        <textarea
-          id="workerBio"
-          name="bio"
-          maxlength="2000"
-          placeholder="Tell customers about your experience and services."
-        ></textarea>
-      </div>
+          <button
+            id="saveWorkerProfileButton"
+            type="submit"
+          >
+            Save Profile
+          </button>
 
-    </div>
+          <a
+            href="worker-dashboard.html"
+          >
+            Back to Dashboard
+          </a>
 
-    <div class="worker-profile-actions">
+        </div>
 
-      <button
-        id="saveWorkerProfileButton"
-        type="submit"
+      </form>
+
+    </section>
+
+
+    <section
+      id="workerDetailSection"
+      class="worker-profile-card"
+    >
+
+      <div
+        id="workerDetail"
+        class="worker-profile-loading"
       >
-        Save Profile
-      </button>
+        Loading worker profile...
+      </div>
 
-      <a href="worker-dashboard.html">
-        Back to Dashboard
-      </a>
+    </section>
 
-    </div>
 
-  </form>
+    <section
+      id="workerNavigationSection"
+      class="worker-profile-card"
+      hidden
+    >
 
-</section>
+      <div
+        id="workerNavigationActions"
+        class="worker-profile-actions"
+      ></div>
 
-<section
-  id="workerDetailSection"
-  class="worker-profile-card"
->
+    </section>
 
-  <div
-    id="workerDetail"
-    class="worker-profile-loading"
-  >
-    Loading worker profile...
-  </div>
+  </main>
 
-</section>
 
-  </main>  <script src="js/auth.js"></script>  <script src="js/app.js"></script>  <script>
+  <script src="js/auth.js"></script>
+
+  <script src="js/app.js"></script>
+
+
+  <script>
+
     "use strict";
 
     (() => {
+
+
       const messageElement =
         document.getElementById(
           "workerProfileMessage"
         );
+
 
       const editSection =
         document.getElementById(
           "workerEditSection"
         );
 
+
       const detailElement =
         document.getElementById(
           "workerDetail"
         );
+
+
+      const navigationSection =
+        document.getElementById(
+          "workerNavigationSection"
+        );
+
+
+      const navigationActions =
+        document.getElementById(
+          "workerNavigationActions"
+        );
+
 
       const form =
         document.getElementById(
           "workerProfileForm"
         );
 
+
       const saveButton =
         document.getElementById(
           "saveWorkerProfileButton"
         );
+
 
       const nameInput =
         document.getElementById(
           "workerName"
         );
 
+
       const serviceInput =
         document.getElementById(
           "workerService"
         );
+
 
       const locationInput =
         document.getElementById(
           "workerLocation"
         );
 
+
       const phoneInput =
         document.getElementById(
           "workerPhone"
         );
+
 
       const experienceInput =
         document.getElementById(
           "workerExperience"
         );
 
+
       const skillsInput =
         document.getElementById(
           "workerSkills"
         );
+
 
       const bioInput =
         document.getElementById(
           "workerBio"
         );
 
+
       const availabilityInput =
         document.getElementById(
           "workerAvailability"
         );
+
 
       const availabilityText =
         document.getElementById(
           "workerAvailabilityText"
         );
 
+
       const params =
         new URLSearchParams(
           window.location.search
         );
 
+
       const editMode =
         params.get("edit") === "1" ||
         params.get("edit") === "true";
 
+
       const workerId =
-        params.get("id");
+        String(
+          params.get("id") || ""
+        ).trim();
+
 
       const jobId =
-        params.get("jobId");
+        String(
+          params.get("jobId") || ""
+        ).trim();
+
 
       let currentWorker = null;
 
+
       function escapeValue(value) {
+
         if (
           typeof window.escapeHtml ===
           "function"
         ) {
+
           return window.escapeHtml(
             value ?? ""
           );
+
         }
 
         const div =
-          document.createElement("div");
+          document.createElement(
+            "div"
+          );
 
         div.textContent =
           String(value ?? "");
@@ -619,10 +748,12 @@ content="Worker profile on Smart Work Network."
         return div.innerHTML;
       }
 
+
       function showMessage(
         message,
         type = "error"
       ) {
+
         if (!messageElement) {
           return;
         }
@@ -634,30 +765,37 @@ content="Worker profile on Smart Work Network."
           `worker-profile-message show ${type}`;
       }
 
+
       function clearMessage() {
+
         if (!messageElement) {
           return;
         }
 
-        messageElement.textContent = "";
+        messageElement.textContent =
+          "";
 
         messageElement.className =
           "worker-profile-message";
       }
 
+
       async function apiRequest(
         path,
         options = {}
       ) {
+
         if (
           typeof window.SWN ===
             "undefined" ||
           typeof window.SWN.request !==
             "function"
         ) {
+
           throw new Error(
             "API client is not available."
           );
+
         }
 
         return window.SWN.request(
@@ -666,7 +804,11 @@ content="Worker profile on Smart Work Network."
         );
       }
 
-      function getResponseData(result) {
+
+      function getResponseData(
+        result
+      ) {
+
         if (
           result &&
           typeof result === "object" &&
@@ -674,24 +816,32 @@ content="Worker profile on Smart Work Network."
           typeof result.data ===
             "object"
         ) {
+
           return result.data;
+
         }
 
         return result || {};
       }
 
+
       function getWorkerFromResponse(
         result
       ) {
+
         const data =
           getResponseData(result);
+
 
         if (
           data &&
           data._id
         ) {
+
           return data;
+
         }
+
 
         return (
           data.worker ||
@@ -703,38 +853,53 @@ content="Worker profile on Smart Work Network."
         );
       }
 
-      function normalizeSkills(value) {
+
+      function normalizeSkills(
+        value
+      ) {
+
         if (
           Array.isArray(value)
         ) {
+
           return value
-            .map((item) =>
-              String(item ?? "")
-                .trim()
-                .slice(0, 100)
+            .map(
+              (item) =>
+                String(item ?? "")
+                  .trim()
+                  .slice(0, 100)
             )
             .filter(Boolean);
+
         }
+
 
         return String(value ?? "")
           .split(",")
-          .map((item) =>
-            item.trim().slice(0, 100)
+          .map(
+            (item) =>
+              item
+                .trim()
+                .slice(0, 100)
           )
           .filter(Boolean);
       }
 
+
       function skillsToInput(
         skills
       ) {
+
         return normalizeSkills(
           skills
         ).join(", ");
       }
 
+
       function updateAvailabilityText(
         available
       ) {
+
         if (!availabilityText) {
           return;
         }
@@ -745,69 +910,107 @@ content="Worker profile on Smart Work Network."
             : "You are unavailable and will not receive new booking requests.";
       }
 
-      function fillForm(worker) {
+
+      function fillForm(
+        worker
+      ) {
+
         if (!worker) {
           return;
         }
 
+
         if (nameInput) {
+
           nameInput.value =
             worker.name || "";
+
         }
+
 
         if (serviceInput) {
+
           serviceInput.value =
             worker.service || "";
+
         }
+
 
         if (locationInput) {
+
           locationInput.value =
             worker.location || "";
+
         }
+
 
         if (phoneInput) {
+
           phoneInput.value =
             worker.phone || "";
+
         }
+
 
         if (experienceInput) {
+
           experienceInput.value =
             worker.experience || "";
+
         }
 
+
         if (skillsInput) {
+
           skillsInput.value =
             skillsToInput(
               worker.skills
             );
+
         }
+
 
         if (bioInput) {
+
           bioInput.value =
             worker.bio || "";
+
         }
 
+
         if (availabilityInput) {
+
           availabilityInput.checked =
             worker.isAvailable !== false;
 
           updateAvailabilityText(
             availabilityInput.checked
           );
+
         }
+
       }
+
 
       function renderSkills(
         skills
       ) {
+
         const cleanSkills =
-          normalizeSkills(skills);
+          normalizeSkills(
+            skills
+          );
+
 
         if (
-          cleanSkills.length === 0
+          cleanSkills.length ===
+          0
         ) {
+
           return "No skills added.";
+
         }
+
 
         return `
           <div class="worker-profile-skills">
@@ -824,12 +1027,18 @@ content="Worker profile on Smart Work Network."
         `;
       }
 
-      function renderWorker(worker) {
+
+      function renderWorker(
+        worker
+      ) {
+
         if (!detailElement) {
           return;
         }
 
+
         if (!worker) {
+
           detailElement.innerHTML = `
             <div class="worker-profile-empty">
               Worker profile not found.
@@ -839,150 +1048,293 @@ content="Worker profile on Smart Work Network."
           return;
         }
 
+
         const verified =
           worker.verified === true;
+
 
         const available =
           worker.isAvailable !== false;
 
+
         detailElement.innerHTML = `
           <h2>
             ${escapeValue(
-              worker.name || "Worker Profile"
+              worker.name ||
+              "Worker Profile"
             )}
           </h2>
 
+
           <div class="worker-profile-detail-row">
+
             <div class="worker-profile-detail-label">
               Verification
             </div>
 
             <div class="worker-profile-detail-value">
-              <span class="worker-profile-badge ${verified ? "verified" : ""}">
-                ${verified ? "Verified Worker" : "Not Verified"}
+
+              <span
+                class="worker-profile-badge ${verified ? "verified" : ""}"
+              >
+                ${
+                  verified
+                    ? "Verified Worker"
+                    : "Not Verified"
+                }
               </span>
+
             </div>
+
           </div>
 
+
           <div class="worker-profile-detail-row">
+
             <div class="worker-profile-detail-label">
               Availability
             </div>
 
             <div class="worker-profile-detail-value">
-              <span class="worker-profile-badge ${available ? "available" : "unavailable"}">
-                ${available ? "Available for New Bookings" : "Currently Unavailable"}
+
+              <span
+                class="worker-profile-badge ${available ? "available" : "unavailable"}"
+              >
+                ${
+                  available
+                    ? "Available for New Bookings"
+                    : "Currently Unavailable"
+                }
               </span>
+
             </div>
+
           </div>
 
+
           <div class="worker-profile-detail-row">
+
             <div class="worker-profile-detail-label">
               Service
             </div>
 
             <div class="worker-profile-detail-value">
+
               ${escapeValue(
                 worker.service || "—"
               )}
+
             </div>
+
           </div>
 
+
           <div class="worker-profile-detail-row">
+
             <div class="worker-profile-detail-label">
               Location
             </div>
 
             <div class="worker-profile-detail-value">
+
               ${escapeValue(
                 worker.location || "—"
               )}
+
             </div>
+
           </div>
 
+
           <div class="worker-profile-detail-row">
+
             <div class="worker-profile-detail-label">
               Phone
             </div>
 
             <div class="worker-profile-detail-value">
+
               ${escapeValue(
                 worker.phone || "—"
               )}
+
             </div>
+
           </div>
 
+
           <div class="worker-profile-detail-row">
+
             <div class="worker-profile-detail-label">
               Experience
             </div>
 
             <div class="worker-profile-detail-value">
+
               ${escapeValue(
                 worker.experience || "—"
               )}
+
             </div>
+
           </div>
 
+
           <div class="worker-profile-detail-row">
+
             <div class="worker-profile-detail-label">
               Skills
             </div>
 
             <div class="worker-profile-detail-value">
+
               ${renderSkills(
                 worker.skills
               )}
+
             </div>
+
           </div>
 
+
           <div class="worker-profile-detail-row">
+
             <div class="worker-profile-detail-label">
               Bio
             </div>
 
             <div class="worker-profile-detail-value">
+
               ${escapeValue(
                 worker.bio || "—"
               )}
+
             </div>
+
           </div>
         `;
+
       }
 
+
+      function makeWorkersUrl() {
+
+        if (jobId) {
+
+          return `workers.html?jobId=${encodeURIComponent(
+            jobId
+          )}`;
+
+        }
+
+        return "workers.html";
+      }
+
+
+      function renderNavigation() {
+
+        if (
+          !navigationSection ||
+          !navigationActions
+        ) {
+          return;
+        }
+
+
+        if (editMode) {
+
+          navigationActions.innerHTML = `
+            <a
+              class="btn"
+              href="worker-dashboard.html"
+            >
+              Back to Dashboard
+            </a>
+          `;
+
+          navigationSection.hidden =
+            false;
+
+          return;
+        }
+
+
+        navigationActions.innerHTML = `
+          <a
+            class="btn"
+            href="${escapeValue(
+              makeWorkersUrl()
+            )}"
+          >
+            Back to Workers
+          </a>
+        `;
+
+
+        navigationSection.hidden =
+          false;
+      }
+
+
       async function loadOwnProfile() {
+
         const result =
           await apiRequest(
             "/workers/me/profile"
           );
+
 
         const worker =
           getWorkerFromResponse(
             result
           );
 
+
         if (!worker) {
+
           throw new Error(
             "Worker profile data was not returned."
           );
+
         }
 
-        currentWorker = worker;
 
-        fillForm(worker);
-        renderWorker(worker);
+        currentWorker =
+          worker;
+
+
+        fillForm(
+          worker
+        );
+
+
+        renderWorker(
+          worker
+        );
+
+
+        renderNavigation();
+
 
         if (editSection) {
-          editSection.hidden = false;
+
+          editSection.hidden =
+            false;
+
         }
       }
 
+
       async function loadPublicProfile() {
+
         if (!workerId) {
+
           throw new Error(
             "Worker ID is missing."
           );
+
         }
+
 
         const result =
           await apiRequest(
@@ -991,28 +1343,46 @@ content="Worker profile on Smart Work Network."
             )}`
           );
 
+
         const worker =
           getWorkerFromResponse(
             result
           );
 
+
         if (!worker) {
+
           throw new Error(
             "Worker profile data was not returned."
           );
+
         }
 
-        currentWorker = worker;
 
-        renderWorker(worker);
+        currentWorker =
+          worker;
+
+
+        renderWorker(
+          worker
+        );
+
+
+        renderNavigation();
       }
 
-      async function saveProfile(event) {
+
+      async function saveProfile(
+        event
+      ) {
+
         event.preventDefault();
 
         clearMessage();
 
+
         if (!currentWorker?._id) {
+
           showMessage(
             "Worker profile ID is missing."
           );
@@ -1020,35 +1390,52 @@ content="Worker profile on Smart Work Network."
           return;
         }
 
+
         const name =
-          nameInput?.value.trim() || "";
+          nameInput?.value.trim() ||
+          "";
+
 
         const service =
-          serviceInput?.value.trim() || "";
+          serviceInput?.value.trim() ||
+          "";
+
 
         const location =
-          locationInput?.value.trim() || "";
+          locationInput?.value.trim() ||
+          "";
+
 
         const phone =
-          phoneInput?.value.trim() || "";
+          phoneInput?.value.trim() ||
+          "";
+
 
         const experience =
-          experienceInput?.value.trim() || "";
+          experienceInput?.value.trim() ||
+          "";
+
 
         const skills =
           normalizeSkills(
             skillsInput?.value || ""
           );
 
+
         const bio =
-          bioInput?.value.trim() || "";
+          bioInput?.value.trim() ||
+          "";
+
 
         const isAvailable =
-          availabilityInput?.checked === true;
+          availabilityInput?.checked ===
+          true;
+
 
         if (
           name.length < 2
         ) {
+
           showMessage(
             "Name must be at least 2 characters."
           );
@@ -1058,9 +1445,11 @@ content="Worker profile on Smart Work Network."
           return;
         }
 
+
         if (
           service.length < 2
         ) {
+
           showMessage(
             "Service must be at least 2 characters."
           );
@@ -1070,7 +1459,9 @@ content="Worker profile on Smart Work Network."
           return;
         }
 
+
         if (!location) {
+
           showMessage(
             "Location is required."
           );
@@ -1080,7 +1471,9 @@ content="Worker profile on Smart Work Network."
           return;
         }
 
+
         if (!phone) {
+
           showMessage(
             "Phone is required."
           );
@@ -1090,7 +1483,9 @@ content="Worker profile on Smart Work Network."
           return;
         }
 
+
         const payload = {
+
           name,
           service,
           location,
@@ -1099,15 +1494,23 @@ content="Worker profile on Smart Work Network."
           skills,
           bio,
           isAvailable
+
         };
 
+
         if (saveButton) {
-          saveButton.disabled = true;
+
+          saveButton.disabled =
+            true;
+
           saveButton.textContent =
             "Saving...";
+
         }
 
+
         try {
+
           const result =
             await apiRequest(
               `/workers/${encodeURIComponent(
@@ -1119,10 +1522,12 @@ content="Worker profile on Smart Work Network."
               }
             );
 
+
           const updatedWorker =
             getWorkerFromResponse(
               result
             );
+
 
           currentWorker =
             updatedWorker ||
@@ -1131,13 +1536,19 @@ content="Worker profile on Smart Work Network."
               ...payload
             };
 
+
           fillForm(
             currentWorker
           );
 
+
           renderWorker(
             currentWorker
           );
+
+
+          renderNavigation();
+
 
           showMessage(
             "Worker profile updated successfully.",
@@ -1145,10 +1556,12 @@ content="Worker profile on Smart Work Network."
           );
 
         } catch (error) {
+
           console.error(
             "WORKER PROFILE UPDATE ERROR:",
             error
           );
+
 
           showMessage(
             error?.message ||
@@ -1156,61 +1569,93 @@ content="Worker profile on Smart Work Network."
           );
 
         } finally {
+
           if (saveButton) {
-            saveButton.disabled = false;
+
+            saveButton.disabled =
+              false;
+
             saveButton.textContent =
               "Save Profile";
+
           }
+
         }
+
       }
 
+
       function bindEvents() {
+
         if (form) {
+
           form.addEventListener(
             "submit",
             saveProfile
           );
+
         }
+
 
         if (
           availabilityInput
         ) {
+
           availabilityInput.addEventListener(
             "change",
             () => {
+
               updateAvailabilityText(
                 availabilityInput.checked
               );
+
             }
           );
+
         }
+
       }
 
+
       async function initialize() {
+
         try {
+
           clearMessage();
 
           bindEvents();
 
+
           if (editMode) {
+
             await loadOwnProfile();
+
             return;
+
           }
 
+
           if (workerId) {
+
             await loadPublicProfile();
+
             return;
+
           }
+
 
           await loadOwnProfile();
 
         } catch (error) {
+
           console.error(
             "WORKER PROFILE LOAD ERROR:",
             error
           );
 
+
           if (detailElement) {
+
             detailElement.innerHTML = `
               <div class="worker-profile-error">
                 ${escapeValue(
@@ -1219,20 +1664,48 @@ content="Worker profile on Smart Work Network."
                 )}
               </div>
             `;
+
           }
+
 
           if (
             editMode &&
             editSection
           ) {
-            editSection.hidden = true;
+
+            editSection.hidden =
+              true;
+
           }
+
         }
+
       }
 
-      window.addEventListener(
-        "DOMContentLoaded",
-        initialize
-      );
+
+      if (
+        document.readyState ===
+        "loading"
+      ) {
+
+        window.addEventListener(
+          "DOMContentLoaded",
+          initialize,
+          {
+            once: true
+          }
+        );
+
+      } else {
+
+        initialize();
+
+      }
+
     })();
-  </script></body></html>
+
+  </script>
+
+</body>
+
+</html>
