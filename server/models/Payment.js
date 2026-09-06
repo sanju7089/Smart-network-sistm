@@ -203,26 +203,32 @@ paymentSchema.index(
 
 /*
 ========================================
-AUTOMATIC PAYMENT NOTIFICATIONS
+NOTIFICATION TRIGGER STATE
 ========================================
+*/
 
-paid     -> payment success
-failed   -> payment failure
-refunded -> refund notification
+paymentSchema.pre(
+  "save",
+  function (next) {
+    this.$notificationStatusChanged =
+      this.isModified("status");
 
-Notification errors never break the
-payment operation.
+    next();
+  }
+);
+
+/*
+========================================
+AUTOMATIC PAYMENT NOTIFICATIONS
 ========================================
 */
 
 paymentSchema.post(
   "save",
-  async function (
-    payment
-  ) {
+  async function (payment) {
     try {
       if (
-        payment?.isModified("status")
+        payment.$notificationStatusChanged
       ) {
         await notifyPaymentEvent(
           payment
