@@ -1,5 +1,9 @@
 import mongoose from "mongoose";
 
+import {
+  notifyPaymentEvent
+} from "../services/notificationService.js";
+
 export const PAYMENT_STATUSES = [
   "created",
   "pending",
@@ -33,9 +37,6 @@ const paymentSchema =
         required: true
       },
 
-      /*
-       * Razorpay amount is stored in paise.
-       */
       amount: {
         type: Number,
         required: true,
@@ -100,9 +101,6 @@ const paymentSchema =
         maxlength: 2000
       },
 
-      /*
-       * Webhook idempotency history.
-       */
       processedWebhookEvents: {
         type: [String],
         default: [],
@@ -147,35 +145,22 @@ const paymentSchema =
     }
   );
 
-/*
- * User payment history.
- */
 paymentSchema.index({
   userId: 1,
   createdAt: -1
 });
 
-/*
- * Booking payment history/status.
- */
 paymentSchema.index({
   bookingId: 1,
   status: 1,
   createdAt: -1
 });
 
-/*
- * Admin payment/status queries.
- */
 paymentSchema.index({
   status: 1,
   createdAt: -1
 });
 
-/*
- * Gateway identifiers must remain unique
- * whenever they contain a value.
- */
 paymentSchema.index(
   {
     transactionId: 1
@@ -196,12 +181,6 @@ paymentSchema.index(
   }
 );
 
-/*
- * Prevent multiple simultaneous active
- * Razorpay payments for the same booking.
- *
- * Historical terminal payments are allowed.
- */
 paymentSchema.index(
   {
     bookingId: 1,
@@ -218,6 +197,44 @@ paymentSchema.index(
           "processing"
         ]
       }
+    }
+  }
+);
+
+/*
+========================================
+AUTOMATIC PAYMENT NOTIFICATIONS
+========================================
+
+paid     -> payment success
+failed   -> payment failure
+refunded -> refund notification
+
+Notification errors never break the
+payment operation.
+========================================
+*/
+
+paymentSchema.post(
+  "save",
+  async function (
+    payment
+  ) {
+    try {
+      if (
+        payment?.isModified("status")
+      ) {
+        await notifyPaymentEvent(
+          payment
+        );
+      }
+    } catch (error) {
+      console.error(
+        "PAYMENT POST-SAVE NOTIFICATION ERROR:",
+        error?.stack ||
+          error?.message ||
+          error
+      );
     }
   }
 );
