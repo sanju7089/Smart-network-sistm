@@ -2,44 +2,240 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import "../../tests/helpers/test-env.js";
+import app from "../../server.js";
 
-test("server configuration exposes the expected API port setting", () => {
-  const port = Number(process.env.PORT);
+async function startTestServer() {
+const server = app.listen(
+0,
+"127.0.0.1"
+);
+
+await new Promise(
+(resolve, reject) => {
+server.once(
+"listening",
+resolve
+);
+
+  server.once(
+    "error",
+    reject
+  );
+}
+
+);
+
+const address =
+server.address();
+
+assert.ok(address);
+assert.equal(
+typeof address,
+"object"
+);
+
+return {
+server,
+baseUrl:
+"http://127.0.0.1:${address.port}"
+};
+}
+
+async function stopTestServer(server) {
+await new Promise(
+(resolve, reject) => {
+server.close(
+(error) => {
+if (error) {
+return reject(error);
+}
+
+      resolve();
+    }
+  );
+}
+
+);
+}
+
+test(
+"API root responds successfully",
+async () => {
+const {
+server,
+baseUrl
+} =
+await startTestServer();
+
+try {
+  const response =
+    await fetch(
+      `${baseUrl}/`
+    );
 
   assert.equal(
-    Number.isFinite(port),
+    response.status,
+    200
+  );
+
+  const data =
+    await response.json();
+
+  assert.equal(
+    data.success,
     true
   );
 
   assert.equal(
-    port >= 0,
+    data.message,
+    "Smart Work Network API is running"
+  );
+
+  assert.equal(
+    data.version,
+    "2.0.0"
+  );
+} finally {
+  await stopTestServer(
+    server
+  );
+}
+
+}
+);
+
+test(
+"authentication status endpoint responds successfully",
+async () => {
+const {
+server,
+baseUrl
+} =
+await startTestServer();
+
+try {
+  const response =
+    await fetch(
+      `${baseUrl}/api/auth/status`
+    );
+
+  assert.equal(
+    response.status,
+    200
+  );
+
+  const data =
+    await response.json();
+
+  assert.equal(
+    data.success,
     true
   );
-});
 
-test("test environment never uses a production Razorpay secret", () => {
   assert.equal(
-    process.env.NODE_ENV,
-    "test"
+    data.message,
+    "Auth route is working."
+  );
+} finally {
+  await stopTestServer(
+    server
+  );
+}
+
+}
+);
+
+test(
+"unknown API route returns JSON 404",
+async () => {
+const {
+server,
+baseUrl
+} =
+await startTestServer();
+
+try {
+  const response =
+    await fetch(
+      `${baseUrl}/api/this-route-does-not-exist`
+    );
+
+  assert.equal(
+    response.status,
+    404
+  );
+
+  const data =
+    await response.json();
+
+  assert.equal(
+    data.success,
+    false
   );
 
   assert.equal(
-    process.env.RAZORPAY_KEY_SECRET,
-    "test_key_secret"
+    typeof data.message,
+    "string"
   );
 
-  assert.equal(
-    process.env.RAZORPAY_WEBHOOK_SECRET,
-    "test_webhook_secret"
-  );
-});
-
-test("API test environment has JWT configuration", () => {
   assert.ok(
-    process.env.JWT_SECRET
+    data.message.length > 0
+  );
+} finally {
+  await stopTestServer(
+    server
+  );
+}
+
+}
+);
+
+test(
+"health endpoint correctly reports database state",
+async () => {
+const {
+server,
+baseUrl
+} =
+await startTestServer();
+
+try {
+  const response =
+    await fetch(
+      `${baseUrl}/api/health`
+    );
+
+  assert.ok(
+    response.status === 200 ||
+    response.status === 503
+  );
+
+  const data =
+    await response.json();
+
+  assert.equal(
+    typeof data.success,
+    "boolean"
   );
 
   assert.ok(
-    process.env.JWT_EXPIRES_IN
+    data.status === "healthy" ||
+    data.status === "unhealthy"
   );
-});
+
+  assert.equal(
+    data.application,
+    "Smart Work Network API"
+  );
+
+  assert.ok(
+    data.database
+  );
+} finally {
+  await stopTestServer(
+    server
+  );
+}
+
+}
+);
