@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <title>
+    Support Tickets | Smart Work Network
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="css/main.css"
+  >
+</head>
+
+<body>
+
+<header class="header">
+
+  <div class="container nav">
+
+    <a
+      class="brand"
+      href="admin.html"
+    >
+      Smart Work Network Admin
+    </a>
+
+    <nav class="navlinks">
+
+      <a href="admin.html">
+        Dashboard
+      </a>
+
+      <a href="admin-users.html">
+        Users
+      </a>
+
+      <a href="admin-jobs.html">
+        Jobs
+      </a>
+
+      <a href="admin-verification.html">
+        Workers
+      </a>
+
+      <a href="admin-payments.html">
+        Payments
+      </a>
+
+      <a
+        href="admin-support.html"
+        aria-current="page"
+      >
+        Support
+      </a>
+
+      <span data-auth></span>
+
+    </nav>
+
+  </div>
+
+</header>
+
+<main>
+
+<section class="section">
+
+  <div class="container">
+
+    <div class="card">
+
+      <h1>
+        Support Tickets
+      </h1>
+
+      <p class="lead">
+        Manage customer and worker support tickets.
+      </p>
+
+      <div
+        id="supportAdminMessage"
+        class="notice"
+      >
+        Loading support tickets...
+      </div>
+
+    </div>
+
+    <br>
+
+    <div class="card">
+
+      <div
+        style="
+          display:flex;
+          gap:10px;
+          flex-wrap:wrap;
+          align-items:center;
+        "
+      >
+
+        <label for="ticketStatusFilter">
+          Status
+        </label>
+
+        <select id="ticketStatusFilter">
+
+          <option value="">
+            All
+          </option>
+
+          <option value="open">
+            Open
+          </option>
+
+          <option value="in_progress">
+            In Progress
+          </option>
+
+          <option value="resolved">
+            Resolved
+          </option>
+
+          <option value="closed">
+            Closed
+          </option>
+
+        </select>
+
+        <button
+          type="button"
+          id="ticketRefresh"
+        >
+          Refresh
+        </button>
+
+      </div>
+
+    </div>
+
+    <br>
+
+    <div id="supportTickets">
+
+      <div class="notice">
+        Loading...
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+</main>
+
+<footer class="footer">
+
+  <div class="container">
+
+    <b>
+      Smart Work Network
+    </b>
+
+    <p>
+      Admin Support
+    </p>
+
+  </div>
+
+</footer>
+
+<script src="js/app.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+"use strict";
+
+(function () {
+
+  const STATUSES = [
+    "open",
+    "in_progress",
+    "resolved",
+    "closed"
+  ];
+
+  function escapeHtml(value) {
+
+    const div =
+      document.createElement(
+        "div"
+      );
+
+    div.textContent =
+      String(value ?? "");
+
+    return div.innerHTML;
+  }
+
+  function formatDate(value) {
+
+    if (!value) {
+      return "—";
+    }
+
+    const date =
+      new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "—";
+    }
+
+    return date.toLocaleString(
+      "en-IN"
+    );
+  }
+
+  function statusLabel(value) {
+
+    return escapeHtml(
+      String(value || "—")
+        .split("_")
+        .join(" ")
+    );
+  }
+
+  function showMessage(
+    message,
+    error = false
+  ) {
+
+    const element =
+      document.querySelector(
+        "#supportAdminMessage"
+      );
+
+    if (!element) {
+      return;
+    }
+
+    element.textContent =
+      String(message || "");
+
+    if (error) {
+      console.error(message);
+    }
+  }
+
+  function renderTickets(
+    tickets
+  ) {
+
+    const container =
+      document.querySelector(
+        "#supportTickets"
+      );
+
+    if (!container) {
+      return;
+    }
+
+    if (
+      !Array.isArray(tickets) ||
+      tickets.length === 0
+    ) {
+
+      container.innerHTML = `
+        <div class="card">
+          <p>
+            No support tickets found.
+          </p>
+        </div>
+      `;
+
+      return;
+    }
+
+    container.innerHTML =
+      tickets
+        .map(function (ticket) {
+
+          const user =
+            ticket.user || {};
+
+          const history =
+            Array.isArray(
+              ticket.replyHistory
+            )
+              ? ticket.replyHistory
+              : [];
+
+          const historyHtml =
+            history.length
+              ? history
+                  .map(
+                    function (reply) {
+
+                      const repliedBy =
+                        reply.repliedBy ||
+                        {};
+
+                      return `
+                        <div
+                          class="notice"
+                          style="margin-top:10px"
+                        >
+
+                          <strong>
+                            Support reply
+                          </strong>
+
+                          <div>
+                            ${escapeHtml(
+                              reply.message
+                            )}
+                          </div>
+
+                          <small>
+                            ${escapeHtml(
+                              repliedBy.name ||
+                              repliedBy.email ||
+                              "Admin"
+                            )}
+                            •
+                            ${escapeHtml(
+                              formatDate(
+                                reply.repliedAt
+                              )
+                            )}
+                          </small>
+
+                        </div>
+                      `;
+                    }
+                  )
+                  .join("")
+              : `
+                <p class="muted">
+                  No admin replies yet.
+                </p>
+              `;
+
+          return `
+            <article
+              class="card"
+              style="margin-bottom:20px"
+            >
+
+              <div
+                style="
+                  display:flex;
+                  justify-content:space-between;
+                  gap:15px;
+                  flex-wrap:wrap;
+                "
+              >
+
+                <div>
+
+                  <h2>
+                    ${escapeHtml(
+                      ticket.subject
+                    )}
+                  </h2>
+
+                  <p class="muted">
+
+                    User:
+                    ${escapeHtml(
+                      user.name ||
+                      "Unknown"
+                    )}
+
+                    •
+
+                    ${escapeHtml(
+                      user.email ||
+                      "—"
+                    )}
+
+                    •
+
+                    ${escapeHtml(
+                      user.role ||
+                      "—"
+                    )}
+
+                  </p>
+
+                </div>
+
+                <div>
+
+                  <span class="tag">
+                    ${statusLabel(
+                      ticket.status
+                    )}
+                  </span>
+
+                </div>
+
+              </div>
+
+              <hr>
+
+              <h3>
+                Customer / Worker Message
+              </h3>
+
+              <p>
+                ${escapeHtml(
+                  ticket.message
+                )}
+              </p>
+
+              <p class="muted">
+
+                Created:
+                ${escapeHtml(
+                  formatDate(
+                    ticket.createdAt
+                  )
+                )}
+
+              </p>
+
+              <h3>
+                Complete Reply History
+              </h3>
+
+              ${historyHtml}
+
+              <hr>
+
+              <form
+                class="ticketUpdateForm"
+                data-ticket-id="${escapeHtml(
+                  ticket.id
+                )}"
+              >
+
+                <label>
+                  Status
+                </label>
+
+                <select
+                  name="status"
+                >
+
+                  ${STATUSES
+                    .map(
+                      function (status) {
+
+                        return `
+                          <option
+                            value="${escapeHtml(
+                              status
+                            )}"
+                            ${
+                              ticket.status ===
+                              status
+                                ? "selected"
+                                : ""
+                            }
+                          >
+                            ${statusLabel(
+                              status
+                            )}
+                          </option>
+                        `;
+                      }
+                    )
+                    .join("")}
+
+                </select>
+
+                <br>
+                <br>
+
+                <label>
+                  Reply
+                </label>
+
+                <textarea
+                  name="adminReply"
+                  rows="5"
+                  maxlength="5000"
+                  placeholder="Write a reply to the customer or worker..."
+                ></textarea>
+
+                <br>
+                <br>
+
+                <button
+                  type="submit"
+                >
+                  Update Ticket
+                </button>
+
+              </form>
+
+            </article>
+          `;
+        })
+        .join("");
+  }
+
+  async function loadTickets() {
+
+    try {
+
+      const filter =
+        document.querySelector(
+          "#ticketStatusFilter"
+        )?.value || "";
+
+      const endpoint =
+        filter
+          ? "/support/admin/all?status=" +
+            encodeURIComponent(
+              filter
+            )
+          : "/support/admin/all";
+
+      const result =
+        await window.SWN.request(
+          endpoint
+        );
+
+      if (
+        !result ||
+        result.success !== true
+      ) {
+        throw new Error(
+          result?.message ||
+          "Unable to load support tickets."
+        );
+      }
+
+      renderTickets(
+        Array.isArray(
+          result.data
+        )
+          ? result.data
+          : []
+      );
+
+      showMessage(
+        "Support tickets loaded successfully."
+      );
+
+    } catch (error) {
+
+      showMessage(
+        error?.message ||
+        "Unable to load support tickets.",
+        true
+      );
+
+      const container =
+        document.querySelector(
+          "#supportTickets"
+        );
+
+      if (container) {
+        container.innerHTML = `
+          <div class="card">
+            <p>
+              ${escapeHtml(
+                error?.message ||
+                "Unable to load tickets."
+              )}
+            </p>
+          </div>
+        `;
+      }
+    }
+  }
+
+  async function updateTicket(
+    form
+  ) {
+
+    const id =
+      form.dataset.ticketId;
+
+    const status =
+      form.querySelector(
+        "[name='status']"
+      )?.value || "";
+
+    const adminReply =
+      form.querySelector(
+        "[name='adminReply']"
+      )?.value.trim() || "";
+
+    if (
+      !STATUSES.includes(
+        status
+      )
+    ) {
+      throw new Error(
+        "Invalid ticket status."
+      );
+    }
+
+    const body = {
+      status
+    };
+
+    /*
+     * Empty reply is not sent.
+     * This allows status-only updates.
+     */
+    if (adminReply) {
+      body.adminReply =
+        adminReply;
+    }
+
+    const result =
+      await window.SWN.request(
+        "/support/admin/" +
+          encodeURIComponent(id),
+        {
+          method: "PATCH",
+          body:
+            JSON.stringify(body)
+        }
+      );
+
+    if (
+      !result ||
+      result.success !== true
+    ) {
+      throw new Error(
+        result?.message ||
+        "Unable to update ticket."
+      );
+    }
+
+    await loadTickets();
+  }
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    async function () {
+
+      try {
+
+        if (
+          typeof window.protect ===
+          "function"
+        ) {
+
+          const allowed =
+            await window.protect(
+              "admin"
+            );
+
+          if (!allowed) {
+            return;
+          }
+        }
+
+        document.addEventListener(
+          "submit",
+          async function (event) {
+
+            const form =
+              event.target.closest(
+                ".ticketUpdateForm"
+              );
+
+            if (!form) {
+              return;
+            }
+
+            event.preventDefault();
+
+            const button =
+              form.querySelector(
+                "button[type='submit']"
+              );
+
+            try {
+
+              if (button) {
+                button.disabled =
+                  true;
+
+                button.textContent =
+                  "Updating...";
+              }
+
+              showMessage(
+                "Updating ticket..."
+              );
+
+              await updateTicket(
+                form
+              );
+
+              showMessage(
+                "Ticket updated successfully."
+              );
+
+            } catch (error) {
+
+              showMessage(
+                error?.message ||
+                "Unable to update ticket.",
+                true
+              );
+
+            } finally {
+
+              if (button) {
+                button.disabled =
+                  false;
+
+                button.textContent =
+                  "Update Ticket";
+              }
+            }
+          }
+        );
+
+        document
+          .querySelector(
+            "#ticketStatusFilter"
+          )
+          ?.addEventListener(
+            "change",
+            loadTickets
+          );
+
+        document
+          .querySelector(
+            "#ticketRefresh"
+          )
+          ?.addEventListener(
+            "click",
+            loadTickets
+          );
+
+        await loadTickets();
+
+      } catch (error) {
+
+        showMessage(
+          error?.message ||
+          "Unable to initialize support admin.",
+          true
+        );
+      }
+    }
+  );
+
+})();
+</script>
+
+</body>
+  </html>
