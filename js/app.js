@@ -1,7 +1,6 @@
 "use strict";
 
 /*
-
 SMART WORK NETWORK
 CENTRAL API CONFIGURATION
 
@@ -9,7 +8,7 @@ Authentication:
 
 - JWT is stored only in HttpOnly cookie.
 - JavaScript cannot read the JWT.
-- Requests use credentials: "include".
+- Requests use credentials: include.
   */
 
 const isLocalhost =
@@ -30,8 +29,7 @@ return SWN_CONFIG.API_URL;
 },
 
 api(path = "") {
-const base =
-SWN_CONFIG.API_URL.replace(//$/, "");
+const base = SWN_CONFIG.API_URL;
 
 const cleanPath =
   String(path || "").trim();
@@ -40,25 +38,24 @@ if (!cleanPath) {
   return base;
 }
 
-return `${base}${
-  cleanPath.startsWith("/")
-    ? cleanPath
-    : `/${cleanPath}`
-}`;
+if (cleanPath.charAt(0) === "/") {
+  return base + cleanPath;
+}
+
+return base + "/" + cleanPath;
 
 },
 
-get(
-key,
-defaultValue = null
-) {
+get(key, defaultValue = null) {
 try {
 const value =
 localStorage.getItem(key);
 
-  return value
-    ? JSON.parse(value)
-    : defaultValue;
+  if (!value) {
+    return defaultValue;
+  }
+
+  return JSON.parse(value);
 } catch {
   return defaultValue;
 }
@@ -86,9 +83,11 @@ return window.getCurrentUser();
       "swn_user"
     );
 
-  return value
-    ? JSON.parse(value)
-    : null;
+  if (!value) {
+    return null;
+  }
+
+  return JSON.parse(value);
 } catch {
   return null;
 }
@@ -97,8 +96,8 @@ return window.getCurrentUser();
 
 /*
 
-* JWT is intentionally inaccessible
-* to JavaScript.
+* JWT is HttpOnly.
+* JavaScript must never read it.
   */
   token() {
   return null;
@@ -130,14 +129,6 @@ if (
     "application/json"
   );
 }
-
-/*
- * Authentication is NOT placed
- * into an Authorization header.
- *
- * The HttpOnly cookie is sent by
- * fetch() through credentials: include.
- */
 
 headers.set(
   "Accept",
@@ -188,10 +179,8 @@ requestOptions.headers =
   );
 
 /*
- * Critical:
- *
- * This sends the HttpOnly
- * authentication cookie.
+ * Sends the HttpOnly authentication
+ * cookie to the backend.
  */
 requestOptions.credentials =
   "include";
@@ -255,11 +244,13 @@ try {
   const text =
     await response.text();
 
-  return text
-    ? {
-        message: text
-      }
-    : null;
+  if (!text) {
+    return null;
+  }
+
+  return {
+    message: text
+  };
 } catch {
   return null;
 }
@@ -286,7 +277,8 @@ if (!response.ok) {
     new Error(
       data?.message ||
         data?.error ||
-        `Request failed with status ${response.status}`
+        "Request failed with status " +
+          response.status
     );
 
   error.status =
@@ -342,13 +334,15 @@ return "login.html";
 }
 
 if (
-user.role === "admin"
+user.role ===
+"admin"
 ) {
 return "admin.html";
 }
 
 if (
-user.role === "worker"
+user.role ===
+"worker"
 ) {
 return "worker-dashboard.html";
 }
@@ -360,26 +354,16 @@ function escapeHtml(
 value = ""
 ) {
 return String(value)
-.replace(
-/&/g,
-"&"
-)
-.replace(
-/</g,
-"<"
-)
-.replace(
-/>/g,
-">"
-)
-.replace(
-/"/g,
-"""
-)
-.replace(
-/'/g,
-"'"
-);
+.split("&")
+.join("&")
+.split("<")
+.join("<")
+.split(">")
+.join(">")
+.split('"')
+.join(""")
+.split("'")
+.join("'");
 }
 
 function authBox() {
@@ -396,27 +380,21 @@ const user =
 SWN.user();
 
 if (user) {
-element.innerHTML = `
-<span class="muted">
-Hi, ${escapeHtml(
+element.innerHTML =
+'<span class="muted">' +
+"Hi, " +
+escapeHtml(
 user.name || "User"
-)}
-</span>
-
-  <a href="${dashboardUrl(
-    user
-  )}">
-    Dashboard
-  </a>
-
-  <button
-    type="button"
-    class="btn btn-primary"
-    id="logoutButton"
-  >
-    Logout
-  </button>
-`;
+) +
+"</span>" +
+'<a href="' +
+dashboardUrl(user) +
+'">' +
+"Dashboard" +
+"</a>" +
+'<button type="button" class="btn btn-primary" id="logoutButton">' +
+"Logout" +
+"</button>";
 
 const logoutButton =
   document.querySelector(
@@ -436,19 +414,9 @@ return;
 
 }
 
-element.innerHTML = `
-<a href="login.html">
-Login
-</a>
-
-<a
-  class="btn btn-primary"
-  href="signup.html"
->
-  Get Started
-</a>
-
-`;
+element.innerHTML =
+'<a href="login.html">Login</a>' +
+'<a class="btn btn-primary" href="signup.html">Get Started</a>';
 }
 
 function redirectToCorrectDashboard(
@@ -458,24 +426,11 @@ window.location.href =
 dashboardUrl(user);
 }
 
-/*
-
-* Synchronous compatibility check.
-* 
-* JWT is HttpOnly, so JavaScript
-* cannot inspect the cookie.
-* 
-* The locally cached user is used
-* only for immediate UI routing.
-* 
-* Real authorization is performed
-* by the backend.
-  */
-  function protect(
-  role = null
-  ) {
-  const user =
-  SWN.user();
+function protect(
+role = null
+) {
+const user =
+SWN.user();
 
 if (!user) {
 window.location.href =
@@ -500,18 +455,13 @@ return null;
 return user;
 }
 
-/*
-
-* Verify the HttpOnly cookie
-* with the backend.
-  */
-  async function verifyAuth() {
-  if (
-  typeof window.refreshCurrentUser !==
-  "function"
-  ) {
-  return SWN.user();
-  }
+async function verifyAuth() {
+if (
+typeof window.refreshCurrentUser !==
+"function"
+) {
+return SWN.user();
+}
 
 try {
 return await window.refreshCurrentUser();
@@ -533,10 +483,6 @@ document.addEventListener(
 async () => {
 authBox();
 
-/*
- * If a cached user exists,
- * verify it against the server.
- */
 if (SWN.user()) {
   const user =
     await verifyAuth();
