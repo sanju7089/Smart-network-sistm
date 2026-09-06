@@ -7,6 +7,33 @@ export const SUPPORT_TICKET_STATUSES = [
   "closed"
 ];
 
+const supportReplySchema =
+  new mongoose.Schema(
+    {
+      message: {
+        type: String,
+        required: true,
+        trim: true,
+        minlength: 1,
+        maxlength: 5000
+      },
+
+      repliedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+      },
+
+      repliedAt: {
+        type: Date,
+        default: Date.now
+      }
+    },
+    {
+      _id: true
+    }
+  );
+
 const supportTicketSchema =
   new mongoose.Schema(
     {
@@ -42,6 +69,10 @@ const supportTicketSchema =
         index: true
       },
 
+      /*
+       * Kept for backward compatibility.
+       * It always contains the latest admin reply.
+       */
       adminReply: {
         type: String,
         default: "",
@@ -49,7 +80,20 @@ const supportTicketSchema =
         maxlength: 5000
       },
 
+      /*
+       * Complete support conversation history.
+       */
+      replyHistory: {
+        type: [supportReplySchema],
+        default: []
+      },
+
       resolvedAt: {
+        type: Date,
+        default: null
+      },
+
+      closedAt: {
         type: Date,
         default: null
       }
