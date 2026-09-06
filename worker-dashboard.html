@@ -303,11 +303,17 @@
   </footer>
 
 
+  <!-- AUTH -->
   <script src="js/auth.js"></script>
 
+  <!-- CENTRAL API -->
   <script src="js/app.js"></script>
 
+  <!-- MAIN DASHBOARD -->
   <script src="js/dashboard.js"></script>
+
+  <!-- NOTIFICATIONS -->
+  <script src="js/notifications.js"></script>
 
 
   <script>
@@ -739,22 +745,6 @@
         }
 
 
-        /*
-         * IMPORTANT:
-         *
-         * earnings.js/backend returns:
-         *
-         * grossAmount
-         * completedAmount
-         * pendingWorkAmount
-         * totalPaidBookings
-         *
-         * These values are already RUPEES.
-         *
-         * Do NOT divide them by 100.
-         */
-
-
         const grossAmount =
           Number(
             earnings?.grossAmount ?? 0
@@ -1073,7 +1063,6 @@
     }
 
   </script>
-
 
 </body>
 
