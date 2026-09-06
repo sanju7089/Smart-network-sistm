@@ -14,10 +14,7 @@ Authentication:
 
 const isLocalhost =
 typeof window !== "undefined" &&
-[
-"localhost",
-"127.0.0.1"
-].includes(
+["localhost", "127.0.0.1"].includes(
 window.location.hostname
 );
 
@@ -34,10 +31,7 @@ return SWN_CONFIG.API_URL;
 
 api(path = "") {
 const base =
-SWN_CONFIG.API_URL.replace(
-//$/,
-""
-);
+SWN_CONFIG.API_URL.replace(//$/, "");
 
 const cleanPath =
   String(path || "").trim();
@@ -60,14 +54,11 @@ defaultValue = null
 ) {
 try {
 const value =
-localStorage.getItem(
-key
-);
+localStorage.getItem(key);
 
   return value
     ? JSON.parse(value)
     : defaultValue;
-
 } catch {
   return defaultValue;
 }
@@ -98,7 +89,6 @@ return window.getCurrentUser();
   return value
     ? JSON.parse(value)
     : null;
-
 } catch {
   return null;
 }
@@ -142,11 +132,11 @@ if (
 }
 
 /*
- * Do NOT create an Authorization
- * header from localStorage.
+ * Authentication is NOT placed
+ * into an Authorization header.
  *
- * Authentication is supplied by
- * the HttpOnly cookie automatically.
+ * The HttpOnly cookie is sent by
+ * fetch() through credentials: include.
  */
 
 headers.set(
@@ -200,9 +190,8 @@ requestOptions.headers =
 /*
  * Critical:
  *
- * credentials: include
- * sends the HttpOnly authentication
- * cookie to the backend.
+ * This sends the HttpOnly
+ * authentication cookie.
  */
 requestOptions.credentials =
   "include";
@@ -215,7 +204,6 @@ try {
       this.api(path),
       requestOptions
     );
-
 } catch (error) {
   const networkError =
     new Error(
@@ -272,7 +260,6 @@ try {
         message: text
       }
     : null;
-
 } catch {
   return null;
 }
@@ -355,15 +342,13 @@ return "login.html";
 }
 
 if (
-user.role ===
-"admin"
+user.role === "admin"
 ) {
 return "admin.html";
 }
 
 if (
-user.role ===
-"worker"
+user.role === "worker"
 ) {
 return "worker-dashboard.html";
 }
@@ -477,12 +462,14 @@ dashboardUrl(user);
 
 * Synchronous compatibility check.
 * 
-* Because the JWT is HttpOnly, JavaScript
-* cannot inspect the cookie directly.
+* JWT is HttpOnly, so JavaScript
+* cannot inspect the cookie.
 * 
-* The locally cached user is used only for
-* immediate UI routing. Server authorization
-* remains authoritative.
+* The locally cached user is used
+* only for immediate UI routing.
+* 
+* Real authorization is performed
+* by the backend.
   */
   function protect(
   role = null
@@ -515,8 +502,8 @@ return user;
 
 /*
 
-* Verify the HttpOnly cookie with
-* the backend.
+* Verify the HttpOnly cookie
+* with the backend.
   */
   async function verifyAuth() {
   if (
@@ -528,7 +515,6 @@ return user;
 
 try {
 return await window.refreshCurrentUser();
-
 } catch (error) {
 console.error(
 "Authentication verification failed:",
@@ -548,9 +534,8 @@ async () => {
 authBox();
 
 /*
- * If a cached user exists, verify it
- * against the server using the
- * HttpOnly cookie.
+ * If a cached user exists,
+ * verify it against the server.
  */
 if (SWN.user()) {
   const user =
