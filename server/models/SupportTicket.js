@@ -19,7 +19,8 @@ const supportReplySchema =
       },
 
       repliedBy: {
-        type: mongoose.Schema.Types.ObjectId,
+        type:
+          mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true
       },
@@ -63,15 +64,14 @@ const supportTicketSchema =
 
       status: {
         type: String,
-        enum:
-          SUPPORT_TICKET_STATUSES,
+        enum: SUPPORT_TICKET_STATUSES,
         default: "open",
         index: true
       },
 
       /*
+       * Latest reply.
        * Kept for backward compatibility.
-       * It always contains the latest admin reply.
        */
       adminReply: {
         type: String,
@@ -81,7 +81,7 @@ const supportTicketSchema =
       },
 
       /*
-       * Complete support conversation history.
+       * Permanent conversation history.
        */
       replyHistory: {
         type: [supportReplySchema],
@@ -103,11 +103,17 @@ const supportTicketSchema =
     }
   );
 
+/*
+ * User ticket history.
+ */
 supportTicketSchema.index({
   userId: 1,
   createdAt: -1
 });
 
+/*
+ * Admin status queue.
+ */
 supportTicketSchema.index({
   status: 1,
   createdAt: -1
