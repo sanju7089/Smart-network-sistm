@@ -11,11 +11,7 @@ function toId(value) {
   return String(value);
 }
 
-function buildEventKey(
-  recipientId,
-  type,
-  sourceId
-) {
+function buildEventKey(recipientId, type, sourceId) {
   return [
     String(recipientId),
     String(type),
@@ -33,20 +29,15 @@ async function createNotification({
   jobId = null,
   sourceId
 }) {
-  if (!recipientId) {
+  if (!recipientId || !sourceId) {
     return null;
   }
 
-  if (!sourceId) {
-    return null;
-  }
-
-  const eventKey =
-    buildEventKey(
-      recipientId,
-      type,
-      sourceId
-    );
+  const eventKey = buildEventKey(
+    recipientId,
+    type,
+    sourceId
+  );
 
   try {
     return await Notification.create({
@@ -77,13 +68,12 @@ async function createNotification({
 
 async function getAdminIds() {
   try {
-    const admins =
-      await User.find({
-        role: "admin",
-        isActive: true
-      })
-        .select("_id")
-        .lean();
+    const admins = await User.find({
+      role: "admin",
+      isActive: true
+    })
+      .select("_id")
+      .lean();
 
     return admins.map(
       (admin) => admin._id
@@ -100,16 +90,13 @@ async function getAdminIds() {
   }
 }
 
-async function getWorkerUserId(
-  workerId
-) {
+async function getWorkerUserId(workerId) {
   try {
-    const worker =
-      await Worker.findById(
-        workerId
-      )
-        .select("userId")
-        .lean();
+    const worker = await Worker.findById(
+      workerId
+    )
+      .select("userId")
+      .lean();
 
     return worker?.userId || null;
   } catch (error) {
@@ -124,20 +111,17 @@ async function getWorkerUserId(
   }
 }
 
-async function getJobTitle(
-  jobId
-) {
+async function getJobTitle(jobId) {
   if (!jobId) {
     return "";
   }
 
   try {
-    const job =
-      await Job.findById(
-        jobId
-      )
-        .select("title")
-        .lean();
+    const job = await Job.findById(
+      jobId
+    )
+      .select("title")
+      .lean();
 
     return String(
       job?.title || "your work"
@@ -224,10 +208,9 @@ export async function notifyBookingEvent(
       return;
     }
 
-    const jobTitle =
-      await getJobTitle(
-        booking.jobId
-      );
+    const jobTitle = await getJobTitle(
+      booking.jobId
+    );
 
     const content =
       bookingNotificationContent(
@@ -239,8 +222,7 @@ export async function notifyBookingEvent(
       return;
     }
 
-    const recipients =
-      new Map();
+    const recipients = new Map();
 
     if (booking.customerId) {
       recipients.set(
@@ -280,9 +262,7 @@ export async function notifyBookingEvent(
       let message =
         content.message;
 
-      if (
-        role === "admin"
-      ) {
+      if (role === "admin") {
         message =
           `Booking update: ${content.message}`;
       }
@@ -414,6 +394,175 @@ export async function notifyPaymentEvent(
   } catch (error) {
     console.error(
       "PAYMENT NOTIFICATION ERROR:",
+      error?.stack ||
+        error?.message ||
+        error
+    );
+  }
+}
+
+/*
+ * JOB / WORK STATUS NOTIFICATIONS
+ *
+ * Sends work updates to:
+ * - customer
+ * - assigned worker, when available
+ * - active admins
+ */
+function jobNotificationContent(status) {
+  switch (status) {
+    case "open":
+      return {
+        type: "work_open",
+        title: "Work posted",
+        message:
+          "Your work has been posted successfully."
+      };
+
+    case "assigned":
+      return {
+        type: "work_assigned",
+        title: "Work assigned",
+        message:
+          "Your work has been assigned to a worker."
+      };
+
+    case "in_progress":
+      return {
+        type: "work_started",
+        title: "Work started",
+        message:
+          "Your work is now in progress."
+      };
+
+    case "completed":
+      return {
+        type: "work_completed",
+        title: "Work completed",
+        message:
+          "Your work has been marked as completed."
+      };
+
+    case "cancelled":
+      return {
+        type: "work_cancelled",
+        title: "Work cancelled",
+        message:
+          "Your work has been cancelled."
+      };
+
+    default:
+      return null;
+  }
+}
+
+export async function notifyJobEvent(
+  job,
+  previousStatus = null
+) {
+  try {
+    if (!job?._id) {
+      return;
+    }
+
+    const status =
+      String(job.status || "");
+
+    if (!status) {
+      return;
+    }
+
+    /*
+     * Do not send duplicate notifications
+     * when nothing actually changed.
+     */
+    if (
+      previousStatus !== null &&
+      String(previousStatus) === status
+    ) {
+      return;
+    }
+
+    const content =
+      jobNotificationContent(status);
+
+    if (!content) {
+      return;
+    }
+
+    const recipients =
+      new Map();
+
+    /*
+     * Customer
+     */
+    if (job.customerId) {
+      recipients.set(
+        toId(job.customerId),
+        "customer"
+      );
+    }
+
+    /*
+     * Worker support.
+     *
+     * Job schema may contain workerId in
+     * future/current database records.
+     */
+    if (job.workerId) {
+      const workerUserId =
+        await getWorkerUserId(
+          job.workerId
+        );
+
+      if (workerUserId) {
+        recipients.set(
+          toId(workerUserId),
+          "worker"
+        );
+      }
+    }
+
+    /*
+     * Admins
+     */
+    const adminIds =
+      await getAdminIds();
+
+    for (const adminId of adminIds) {
+      recipients.set(
+        toId(adminId),
+        "admin"
+      );
+    }
+
+    for (
+      const [recipientId, role]
+      of recipients
+    ) {
+      const isAdmin =
+        role === "admin";
+
+      await createNotification({
+        recipientId,
+        type: content.type,
+        title:
+          isAdmin
+            ? `Admin: ${content.title}`
+            : content.title,
+        message:
+          isAdmin
+            ? `Work update: ${content.message}`
+            : content.message,
+        jobId:
+          job._id,
+        sourceId:
+          `${job._id}:${status}`
+      });
+    }
+  } catch (error) {
+    console.error(
+      "JOB NOTIFICATION ERROR:",
       error?.stack ||
         error?.message ||
         error
