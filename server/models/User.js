@@ -17,8 +17,7 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
       maxlength: 254,
-      match:
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     },
 
     password: {
@@ -30,11 +29,7 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: [
-        "customer",
-        "worker",
-        "admin"
-      ],
+      enum: ["customer", "worker", "admin"],
       default: "customer",
       index: true
     },
@@ -57,6 +52,37 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
       index: true
+    },
+
+    /*
+     * Every time the password is changed/reset,
+     * this number is increased.
+     *
+     * Existing JWTs contain the old version and
+     * therefore become invalid automatically.
+     */
+    tokenVersion: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+
+    /*
+     * Password reset security.
+     *
+     * The raw reset token is NEVER stored.
+     * Only its SHA-256 hash is stored.
+     */
+    passwordResetTokenHash: {
+      type: String,
+      default: null,
+      select: false
+    },
+
+    passwordResetExpiresAt: {
+      type: Date,
+      default: null,
+      select: false
     }
   },
   {
@@ -64,22 +90,21 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-/*
- * email: unique:true already creates
- * the unique index. No duplicate index
- * declaration is needed.
- */
-
 userSchema.index({
   role: 1,
   isActive: 1,
   createdAt: -1
 });
 
-const User =
-  mongoose.model(
-    "User",
-    userSchema
-  );
+userSchema.index(
+  {
+    passwordResetTokenHash: 1
+  },
+  {
+    sparse: true
+  }
+);
+
+const User = mongoose.model("User", userSchema);
 
 export default User;
