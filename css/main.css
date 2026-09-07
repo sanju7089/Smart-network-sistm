@@ -2307,3 +2307,812 @@ input:focus-visible {
   }
 
   }
+/* ================================================= */
+/* CUSTOMER DASHBOARD */
+/* ================================================= */
+
+.swn-dashboard-main {
+  min-height: calc(100vh - 150px);
+
+  padding:
+    24px 0 50px;
+}
+
+
+/* ================= WELCOME ================= */
+
+.dashboard-welcome {
+  margin-bottom: 20px;
+
+  padding:
+    24px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content:
+    space-between;
+
+  gap: 20px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #eefaf4,
+      #ffffff
+    );
+
+  border:
+    1px solid #d7ebe1;
+
+  border-radius:
+    14px;
+
+  box-shadow:
+    0 4px 16px
+    rgba(
+      20,
+      60,
+      45,
+      .06
+    );
+}
+
+
+.dashboard-eyebrow {
+  color:
+    var(--primary);
+
+  font-size:
+    11px;
+
+  font-weight:
+    900;
+
+  letter-spacing:
+    1px;
+}
+
+
+.dashboard-welcome h1 {
+  margin:
+    5px 0;
+
+  font-size:
+    clamp(
+      25px,
+      4vw,
+      34px
+    );
+
+  line-height:
+    1.2;
+}
+
+
+.dashboard-welcome h1 span {
+  color:
+    var(--primary);
+}
+
+
+.dashboard-welcome p {
+  margin:
+    5px 0 0;
+
+  color:
+    var(--muted);
+
+  font-size:
+    14px;
+}
+
+
+.dashboard-post-work {
+  flex:
+    0 0 auto;
+
+  min-height:
+    47px;
+
+  padding:
+    12px 18px;
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  border-radius:
+    9px;
+
+  background:
+    var(--primary);
+
+  color:
+    white;
+
+  font-size:
+    14px;
+
+  font-weight:
+    800;
+
+  box-shadow:
+    0 4px 12px
+    rgba(
+      7,
+      155,
+      98,
+      .18
+    );
+}
+
+
+/* ================= LOADING ================= */
+
+.dashboard-loading {
+  min-height:
+    180px;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  background:
+    white;
+
+  border:
+    1px solid var(--border);
+
+  border-radius:
+    12px;
+
+  color:
+    var(--muted);
+}
+
+
+.dashboard-loading-spinner {
+  width:
+    34px;
+
+  height:
+    34px;
+
+  margin-bottom:
+    12px;
+
+  border:
+    3px solid #dfeee7;
+
+  border-top-color:
+    var(--primary);
+
+  border-radius:
+    50%;
+
+  animation:
+    dashboardSpin .8s
+    linear infinite;
+}
+
+
+@keyframes dashboardSpin {
+
+  to {
+    transform:
+      rotate(360deg);
+  }
+
+}
+
+
+/* ================= DASHBOARD SECTION ================= */
+
+.dashboard-section {
+  margin-bottom:
+    18px;
+
+  padding:
+    20px;
+
+  background:
+    white;
+
+  border:
+    1px solid var(--border);
+
+  border-radius:
+    12px;
+
+  box-shadow:
+    0 2px 10px
+    rgba(
+      20,
+      50,
+      40,
+      .04
+    );
+}
+
+
+.dashboard-section__header {
+  margin-bottom:
+    18px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    15px;
+}
+
+
+.dashboard-section__header h2 {
+  margin:
+    0 0 4px;
+
+  font-size:
+    20px;
+}
+
+
+.dashboard-section__header p {
+  margin:
+    0;
+
+  color:
+    var(--muted);
+
+  font-size:
+    13px;
+}
+
+
+.dashboard-section__header > a {
+  flex:
+    0 0 auto;
+
+  color:
+    var(--primary);
+
+  font-size:
+    13px;
+
+  font-weight:
+    800;
+}
+
+
+/* ================= STATISTICS ================= */
+
+.dashboard-status-card {
+  min-height:
+    115px;
+
+  padding:
+    18px;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  justify-content:
+    center;
+
+  background:
+    linear-gradient(
+      135deg,
+      #f6fbf8,
+      #ffffff
+    );
+
+  border:
+    1px solid var(--border);
+
+  border-radius:
+    11px;
+}
+
+
+.dashboard-status-card__label {
+  color:
+    var(--muted);
+
+  font-size:
+    13px;
+
+  font-weight:
+    700;
+}
+
+
+.dashboard-status-card__count {
+  margin-top:
+    7px;
+
+  color:
+    var(--primary);
+
+  font-size:
+    30px;
+
+  font-weight:
+    900;
+}
+
+
+/* ================= PROFILE GRID ================= */
+
+.dashboard-profile-grid {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    16px 35px;
+}
+
+
+.dashboard-profile-item {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    4px;
+
+  padding:
+    4px 0;
+}
+
+
+.dashboard-profile-item strong {
+  color:
+    #41515a;
+
+  font-size:
+    13px;
+}
+
+
+.dashboard-profile-item span {
+  color:
+    var(--muted);
+
+  font-size:
+    14px;
+}
+
+
+/* ================= JOB ================= */
+
+.dashboard-job-card {
+  margin-bottom:
+    12px;
+
+  padding:
+    17px;
+
+  background:
+    #fbfdfc;
+
+  border:
+    1px solid var(--border);
+
+  border-radius:
+    10px;
+}
+
+
+.dashboard-job-card:last-child {
+  margin-bottom:
+    0;
+}
+
+
+.dashboard-job-card h3 {
+  margin:
+    0 0 7px;
+
+  font-size:
+    17px;
+}
+
+
+.dashboard-job-card p {
+  margin:
+    0 0 12px;
+
+  color:
+    var(--muted);
+
+  font-size:
+    13px;
+
+  line-height:
+    1.6;
+}
+
+
+.dashboard-job-meta {
+  display:
+    flex;
+
+  flex-wrap:
+    wrap;
+
+  gap:
+    7px 15px;
+
+  color:
+    #5d6d75;
+
+  font-size:
+    12px;
+}
+
+
+.dashboard-job-card > a,
+.dashboard-booking-card > a,
+.dashboard-payment-card > a {
+  display:
+    inline-flex;
+
+  margin-top:
+    13px;
+
+  color:
+    var(--primary);
+
+  font-size:
+    13px;
+
+  font-weight:
+    800;
+}
+
+
+/* ================= BOOKING ================= */
+
+.dashboard-booking-card {
+  margin-bottom:
+    12px;
+
+  padding:
+    17px;
+
+  background:
+    white;
+
+  border:
+    1px solid var(--border);
+
+  border-radius:
+    10px;
+}
+
+
+.dashboard-booking-card:last-child {
+  margin-bottom:
+    0;
+}
+
+
+.dashboard-booking-card h3 {
+  margin:
+    0 0 10px;
+
+  font-size:
+    16px;
+}
+
+
+/* ================= PAYMENT ================= */
+
+.dashboard-payment-card {
+  margin-bottom:
+    12px;
+
+  padding:
+    17px;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  background:
+    white;
+
+  border:
+    1px solid var(--border);
+
+  border-radius:
+    10px;
+}
+
+
+.dashboard-payment-card:last-child {
+  margin-bottom:
+    0;
+}
+
+
+.dashboard-payment-main h3 {
+  margin:
+    0;
+
+  color:
+    var(--primary);
+
+  font-size:
+    24px;
+}
+
+
+.dashboard-payment-main p {
+  margin:
+    4px 0 12px;
+
+  color:
+    var(--muted);
+
+  font-size:
+    13px;
+}
+
+
+/* ================= EMPTY ================= */
+
+.dashboard-empty {
+  padding:
+    30px 20px;
+
+  text-align:
+    center;
+
+  background:
+    #fafcfb;
+
+  border:
+    1px dashed #cbded5;
+
+  border-radius:
+    10px;
+}
+
+
+.dashboard-empty p {
+  margin:
+    0 0 10px;
+
+  color:
+    var(--muted);
+
+  font-size:
+    14px;
+}
+
+
+.dashboard-empty a {
+  color:
+    var(--primary);
+
+  font-weight:
+    800;
+
+  font-size:
+    13px;
+}
+
+
+/* ================= ERROR ================= */
+
+.dashboard-error {
+  padding:
+    25px;
+
+  text-align:
+    center;
+
+  background:
+    #fff7f7;
+
+  border:
+    1px solid #efcaca;
+
+  border-radius:
+    11px;
+}
+
+
+.dashboard-error h3 {
+  margin:
+    0 0 7px;
+
+  color:
+    var(--danger);
+}
+
+
+.dashboard-error p {
+  margin:
+    0 0 15px;
+
+  color:
+    #765b5b;
+
+  font-size:
+    13px;
+}
+
+
+.dashboard-error button {
+  min-height:
+    42px;
+
+  padding:
+    9px 17px;
+
+  border:
+    0;
+
+  border-radius:
+    8px;
+
+  background:
+    var(--primary);
+
+  color:
+    white;
+
+  font-weight:
+    800;
+}
+
+
+/* ================= MOBILE ================= */
+
+@media (max-width: 700px) {
+
+  .swn-dashboard-main {
+    padding:
+      15px 0 35px;
+  }
+
+
+  .dashboard-welcome {
+    padding:
+      17px;
+
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+  }
+
+
+  .dashboard-welcome h1 {
+    font-size:
+      24px;
+  }
+
+
+  .dashboard-welcome p {
+    font-size:
+      12px;
+  }
+
+
+  .dashboard-post-work {
+    width:
+      100%;
+  }
+
+
+  .dashboard-section {
+    padding:
+      15px;
+  }
+
+
+  .dashboard-section__header {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+  }
+
+
+  .dashboard-profile-grid {
+    grid-template-columns:
+      1fr;
+
+    gap:
+      13px;
+  }
+
+
+  .dashboard-status-card {
+    min-height:
+      95px;
+  }
+
+
+  .dashboard-status-card__count {
+    font-size:
+      25px;
+  }
+
+
+  .dashboard-job-card,
+  .dashboard-booking-card,
+  .dashboard-payment-card {
+    padding:
+      14px;
+  }
+
+}
+
+
+/* ================= SMALL PHONE ================= */
+
+@media (max-width: 390px) {
+
+  .dashboard-welcome h1 {
+    font-size:
+      22px;
+  }
+
+
+  .dashboard-post-work {
+    min-height:
+      45px;
+
+    font-size:
+      13px;
+  }
+
+
+  .dashboard-section__header h2 {
+    font-size:
+      18px;
+  }
+
+  }
