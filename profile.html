@@ -63,7 +63,6 @@
             <span>
               3
             </span>
-
           </button>
 
 
@@ -99,8 +98,6 @@
 
       </div>
 
-
-      <!-- NAVIGATION -->
 
       <nav class="swn-nav">
 
@@ -508,6 +505,130 @@
 
       </section>
 
+
+      <!-- ================= CHANGE PASSWORD ================= -->
+
+      <section
+        id="changePasswordPanel"
+        class="swn-content-card swn-edit-card"
+        hidden
+      >
+
+        <div class="swn-card-heading">
+
+          <div>
+
+            <h2>
+              Change Password
+            </h2>
+
+            <p>
+              Update your Smart Work Network account password.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <form
+          id="changePasswordForm"
+          class="swn-profile-form"
+          autocomplete="off"
+        >
+
+          <label for="currentPassword">
+            Current Password
+          </label>
+
+          <input
+            id="currentPassword"
+            name="currentPassword"
+            type="password"
+            minlength="8"
+            maxlength="128"
+            autocomplete="current-password"
+            required
+          >
+
+
+          <label for="newPassword">
+            New Password
+          </label>
+
+          <input
+            id="newPassword"
+            name="newPassword"
+            type="password"
+            minlength="8"
+            maxlength="128"
+            autocomplete="new-password"
+            required
+          >
+
+
+          <label for="confirmPassword">
+            Confirm New Password
+          </label>
+
+          <input
+            id="confirmPassword"
+            name="confirmPassword"
+            type="password"
+            minlength="8"
+            maxlength="128"
+            autocomplete="new-password"
+            required
+          >
+
+
+          <label
+            style="
+              display:flex;
+              align-items:center;
+              gap:8px;
+              cursor:pointer;
+            "
+          >
+
+            <input
+              id="showPassword"
+              type="checkbox"
+              style="width:auto;"
+            >
+
+            <span>
+              Show passwords
+            </span>
+
+          </label>
+
+
+          <div class="swn-form-buttons">
+
+            <button
+              id="savePasswordButton"
+              class="swn-action-btn swn-action-primary"
+              type="submit"
+            >
+              ✓ Update Password
+            </button>
+
+
+            <button
+              id="cancelPasswordButton"
+              class="swn-action-btn swn-action-secondary"
+              type="button"
+            >
+              Cancel
+            </button>
+
+          </div>
+
+        </form>
+
+      </section>
+
     </div>
 
   </main>
@@ -542,10 +663,9 @@
     "use strict";
 
 
-    function setText(
-      id,
-      value
-    ) {
+    /* ================= BASIC HELPERS ================= */
+
+    function setText(id, value) {
 
       const element =
         document.getElementById(id);
@@ -556,6 +676,7 @@
 
       element.textContent =
         value || "—";
+
     }
 
 
@@ -587,9 +708,9 @@
     }
 
 
-    function renderProfile(
-      user
-    ) {
+    /* ================= RENDER PROFILE ================= */
+
+    function renderProfile(user) {
 
       if (!user) {
         return;
@@ -725,6 +846,8 @@
     }
 
 
+    /* ================= LOAD PROFILE ================= */
+
     async function loadProfile() {
 
       let localUser =
@@ -796,32 +919,48 @@
         );
 
 
-        document.getElementById(
-          "profileName"
-        ).value =
-          profile.name ||
-          "";
+        const nameInput =
+          document.getElementById(
+            "profileName"
+          );
+
+        if (nameInput) {
+          nameInput.value =
+            profile.name || "";
+        }
 
 
-        document.getElementById(
-          "profileEmail"
-        ).value =
-          profile.email ||
-          "";
+        const emailInput =
+          document.getElementById(
+            "profileEmail"
+          );
+
+        if (emailInput) {
+          emailInput.value =
+            profile.email || "";
+        }
 
 
-        document.getElementById(
-          "profilePhone"
-        ).value =
-          profile.phone ||
-          "";
+        const phoneInput =
+          document.getElementById(
+            "profilePhone"
+          );
+
+        if (phoneInput) {
+          phoneInput.value =
+            profile.phone || "";
+        }
 
 
-        document.getElementById(
-          "profileLocation"
-        ).value =
-          profile.location ||
-          "";
+        const locationInput =
+          document.getElementById(
+            "profileLocation"
+          );
+
+        if (locationInput) {
+          locationInput.value =
+            profile.location || "";
+        }
 
 
         if (
@@ -848,9 +987,9 @@
     }
 
 
-    async function saveProfile(
-      event
-    ) {
+    /* ================= SAVE PROFILE ================= */
+
+    async function saveProfile(event) {
 
       event.preventDefault();
 
@@ -943,11 +1082,18 @@
         }
 
 
+        const currentUser =
+          typeof getCurrentUser ===
+          "function"
+            ? getCurrentUser()
+            : {};
+
+
         const updated =
           result.data ||
           result.user ||
           {
-            ...(getCurrentUser() || {}),
+            ...currentUser,
             name,
             phone,
             location
@@ -1002,12 +1148,234 @@
     }
 
 
+    /* ================= CHANGE PASSWORD ================= */
+
+    async function changePassword(event) {
+
+      event.preventDefault();
+
+
+      const button =
+        document.getElementById(
+          "savePasswordButton"
+        );
+
+
+      const currentPassword =
+        document.getElementById(
+          "currentPassword"
+        ).value;
+
+
+      const newPassword =
+        document.getElementById(
+          "newPassword"
+        ).value;
+
+
+      const confirmPassword =
+        document.getElementById(
+          "confirmPassword"
+        ).value;
+
+
+      if (
+        !currentPassword ||
+        !newPassword ||
+        !confirmPassword
+      ) {
+
+        showProfileMessage(
+          "Please fill all password fields.",
+          true
+        );
+
+        return;
+
+      }
+
+
+      if (
+        newPassword.length < 8
+      ) {
+
+        showProfileMessage(
+          "New password must be at least 8 characters.",
+          true
+        );
+
+        return;
+
+      }
+
+
+      if (
+        newPassword.length > 128
+      ) {
+
+        showProfileMessage(
+          "New password cannot exceed 128 characters.",
+          true
+        );
+
+        return;
+
+      }
+
+
+      if (
+        newPassword !==
+        confirmPassword
+      ) {
+
+        showProfileMessage(
+          "New password and confirm password do not match.",
+          true
+        );
+
+        return;
+
+      }
+
+
+      if (
+        currentPassword ===
+        newPassword
+      ) {
+
+        showProfileMessage(
+          "New password must be different from your current password.",
+          true
+        );
+
+        return;
+
+      }
+
+
+      if (button) {
+
+        button.disabled =
+          true;
+
+        button.textContent =
+          "Updating...";
+
+      }
+
+
+      try {
+
+        const response =
+          await apiFetch(
+            "/auth/change-password",
+            {
+              method: "POST",
+
+              body:
+                JSON.stringify({
+                  currentPassword,
+                  newPassword,
+                  confirmPassword
+                })
+            }
+          );
+
+
+        const result =
+          await response
+            .json()
+            .catch(
+              () => ({})
+            );
+
+
+        if (
+          !response.ok ||
+          !result.success
+        ) {
+
+          throw new Error(
+            result.message ||
+            "Unable to change password."
+          );
+
+        }
+
+
+        const form =
+          document.getElementById(
+            "changePasswordForm"
+          );
+
+
+        if (form) {
+          form.reset();
+        }
+
+
+        showProfileMessage(
+          result.message ||
+          "Password changed successfully."
+        );
+
+
+        const panel =
+          document.getElementById(
+            "changePasswordPanel"
+          );
+
+
+        if (panel) {
+
+          setTimeout(
+            () => {
+
+              panel.hidden =
+                true;
+
+            },
+            1200
+          );
+
+        }
+
+
+      } catch (error) {
+
+        showProfileMessage(
+          error.message ||
+          "Unable to change password.",
+          true
+        );
+
+      } finally {
+
+        if (button) {
+
+          button.disabled =
+            false;
+
+          button.textContent =
+            "✓ Update Password";
+
+        }
+
+      }
+
+    }
+
+
+    /* ================= PAGE EVENTS ================= */
+
     document.addEventListener(
       "DOMContentLoaded",
       () => {
 
         loadProfile();
 
+
+        /* ---------- EDIT PROFILE ---------- */
 
         const editButton =
           document.getElementById(
@@ -1021,7 +1389,10 @@
           );
 
 
-        if (editButton) {
+        if (
+          editButton &&
+          editPanel
+        ) {
 
           editButton.addEventListener(
             "click",
@@ -1049,7 +1420,10 @@
           );
 
 
-        if (cancelButton) {
+        if (
+          cancelButton &&
+          editPanel
+        ) {
 
           cancelButton.addEventListener(
             "click",
@@ -1080,6 +1454,8 @@
         }
 
 
+        /* ---------- LOGOUT ---------- */
+
         const logout =
           document.getElementById(
             "profileLogout"
@@ -1090,22 +1466,34 @@
 
           logout.addEventListener(
             "click",
-            () => {
+            async () => {
 
-              if (
-                typeof window.logout ===
-                "function"
-              ) {
+              try {
 
-                window.logout();
+                if (
+                  typeof window.logout ===
+                  "function"
+                ) {
 
-              } else if (
-                window.SWN &&
-                typeof SWN.logout ===
-                "function"
-              ) {
+                  await window.logout();
 
-                SWN.logout();
+                } else if (
+                  window.SWN &&
+                  typeof SWN.logout ===
+                  "function"
+                ) {
+
+                  await SWN.logout();
+
+                }
+
+              } catch (error) {
+
+                showProfileMessage(
+                  error.message ||
+                  "Unable to logout.",
+                  true
+                );
 
               }
 
@@ -1115,20 +1503,153 @@
         }
 
 
-        const password =
+        /* ---------- CHANGE PASSWORD ---------- */
+
+        const passwordButton =
           document.getElementById(
             "changePasswordButton"
           );
 
 
-        if (password) {
+        const passwordPanel =
+          document.getElementById(
+            "changePasswordPanel"
+          );
 
-          password.addEventListener(
+
+        if (
+          passwordButton &&
+          passwordPanel
+        ) {
+
+          passwordButton.addEventListener(
             "click",
             () => {
 
-              showProfileMessage(
-                "Change Password feature will open when its password page/API is available."
+              passwordPanel.hidden =
+                false;
+
+              passwordPanel.scrollIntoView({
+                behavior:
+                  "smooth",
+                block:
+                  "start"
+              });
+
+              const currentPassword =
+                document.getElementById(
+                  "currentPassword"
+                );
+
+              if (currentPassword) {
+
+                setTimeout(
+                  () => {
+                    currentPassword.focus();
+                  },
+                  300
+                );
+
+              }
+
+            }
+          );
+
+        }
+
+
+        const cancelPasswordButton =
+          document.getElementById(
+            "cancelPasswordButton"
+          );
+
+
+        if (
+          cancelPasswordButton &&
+          passwordPanel
+        ) {
+
+          cancelPasswordButton.addEventListener(
+            "click",
+            () => {
+
+              passwordPanel.hidden =
+                true;
+
+
+              const passwordForm =
+                document.getElementById(
+                  "changePasswordForm"
+                );
+
+
+              if (passwordForm) {
+                passwordForm.reset();
+              }
+
+            }
+          );
+
+        }
+
+
+        const passwordForm =
+          document.getElementById(
+            "changePasswordForm"
+          );
+
+
+        if (passwordForm) {
+
+          passwordForm.addEventListener(
+            "submit",
+            changePassword
+          );
+
+        }
+
+
+        /* ---------- SHOW / HIDE PASSWORD ---------- */
+
+        const showPassword =
+          document.getElementById(
+            "showPassword"
+          );
+
+
+        if (showPassword) {
+
+          showPassword.addEventListener(
+            "change",
+            () => {
+
+              const fields = [
+                "currentPassword",
+                "newPassword",
+                "confirmPassword"
+              ];
+
+
+              fields.forEach(
+                (id) => {
+
+                  const input =
+                    document.getElementById(
+                      id
+                    );
+
+
+                  if (!input) {
+                    return;
+                  }
+
+
+                  input.type =
+                    showPassword.checked
+                      ? "text"
+                      : "password";
+
+                }
               );
 
             }
@@ -1136,6 +1657,8 @@
 
         }
 
+
+        /* ---------- DELETE ACCOUNT ---------- */
 
         const deleteButton =
           document.getElementById(
