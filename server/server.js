@@ -8,6 +8,10 @@ import { fileURLToPath } from "url";
 import path from "path";
 
 import {
+  loadEnvironment
+} from "./config/environment.js";
+
+import {
   connectDatabase,
   getDatabaseStatus,
   disconnectDatabase
@@ -36,34 +40,46 @@ import earningsRoutes from "./routes/earnings.js";
 import notificationRoutes from "./routes/notifications.js";
 import liveLocationRoutes from "./routes/liveLocation.js";
 
+/*
+========================================
+ENVIRONMENT
+========================================
+*/
+
 dotenv.config();
+
+const ENV = loadEnvironment();
+
+const {
+  port: PORT,
+  nodeEnv: NODE_ENV,
+  isProduction,
+  allowedOrigins
+} = ENV;
+
+/*
+========================================
+APP
+========================================
+*/
 
 const app = express();
 
-const PORT =
-  Number(process.env.PORT) || 3000;
-
-const isProduction =
-  process.env.NODE_ENV === "production";
-
-const allowedOrigins =
-  String(process.env.ALLOWED_ORIGINS || "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-
-if (
-  isProduction &&
-  allowedOrigins.length === 0
-) {
-  throw new Error(
-    "ALLOWED_ORIGINS must be configured in production."
-  );
-}
+/*
+========================================
+TRUST PROXY
+========================================
+*/
 
 if (isProduction) {
   app.set("trust proxy", 1);
 }
+
+/*
+========================================
+SECURITY
+========================================
+*/
 
 app.disable("x-powered-by");
 
@@ -75,13 +91,29 @@ app.use(
 
 app.use(securityHeaders);
 
+/*
+========================================
+CORS
+========================================
+*/
+
 app.use(
   cors({
     origin(origin, callback) {
+      /*
+      Requests such as server-to-server calls,
+      health checks and same-origin requests
+      may not contain an Origin header.
+      */
       if (!origin) {
         return callback(null, true);
       }
 
+      /*
+      Development:
+      If ALLOWED_ORIGINS is intentionally empty,
+      allow local development requests.
+      */
       if (
         !isProduction &&
         allowedOrigins.length === 0
@@ -89,6 +121,10 @@ app.use(
         return callback(null, true);
       }
 
+      /*
+      Production / configured development:
+      Only explicitly allowed origins are accepted.
+      */
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
@@ -122,11 +158,20 @@ app.use(
   })
 );
 
+/*
+========================================
+GLOBAL API RATE LIMIT
+========================================
+*/
+
 const globalApiLimiter =
   rateLimit({
     windowMs: 15 * 60 * 1000,
+
     limit: 300,
+
     standardHeaders: "draft-7",
+
     legacyHeaders: false,
 
     skip(req) {
@@ -154,10 +199,12 @@ RAW BODY MUST COME BEFORE JSON PARSER
 
 app.post(
   "/api/payments/razorpay/webhook",
+
   express.raw({
     type: "application/json",
     limit: "1mb"
   }),
+
   razorpayWebhook
 );
 
@@ -195,9 +242,14 @@ app.get(
   (req, res) => {
     return res.status(200).json({
       success: true,
+
       message:
         "Smart Work Network API is running",
+
       version: "2.0.0",
+
+      environment: NODE_ENV,
+
       timestamp:
         new Date().toISOString()
     });
@@ -206,7 +258,7 @@ app.get(
 
 /*
 ========================================
-HEALTH
+HEALTH CHECK
 ========================================
 */
 
@@ -220,7 +272,11 @@ app.get(
       database.status === "connected";
 
     return res
-      .status(healthy ? 200 : 503)
+      .status(
+        healthy
+          ? 200
+          : 503
+      )
       .json({
         success: healthy,
 
@@ -233,8 +289,7 @@ app.get(
           "Smart Work Network API",
 
         environment:
-          process.env.NODE_ENV ||
-          "development",
+          NODE_ENV,
 
         database,
 
@@ -387,6 +442,7 @@ SERVER
 */
 
 let server = null;
+
 let shuttingDown = false;
 
 async function startServer() {
@@ -402,10 +458,11 @@ async function startServer() {
           );
 
           console.log(
-            `Environment: ${
-              process.env.NODE_ENV ||
-              "development"
-            }`
+            `Environment: ${NODE_ENV}`
+          );
+
+          console.log(
+            `Health: /api/health`
           );
         }
       );
