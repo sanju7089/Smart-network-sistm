@@ -3,15 +3,12 @@
 
 <head>
   <meta charset="utf-8">
-
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1"
   >
 
-  <title>
-    My Profile | Smart Work Network
-  </title>
+  <title>My Profile | Smart Work Network</title>
 
   <link
     rel="stylesheet"
@@ -19,420 +16,1161 @@
   >
 </head>
 
-<body>
+<body class="swn-dashboard-page">
 
-<header class="header">
+  <!-- ================= HEADER ================= -->
 
-  <div class="container nav">
+  <header class="swn-header">
 
-    <a
-      class="brand"
-      href="index.html"
-    >
-      Smart Work Network
-    </a>
+    <div class="container">
 
-    <nav class="navlinks">
+      <div class="swn-header-top">
 
-      <a href="services.html">
-        Services
-      </a>
-
-      <a href="find-help.html">
-        Find Help
-      </a>
-
-      <a href="workers.html">
-        Workers
-      </a>
-
-      <span data-auth></span>
-
-    </nav>
-
-  </div>
-
-</header>
-
-<main>
-
-<section class="section">
-
-  <div
-    class="container"
-    style="max-width:700px"
-  >
-
-    <div class="card">
-
-      <h1>
-        My Profile
-      </h1>
-
-      <p class="lead">
-        View and update your account details.
-      </p>
-
-      <div id="profileMessage"></div>
-
-      <form id="profileForm">
-
-        <label for="profileName">
-          Name
-        </label>
-
-        <input
-          id="profileName"
-          name="name"
-          type="text"
-          minlength="2"
-          maxlength="100"
-          required
+        <a
+          class="swn-brand"
+          href="index.html"
         >
 
-        <br>
-        <br>
+          <span class="swn-logo">
+            ✓
+          </span>
 
-        <label for="profileEmail">
-          Email
-        </label>
+          <span class="swn-brand-text">
+            <strong>
+              Smart Work Network
+            </strong>
 
-        <input
-          id="profileEmail"
-          type="email"
-          readonly
-        >
+            <small>
+              Work • Connect • Grow
+            </small>
+          </span>
 
-        <br>
-        <br>
+        </a>
 
-        <label for="profilePhone">
-          Phone
-        </label>
 
-        <input
-          id="profilePhone"
-          name="phone"
-          type="tel"
-          maxlength="30"
-        >
+        <div class="swn-header-icons">
 
-        <br>
-        <br>
+          <button
+            class="swn-notification"
+            type="button"
+            aria-label="Notifications"
+          >
+            ♧
 
-        <label for="profileLocation">
-          Location
-        </label>
+            <span>
+              3
+            </span>
 
-        <input
-          id="profileLocation"
-          name="location"
-          type="text"
-          maxlength="200"
-        >
+          </button>
 
-        <br>
-        <br>
+
+          <a
+            class="swn-user-icon"
+            href="profile.html"
+            aria-label="Profile"
+          >
+            ●
+          </a>
+
+        </div>
+
+      </div>
+
+
+      <div class="swn-header-user">
+
+        <span>
+          Hi,
+          <strong id="headerUserName">
+            User
+          </strong>
+        </span>
 
         <button
-          class="btn btn-primary"
-          type="submit"
-          id="saveProfileButton"
+          id="profileLogout"
+          class="swn-logout"
+          type="button"
         >
-          Save Profile
+          ↪ Logout
         </button>
 
-      </form>
+      </div>
+
+
+      <!-- NAVIGATION -->
+
+      <nav class="swn-nav">
+
+        <a href="index.html">
+          <span class="nav-icon">⌂</span>
+          <span>Home</span>
+        </a>
+
+        <a href="find-help.html">
+          <span class="nav-icon">⌕</span>
+          <span>Find Help</span>
+        </a>
+
+        <a href="workers.html">
+          <span class="nav-icon">♟</span>
+          <span>Workers</span>
+        </a>
+
+        <a
+          class="active"
+          href="customer-dashboard.html"
+        >
+          <span class="nav-icon">▦</span>
+          <span>Dashboard</span>
+        </a>
+
+      </nav>
 
     </div>
 
-  </div>
+  </header>
 
-</section>
 
-</main>
+  <!-- ================= MAIN ================= -->
 
-<footer class="footer">
+  <main class="swn-main">
 
-  <div class="container">
+    <div class="container">
 
-    <b>
-      Smart Work Network
-    </b>
+      <!-- PROFILE TOP CARD -->
 
-    <p>
-      Services • Workers • Work opportunities
-    </p>
+      <section class="swn-profile-card">
 
-    <div class="row">
+        <div class="swn-profile-info">
 
-      <a href="support.html">
-        Support
+          <div
+            class="swn-profile-photo"
+            id="profileAvatar"
+          >
+            U
+          </div>
+
+
+          <div class="swn-profile-details">
+
+            <h1 id="profileDisplayName">
+              My Profile
+            </h1>
+
+            <span class="swn-role">
+              ● Customer
+            </span>
+
+            <p id="profileDisplayLocation">
+              Location not set
+            </p>
+
+
+            <div class="swn-contact">
+
+              <span id="profileDisplayEmail">
+                Email not set
+              </span>
+
+              <span id="profileDisplayPhone">
+                Phone not set
+              </span>
+
+            </div>
+
+          </div>
+
+
+          <span class="swn-active">
+            <i></i>
+            Active
+          </span>
+
+        </div>
+
+      </section>
+
+
+      <!-- PROFILE ACTIONS -->
+
+      <section class="swn-profile-actions">
+
+        <button
+          id="editProfileButton"
+          class="swn-action-btn swn-action-primary"
+          type="button"
+        >
+          <span>✎</span>
+          Edit Profile
+        </button>
+
+
+        <button
+          id="changePasswordButton"
+          class="swn-action-btn swn-action-secondary"
+          type="button"
+        >
+          <span>▣</span>
+          Change Password
+        </button>
+
+
+        <button
+          id="deleteAccountButton"
+          class="swn-action-btn swn-action-danger"
+          type="button"
+        >
+          <span>♧</span>
+          Delete Account
+        </button>
+
+      </section>
+
+
+      <!-- MESSAGE -->
+
+      <div
+        id="profileMessage"
+        class="swn-profile-message"
+        aria-live="polite"
+      ></div>
+
+
+      <!-- MY ACCOUNT -->
+
+      <section class="swn-content-card">
+
+        <div class="swn-card-heading">
+
+          <div class="swn-section-icon green">
+            ●
+          </div>
+
+          <div>
+
+            <h2>
+              My Account
+            </h2>
+
+            <p>
+              Your Smart Work Network account details.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="swn-account-grid">
+
+          <div class="swn-account-item">
+
+            <strong>
+              ♟ Name
+            </strong>
+
+            <span id="accountName">
+              —
+            </span>
+
+          </div>
+
+
+          <div class="swn-account-item">
+
+            <strong>
+              ✉ Email
+            </strong>
+
+            <span id="accountEmail">
+              —
+            </span>
+
+          </div>
+
+
+          <div class="swn-account-item">
+
+            <strong>
+              ☎ Phone
+            </strong>
+
+            <span id="accountPhone">
+              —
+            </span>
+
+          </div>
+
+
+          <div class="swn-account-item">
+
+            <strong>
+              ● Location
+            </strong>
+
+            <span id="accountLocation">
+              —
+            </span>
+
+          </div>
+
+
+          <div class="swn-account-item">
+
+            <strong>
+              ♛ Account Type
+            </strong>
+
+            <span id="accountRole">
+              Customer
+            </span>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- MY POSTED WORK -->
+
+      <section class="swn-content-card swn-work-card">
+
+        <div class="swn-card-heading">
+
+          <div class="swn-section-icon green">
+            ▣
+          </div>
+
+          <div>
+
+            <h2>
+              My Posted Work
+            </h2>
+
+            <p>
+              Work requests posted from your customer account.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <a
+          class="swn-post-button"
+          href="post-work.html"
+        >
+          ＋ Post New Work
+        </a>
+
+      </section>
+
+
+      <!-- RECENT ACTIVITY -->
+
+      <a
+        class="swn-content-card swn-activity-card"
+        href="customer-dashboard.html"
+      >
+
+        <div class="swn-card-heading">
+
+          <div class="swn-section-icon blue">
+            ▤
+          </div>
+
+          <div>
+
+            <h2>
+              Recent Activity
+            </h2>
+
+            <p>
+              Your latest activities and updates.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <span class="swn-arrow">
+          ›
+        </span>
+
       </a>
 
-      <a href="profile.html">
-        Profile
-      </a>
 
-      <a href="urgent-help.html">
-        Urgent Help
-      </a>
+      <!-- EDIT PROFILE -->
+
+      <section
+        id="editProfilePanel"
+        class="swn-content-card swn-edit-card"
+        hidden
+      >
+
+        <div class="swn-card-heading">
+
+          <div>
+
+            <h2>
+              Edit Profile
+            </h2>
+
+            <p>
+              Update your account details.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <form
+          id="profileForm"
+          class="swn-profile-form"
+        >
+
+          <label for="profileName">
+            Name
+          </label>
+
+          <input
+            id="profileName"
+            name="name"
+            type="text"
+            minlength="2"
+            maxlength="100"
+            required
+          >
+
+
+          <label for="profileEmail">
+            Email
+          </label>
+
+          <input
+            id="profileEmail"
+            type="email"
+            readonly
+          >
+
+
+          <label for="profilePhone">
+            Phone
+          </label>
+
+          <input
+            id="profilePhone"
+            name="phone"
+            type="tel"
+            maxlength="30"
+          >
+
+
+          <label for="profileLocation">
+            Location
+          </label>
+
+          <input
+            id="profileLocation"
+            name="location"
+            type="text"
+            maxlength="200"
+          >
+
+
+          <div class="swn-form-buttons">
+
+            <button
+              id="saveProfileButton"
+              class="swn-action-btn swn-action-primary"
+              type="submit"
+            >
+              ✓ Save Profile
+            </button>
+
+            <button
+              id="cancelEditButton"
+              class="swn-action-btn swn-action-secondary"
+              type="button"
+            >
+              Cancel
+            </button>
+
+          </div>
+
+        </form>
+
+      </section>
 
     </div>
 
-  </div>
+  </main>
 
-</footer>
 
-<script src="js/app.js"></script>
-<script src="js/auth.js"></script>
+  <!-- ================= FOOTER ================= -->
 
-<script>
+  <footer class="footer swn-footer">
 
-function escapeProfileHtml(
-  value = ""
-) {
-  if (
-    typeof window.escapeHtml ===
-    "function"
-  ) {
-    return window.escapeHtml(value);
-  }
+    <div class="container">
 
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+      <strong>
+        Smart Work Network
+      </strong>
 
-function showProfileMessage(
-  message,
-  error = false
-) {
-  const element =
-    document.querySelector(
-      "#profileMessage"
-    );
+      <p>
+        Services • Workers • Work opportunities
+      </p>
 
-  if (!element) return;
-
-  element.innerHTML = `
-    <div class="notice">
-      ${escapeProfileHtml(message)}
     </div>
-  `;
 
-  if (error) {
-    console.error(message);
-  }
-}
+  </footer>
 
-async function loadProfile() {
 
-  const user =
-    typeof window.protect ===
-    "function"
-      ? protect()
-      : null;
+  <!-- ================= SCRIPTS ================= -->
 
-  if (!user) {
-    return;
-  }
+  <script src="js/app.js"></script>
+  <script src="js/auth.js"></script>
 
-  try {
+  <script>
 
-    const response =
-      await apiFetch(
-        "/users/me"
-      );
+    "use strict";
 
-    let result = {};
 
-    try {
-      result =
-        await response.json();
-    } catch {
-      result = {};
-    }
-
-    if (
-      !response.ok ||
-      !result.success
+    function setText(
+      id,
+      value
     ) {
-      throw new Error(
-        result.message ||
-        "Unable to load profile."
-      );
+
+      const element =
+        document.getElementById(id);
+
+      if (!element) {
+        return;
+      }
+
+      element.textContent =
+        value || "—";
     }
 
-    const profile =
-      result.data || {};
 
-    document.querySelector(
-      "#profileName"
-    ).value =
-      profile.name || "";
+    function showProfileMessage(
+      message,
+      error = false
+    ) {
 
-    document.querySelector(
-      "#profileEmail"
-    ).value =
-      profile.email || "";
+      const element =
+        document.getElementById(
+          "profileMessage"
+        );
 
-    document.querySelector(
-      "#profilePhone"
-    ).value =
-      profile.phone || "";
+      if (!element) {
+        return;
+      }
 
-    document.querySelector(
-      "#profileLocation"
-    ).value =
-      profile.location || "";
+      element.textContent =
+        String(message || "");
 
-  } catch (error) {
+      element.className =
+        "swn-profile-message " +
+        (
+          error
+            ? "error"
+            : "success"
+        );
 
-    showProfileMessage(
-      error.message ||
-      "Unable to load profile.",
-      true
-    );
+    }
 
-  }
-}
 
-async function saveProfile(
-  event
-) {
+    function renderProfile(
+      user
+    ) {
 
-  event.preventDefault();
+      if (!user) {
+        return;
+      }
 
-  const button =
-    document.querySelector(
-      "#saveProfileButton"
-    );
 
-  const name =
-    document.querySelector(
-      "#profileName"
-    ).value.trim();
+      const name =
+        user.name ||
+        "User";
 
-  const phone =
-    document.querySelector(
-      "#profilePhone"
-    ).value.trim();
 
-  const location =
-    document.querySelector(
-      "#profileLocation"
-    ).value.trim();
+      const email =
+        user.email ||
+        "";
 
-  if (name.length < 2) {
-    showProfileMessage(
-      "Please enter a valid name.",
-      true
-    );
 
-    return;
-  }
+      const phone =
+        user.phone ||
+        "";
 
-  if (button) {
-    button.disabled = true;
-    button.textContent =
-      "Saving...";
-  }
 
-  try {
+      const location =
+        user.location ||
+        "";
 
-    const response =
-      await apiFetch(
-        "/users/me",
-        {
-          method: "PATCH",
 
-          body:
-            JSON.stringify({
-              name,
-              phone,
-              location
-            })
+      let role =
+        "Customer";
+
+
+      if (
+        user.role ===
+        "worker"
+      ) {
+
+        role =
+          "Worker";
+
+      }
+
+
+      if (
+        user.role ===
+        "admin"
+      ) {
+
+        role =
+          "Admin";
+
+      }
+
+
+      setText(
+        "headerUserName",
+        name
+      );
+
+
+      setText(
+        "profileDisplayName",
+        name
+      );
+
+
+      setText(
+        "profileDisplayLocation",
+        location ||
+        "Location not set"
+      );
+
+
+      setText(
+        "profileDisplayEmail",
+        email ||
+        "Email not set"
+      );
+
+
+      setText(
+        "profileDisplayPhone",
+        phone ||
+        "Phone not set"
+      );
+
+
+      setText(
+        "accountName",
+        name
+      );
+
+
+      setText(
+        "accountEmail",
+        email
+      );
+
+
+      setText(
+        "accountPhone",
+        phone
+      );
+
+
+      setText(
+        "accountLocation",
+        location
+      );
+
+
+      setText(
+        "accountRole",
+        role
+      );
+
+
+      const avatar =
+        document.getElementById(
+          "profileAvatar"
+        );
+
+
+      if (avatar) {
+
+        avatar.textContent =
+          name
+            .trim()
+            .charAt(0)
+            .toUpperCase() ||
+          "U";
+
+      }
+
+    }
+
+
+    async function loadProfile() {
+
+      let localUser =
+        typeof window.getCurrentUser ===
+        "function"
+          ? window.getCurrentUser()
+          : null;
+
+
+      if (
+        !localUser &&
+        typeof window.protect ===
+        "function"
+      ) {
+
+        localUser =
+          window.protect();
+
+      }
+
+
+      if (!localUser) {
+        return;
+      }
+
+
+      renderProfile(
+        localUser
+      );
+
+
+      try {
+
+        const response =
+          await apiFetch(
+            "/users/me"
+          );
+
+
+        const result =
+          await response
+            .json()
+            .catch(
+              () => ({})
+            );
+
+
+        if (
+          !response.ok ||
+          !result.success
+        ) {
+
+          throw new Error(
+            result.message ||
+            "Unable to load profile."
+          );
+
         }
-      );
 
-    let result = {};
 
-    try {
-      result =
-        await response.json();
-    } catch {
-      result = {};
+        const profile =
+          result.data ||
+          result.user ||
+          localUser;
+
+
+        renderProfile(
+          profile
+        );
+
+
+        document.getElementById(
+          "profileName"
+        ).value =
+          profile.name ||
+          "";
+
+
+        document.getElementById(
+          "profileEmail"
+        ).value =
+          profile.email ||
+          "";
+
+
+        document.getElementById(
+          "profilePhone"
+        ).value =
+          profile.phone ||
+          "";
+
+
+        document.getElementById(
+          "profileLocation"
+        ).value =
+          profile.location ||
+          "";
+
+
+        if (
+          typeof window.setCurrentUser ===
+          "function"
+        ) {
+
+          window.setCurrentUser(
+            profile
+          );
+
+        }
+
+      } catch (error) {
+
+        showProfileMessage(
+          error.message ||
+          "Unable to load profile.",
+          true
+        );
+
+      }
+
     }
 
-    if (
-      !response.ok ||
-      !result.success
+
+    async function saveProfile(
+      event
     ) {
-      throw new Error(
-        result.message ||
-        "Unable to update profile."
-      );
+
+      event.preventDefault();
+
+
+      const button =
+        document.getElementById(
+          "saveProfileButton"
+        );
+
+
+      const name =
+        document.getElementById(
+          "profileName"
+        ).value.trim();
+
+
+      const phone =
+        document.getElementById(
+          "profilePhone"
+        ).value.trim();
+
+
+      const location =
+        document.getElementById(
+          "profileLocation"
+        ).value.trim();
+
+
+      if (
+        name.length < 2
+      ) {
+
+        showProfileMessage(
+          "Please enter a valid name.",
+          true
+        );
+
+        return;
+
+      }
+
+
+      if (button) {
+
+        button.disabled =
+          true;
+
+        button.textContent =
+          "Saving...";
+
+      }
+
+
+      try {
+
+        const response =
+          await apiFetch(
+            "/users/me",
+            {
+              method: "PATCH",
+
+              body:
+                JSON.stringify({
+                  name,
+                  phone,
+                  location
+                })
+            }
+          );
+
+
+        const result =
+          await response
+            .json()
+            .catch(
+              () => ({})
+            );
+
+
+        if (
+          !response.ok ||
+          !result.success
+        ) {
+
+          throw new Error(
+            result.message ||
+            "Unable to update profile."
+          );
+
+        }
+
+
+        const updated =
+          result.data ||
+          result.user ||
+          {
+            ...(getCurrentUser() || {}),
+            name,
+            phone,
+            location
+          };
+
+
+        if (
+          typeof window.setCurrentUser ===
+          "function"
+        ) {
+
+          window.setCurrentUser(
+            updated
+          );
+
+        }
+
+
+        renderProfile(
+          updated
+        );
+
+
+        showProfileMessage(
+          result.message ||
+          "Profile updated successfully."
+        );
+
+
+      } catch (error) {
+
+        showProfileMessage(
+          error.message ||
+          "Unable to update profile.",
+          true
+        );
+
+      } finally {
+
+        if (button) {
+
+          button.disabled =
+            false;
+
+          button.textContent =
+            "✓ Save Profile";
+
+        }
+
+      }
+
     }
 
-    if (
-      typeof window.setCurrentUser ===
-      "function"
-    ) {
-      window.setCurrentUser(
-        result.data
-      );
-    }
 
-    showProfileMessage(
-      result.message ||
-      "Profile updated successfully."
+    document.addEventListener(
+      "DOMContentLoaded",
+      () => {
+
+        loadProfile();
+
+
+        const editButton =
+          document.getElementById(
+            "editProfileButton"
+          );
+
+
+        const editPanel =
+          document.getElementById(
+            "editProfilePanel"
+          );
+
+
+        if (editButton) {
+
+          editButton.addEventListener(
+            "click",
+            () => {
+
+              editPanel.hidden =
+                false;
+
+              editPanel.scrollIntoView({
+                behavior:
+                  "smooth",
+                block:
+                  "start"
+              });
+
+            }
+          );
+
+        }
+
+
+        const cancelButton =
+          document.getElementById(
+            "cancelEditButton"
+          );
+
+
+        if (cancelButton) {
+
+          cancelButton.addEventListener(
+            "click",
+            () => {
+
+              editPanel.hidden =
+                true;
+
+            }
+          );
+
+        }
+
+
+        const form =
+          document.getElementById(
+            "profileForm"
+          );
+
+
+        if (form) {
+
+          form.addEventListener(
+            "submit",
+            saveProfile
+          );
+
+        }
+
+
+        const logout =
+          document.getElementById(
+            "profileLogout"
+          );
+
+
+        if (logout) {
+
+          logout.addEventListener(
+            "click",
+            () => {
+
+              if (
+                typeof window.logout ===
+                "function"
+              ) {
+
+                window.logout();
+
+              } else if (
+                window.SWN &&
+                typeof SWN.logout ===
+                "function"
+              ) {
+
+                SWN.logout();
+
+              }
+
+            }
+          );
+
+        }
+
+
+        const password =
+          document.getElementById(
+            "changePasswordButton"
+          );
+
+
+        if (password) {
+
+          password.addEventListener(
+            "click",
+            () => {
+
+              showProfileMessage(
+                "Change Password feature will open when its password page/API is available."
+              );
+
+            }
+          );
+
+        }
+
+
+        const deleteButton =
+          document.getElementById(
+            "deleteAccountButton"
+          );
+
+
+        if (deleteButton) {
+
+          deleteButton.addEventListener(
+            "click",
+            () => {
+
+              const confirmed =
+                window.confirm(
+                  "Are you sure you want to delete your account?"
+                );
+
+
+              if (!confirmed) {
+                return;
+              }
+
+
+              showProfileMessage(
+                "Account deletion API is not connected yet. No account was deleted."
+              );
+
+            }
+          );
+
+        }
+
+      }
     );
 
-  } catch (error) {
-
-    showProfileMessage(
-      error.message ||
-      "Unable to update profile.",
-      true
-    );
-
-  } finally {
-
-    if (button) {
-      button.disabled = false;
-      button.textContent =
-        "Save Profile";
-    }
-
-  }
-}
-
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
-
-    const form =
-      document.querySelector(
-        "#profileForm"
-      );
-
-    if (form) {
-      form.addEventListener(
-        "submit",
-        saveProfile
-      );
-    }
-
-    loadProfile();
-
-  }
-);
-
-</script>
+  </script>
 
 </body>
+
 </html>
