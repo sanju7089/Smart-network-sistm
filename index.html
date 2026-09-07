@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+
   <meta charset="utf-8">
 
   <meta
@@ -9,42 +10,141 @@
     content="width=device-width, initial-scale=1"
   >
 
-  <title>Home | Smart Work Network</title>
+  <title>
+    Smart Work Network | Home
+  </title>
 
   <link
     rel="stylesheet"
     href="css/main.css"
   >
+
 </head>
 
-<body>
 
-  <header class="header">
+<body class="swn-home-page">
 
-    <div class="container nav">
+  <!-- ================= HEADER ================= -->
 
-      <a
-        class="brand"
-        href="index.html"
-      >
-        Smart Work Network
-      </a>
+  <header class="swn-header">
 
-      <nav class="navlinks">
+    <div class="container">
 
-        <a href="services.html">
-          Services
+      <div class="swn-header-top">
+
+        <a
+          class="swn-brand"
+          href="index.html"
+        >
+
+          <span class="swn-logo">
+            ✓
+          </span>
+
+          <span class="swn-brand-text">
+
+            <strong>
+              Smart Work Network
+            </strong>
+
+            <small>
+              Work • Connect • Grow
+            </small>
+
+          </span>
+
         </a>
+
+
+        <div class="swn-header-icons">
+
+          <button
+            class="swn-notification"
+            type="button"
+            aria-label="Notifications"
+          >
+            ♧
+            <span>3</span>
+          </button>
+
+
+          <a
+            class="swn-user-icon"
+            href="profile.html"
+            aria-label="Profile"
+          >
+            ●
+          </a>
+
+        </div>
+
+      </div>
+
+
+      <div class="swn-header-user">
+
+        <span>
+          Welcome to
+          <strong>
+            Smart Work Network
+          </strong>
+        </span>
+
+        <span id="homeAuthArea"></span>
+
+      </div>
+
+
+      <!-- MAIN NAV -->
+
+      <nav class="swn-nav">
+
+        <a
+          class="active"
+          href="index.html"
+        >
+          <span class="nav-icon">⌂</span>
+          <span>Home</span>
+        </a>
+
 
         <a href="find-help.html">
-          Find Help
+
+          <span class="nav-icon">
+            ⌕
+          </span>
+
+          <span>
+            Find Help
+          </span>
+
         </a>
+
 
         <a href="workers.html">
-          Workers
+
+          <span class="nav-icon">
+            ♟
+          </span>
+
+          <span>
+            Workers
+          </span>
+
         </a>
 
-        <span data-auth></span>
+
+        <a href="customer-dashboard.html">
+
+          <span class="nav-icon">
+            ▦
+          </span>
+
+          <span>
+            Dashboard
+          </span>
+
+        </a>
 
       </nav>
 
@@ -53,56 +153,148 @@
   </header>
 
 
-  <main>
+  <!-- ================= MAIN ================= -->
 
-    <section class="hero">
+  <main class="swn-home-main">
 
-      <div class="container hero-grid">
+    <!-- HERO -->
 
-        <div>
+    <section class="swn-home-hero">
 
-          <span class="tag">
-            Local services • Work • Trust
-          </span>
+      <div class="container">
 
-          <h1>
-            Find the right help. Find the right work.
-          </h1>
+        <div class="swn-hero-card">
 
-          <p class="lead">
-            Customer and worker marketplace with real multi-page navigation.
-          </p>
+          <div class="swn-hero-content">
 
-          <div class="row">
+            <span class="swn-home-badge">
+              Local Services • Work • Trust
+            </span>
 
-            <a
-              class="btn btn-primary"
-              href="services.html"
-            >
-              Find a Service
-            </a>
 
-            <a
-              class="btn btn-light"
-              href="signup.html"
-            >
-              Join as Worker
-            </a>
+            <h1>
+              Find the right help.
+              <br>
+              Find the right work.
+            </h1>
+
+
+            <p>
+              Connect customers with trusted workers
+              and find genuine work opportunities
+              in your area.
+            </p>
+
+
+            <div class="swn-hero-buttons">
+
+              <a
+                class="swn-hero-primary"
+                href="find-help.html"
+              >
+                Find Help
+              </a>
+
+
+              <a
+                class="swn-hero-secondary"
+                href="signup.html"
+              >
+                Join as Worker
+              </a>
+
+            </div>
 
           </div>
 
-        </div>
+
+          <div class="swn-how-card">
+
+            <div class="swn-how-icon">
+              ✓
+            </div>
+
+            <h2>
+              How it works
+            </h2>
 
 
-        <div class="card">
+            <div class="swn-step">
 
-          <h2>
-            How it works
-          </h2>
+              <span>
+                1
+              </span>
 
-          <p>
-            Choose Service → Post Work → Matched Workers → Profile → Booking → Confirmation
-          </p>
+              <div>
+                <strong>
+                  Find a Service
+                </strong>
+
+                <small>
+                  Search for the help you need.
+                </small>
+              </div>
+
+            </div>
+
+
+            <div class="swn-step">
+
+              <span>
+                2
+              </span>
+
+              <div>
+                <strong>
+                  Post Work
+                </strong>
+
+                <small>
+                  Tell workers what you need.
+                </small>
+              </div>
+
+            </div>
+
+
+            <div class="swn-step">
+
+              <span>
+                3
+              </span>
+
+              <div>
+                <strong>
+                  Connect
+                </strong>
+
+                <small>
+                  Choose the right worker.
+                </small>
+              </div>
+
+            </div>
+
+
+            <div class="swn-step">
+
+              <span>
+                4
+              </span>
+
+              <div>
+                <strong>
+                  Book & Confirm
+                </strong>
+
+                <small>
+                  Complete your booking safely.
+                </small>
+              </div>
+
+            </div>
+
+          </div>
 
         </div>
 
@@ -111,18 +303,222 @@
     </section>
 
 
-    <section class="section">
+    <!-- QUICK SEARCH -->
+
+    <section class="swn-search-section">
 
       <div class="container">
 
-        <h2>
-          Popular Services
-        </h2>
+        <div class="swn-search-card">
+
+          <div>
+
+            <span class="swn-search-label">
+              What service do you need?
+            </span>
+
+            <h2>
+              Find trusted help near you
+            </h2>
+
+          </div>
+
+
+          <form
+            class="swn-search-form"
+            id="homeSearchForm"
+          >
+
+            <input
+              id="homeSearch"
+              type="search"
+              placeholder="e.g. Electrician, Plumber, Driver..."
+              autocomplete="off"
+            >
+
+
+            <button
+              type="submit"
+            >
+              Search
+            </button>
+
+          </form>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- POPULAR SERVICES -->
+
+    <section class="swn-home-section">
+
+      <div class="container">
+
+        <div class="swn-section-heading">
+
+          <div>
+
+            <span>
+              SERVICES
+            </span>
+
+            <h2>
+              Popular Services
+            </h2>
+
+            <p>
+              Find skilled workers for everyday needs.
+            </p>
+
+          </div>
+
+
+          <a
+            href="services.html"
+          >
+            View All →
+          </a>
+
+        </div>
+
 
         <div
-          class="grid"
+          class="swn-service-grid"
           id="serviceList"
-        ></div>
+        >
+
+          <a
+            class="swn-service-card"
+            href="find-help.html?service=Electrician"
+          >
+            <span>⚡</span>
+            <strong>Electrician</strong>
+            <small>Electrical work</small>
+          </a>
+
+
+          <a
+            class="swn-service-card"
+            href="find-help.html?service=Plumber"
+          >
+            <span>♒</span>
+            <strong>Plumber</strong>
+            <small>Plumbing services</small>
+          </a>
+
+
+          <a
+            class="swn-service-card"
+            href="find-help.html?service=Carpenter"
+          >
+            <span>▤</span>
+            <strong>Carpenter</strong>
+            <small>Furniture & wood work</small>
+          </a>
+
+
+          <a
+            class="swn-service-card"
+            href="find-help.html?service=Painter"
+          >
+            <span>◉</span>
+            <strong>Painter</strong>
+            <small>Painting services</small>
+          </a>
+
+
+          <a
+            class="swn-service-card"
+            href="find-help.html?service=Driver"
+          >
+            <span>▣</span>
+            <strong>Driver</strong>
+            <small>Driving services</small>
+          </a>
+
+
+          <a
+            class="swn-service-card"
+            href="find-help.html?service=Cleaning"
+          >
+            <span>✦</span>
+            <strong>Cleaning</strong>
+            <small>Home cleaning</small>
+          </a>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- TRUST SECTION -->
+
+    <section class="swn-trust-section">
+
+      <div class="container">
+
+        <div class="swn-trust-grid">
+
+          <div>
+
+            <span class="swn-trust-icon">
+              ✓
+            </span>
+
+            <strong>
+              Trusted Connections
+            </strong>
+
+            <p>
+              Connect customers and workers
+              through one simple platform.
+            </p>
+
+          </div>
+
+
+          <div>
+
+            <span class="swn-trust-icon">
+              ⚡
+            </span>
+
+            <strong>
+              Fast & Simple
+            </strong>
+
+            <p>
+              Find help and work opportunities
+              without unnecessary steps.
+            </p>
+
+          </div>
+
+
+          <div>
+
+            <span class="swn-trust-icon">
+              ♧
+            </span>
+
+            <strong>
+              Local Network
+            </strong>
+
+            <p>
+              Discover services and workers
+              around your location.
+            </p>
+
+          </div>
+
+        </div>
 
       </div>
 
@@ -131,13 +527,15 @@
   </main>
 
 
-  <footer class="footer">
+  <!-- ================= FOOTER ================= -->
+
+  <footer class="footer swn-footer">
 
     <div class="container">
 
-      <b>
+      <strong>
         Smart Work Network
-      </b>
+      </strong>
 
       <p>
         Services • Workers • Work opportunities
@@ -164,14 +562,106 @@
   </footer>
 
 
-  <!-- CENTRAL API -->
+  <!-- ================= JS ================= -->
+
   <script src="js/app.js"></script>
 
-  <!-- AUTOMATED NOTIFICATIONS -->
   <script src="js/notifications.js"></script>
 
-  <!-- SERVICES -->
   <script src="js/services.js"></script>
+
+
+  <script>
+
+    document.addEventListener(
+      "DOMContentLoaded",
+      () => {
+
+        const user =
+          window.SWN &&
+          typeof SWN.user ===
+          "function"
+            ? SWN.user()
+            : null;
+
+
+        const authArea =
+          document.getElementById(
+            "homeAuthArea"
+          );
+
+
+        if (
+          authArea &&
+          user
+        ) {
+
+          authArea.innerHTML =
+            `
+              <a
+                class="swn-home-profile-link"
+                href="profile.html"
+              >
+                My Profile
+              </a>
+            `;
+
+        }
+
+
+        const searchForm =
+          document.getElementById(
+            "homeSearchForm"
+          );
+
+
+        const searchInput =
+          document.getElementById(
+            "homeSearch"
+          );
+
+
+        if (
+          searchForm &&
+          searchInput
+        ) {
+
+          searchForm.addEventListener(
+            "submit",
+            (event) => {
+
+              event.preventDefault();
+
+
+              const query =
+                searchInput.value.trim();
+
+
+              if (!query) {
+
+                window.location.href =
+                  "find-help.html";
+
+                return;
+
+              }
+
+
+              window.location.href =
+                "find-help.html?search=" +
+                encodeURIComponent(
+                  query
+                );
+
+            }
+          );
+
+        }
+
+      }
+    );
+
+  </script>
 
 </body>
 
