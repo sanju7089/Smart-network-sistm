@@ -3269,3 +3269,703 @@ input:focus-visible {
   }
 
 }
+/* ========================================================= */
+/* SMART WORK NETWORK - CUSTOMER DASHBOARD FINAL POLISH     */
+/* ========================================================= */
+
+/* ================= HEADER ICONS ================= */
+
+.swn-header-icons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.swn-notification,
+.swn-user-icon {
+  width: 42px;
+  height: 42px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  position: relative;
+
+  border: 1px solid var(--border);
+  border-radius: 50%;
+
+  background: #ffffff;
+  color: var(--text);
+
+  text-decoration: none;
+
+  cursor: pointer;
+
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    border-color .18s ease;
+}
+
+.swn-notification:hover,
+.swn-user-icon:hover {
+  transform: translateY(-2px);
+
+  border-color: #b9d9ca;
+
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, .08);
+}
+
+.swn-bell-icon {
+  display: inline-flex;
+
+  align-items: center;
+  justify-content: center;
+
+  font-size: 18px;
+  line-height: 1;
+}
+
+.swn-notification > span:last-child {
+  position: absolute;
+
+  top: -4px;
+  right: -4px;
+
+  min-width: 19px;
+  height: 19px;
+
+  padding: 0 4px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 999px;
+
+  background: #e53935;
+  color: #ffffff;
+
+  font-size: 10px;
+  font-weight: 900;
+
+  line-height: 1;
+
+  border: 2px solid #ffffff;
+}
+
+.swn-user-icon {
+  font-size: 15px;
+}
+
+
+/* ================= DASHBOARD MAIN ================= */
+
+.swn-dashboard-main {
+  min-height: calc(100vh - 150px);
+
+  padding:
+    28px 0 55px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #f8fbf9 0%,
+      #ffffff 55%
+    );
+}
+
+.dashboard-content {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 18px;
+}
+
+
+/* ================= WELCOME CARD ================= */
+
+.dashboard-welcome {
+  position: relative;
+
+  margin-bottom: 22px;
+
+  padding:
+    26px 28px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 24px;
+
+  overflow: hidden;
+
+  background:
+    linear-gradient(
+      135deg,
+      #eefaf4 0%,
+      #ffffff 75%
+    );
+
+  border:
+    1px solid #d7ebe1;
+
+  border-radius:
+    16px;
+
+  box-shadow:
+    0 6px 22px
+    rgba(
+      20,
+      60,
+      45,
+      .06
+    );
+}
+
+.dashboard-welcome::after {
+  content: "";
+
+  position: absolute;
+
+  width: 150px;
+  height: 150px;
+
+  right: -55px;
+  top: -65px;
+
+  border-radius: 50%;
+
+  background:
+    rgba(
+      7,
+      155,
+      98,
+      .07
+    );
+
+  pointer-events: none;
+}
+
+.dashboard-eyebrow {
+  display: inline-block;
+
+  margin-bottom: 3px;
+
+  color:
+    var(--primary);
+
+  font-size:
+    11px;
+
+  font-weight:
+    900;
+
+  letter-spacing:
+    1.2px;
+}
+
+.dashboard-welcome h1 {
+  position: relative;
+  z-index: 1;
+
+  margin:
+    5px 0;
+
+  color:
+    #18251f;
+
+  font-size:
+    clamp(
+      25px,
+      4vw,
+      34px
+    );
+
+  line-height:
+    1.2;
+}
+
+.dashboard-welcome h1 span {
+  color:
+    var(--primary);
+}
+
+.dashboard-welcome p {
+  position: relative;
+  z-index: 1;
+
+  margin:
+    6px 0 0;
+
+  color:
+    var(--muted);
+
+  font-size:
+    14px;
+
+  line-height:
+    1.6;
+}
+
+
+/* ================= POST WORK BUTTON ================= */
+
+.dashboard-post-work {
+  position: relative;
+  z-index: 2;
+
+  flex:
+    0 0 auto;
+
+  min-height:
+    48px;
+
+  padding:
+    12px 20px;
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  gap:
+    6px;
+
+  border:
+    0;
+
+  border-radius:
+    10px;
+
+  background:
+    var(--primary);
+
+  color:
+    #ffffff;
+
+  font-size:
+    14px;
+
+  font-weight:
+    800;
+
+  text-decoration:
+    none;
+
+  box-shadow:
+    0 6px 15px
+    rgba(
+      7,
+      155,
+      98,
+      .20
+    );
+
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    filter .18s ease;
+}
+
+.dashboard-post-work:hover {
+  transform:
+    translateY(-2px);
+
+  filter:
+    brightness(.97);
+
+  box-shadow:
+    0 9px 20px
+    rgba(
+      7,
+      155,
+      98,
+      .25
+    );
+}
+
+.dashboard-post-work:active {
+  transform:
+    translateY(0);
+}
+
+
+/* ================= COMMON DASHBOARD CARDS ================= */
+
+.dashboard-section,
+.dashboard-status-card,
+.dashboard-job-card,
+.dashboard-booking-card,
+.dashboard-payment-card {
+  background:
+    #ffffff;
+
+  border:
+    1px solid var(--border);
+
+  border-radius:
+    14px;
+}
+
+.dashboard-section {
+  overflow:
+    hidden;
+
+  box-shadow:
+    0 4px 15px
+    rgba(
+      0,
+      0,
+      0,
+      .035
+    );
+}
+
+
+/* ================= SECTION HEADERS ================= */
+
+.dashboard-section__header {
+  padding:
+    18px 20px;
+
+  border-bottom:
+    1px solid #edf2ef;
+
+  background:
+    #ffffff;
+}
+
+.dashboard-section__header h2 {
+  margin:
+    0;
+
+  color:
+    #18251f;
+
+  font-size:
+    18px;
+
+  font-weight:
+    850;
+}
+
+
+/* ================= STATUS CARDS ================= */
+
+.dashboard-status-card {
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    border-color .18s ease;
+}
+
+.dashboard-status-card:hover {
+  transform:
+    translateY(-2px);
+
+  border-color:
+    #c7e3d4;
+
+  box-shadow:
+    0 8px 20px
+    rgba(
+      0,
+      0,
+      0,
+      .06
+    );
+}
+
+
+/* ================= JOB / BOOKING / PAYMENT ================= */
+
+.dashboard-job-card,
+.dashboard-booking-card,
+.dashboard-payment-card {
+  transition:
+    transform .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease;
+}
+
+.dashboard-job-card:hover,
+.dashboard-booking-card:hover,
+.dashboard-payment-card:hover {
+  transform:
+    translateY(-2px);
+
+  border-color:
+    #b9d9ca;
+
+  box-shadow:
+    0 7px 18px
+    rgba(
+      0,
+      0,
+      0,
+      .05
+    );
+}
+
+
+/* ================= LOADING ================= */
+
+.dashboard-loading {
+  min-height:
+    190px;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  background:
+    #ffffff;
+
+  border:
+    1px solid var(--border);
+
+  border-radius:
+    14px;
+
+  color:
+    var(--muted);
+
+  box-shadow:
+    0 4px 15px
+    rgba(
+      0,
+      0,
+      0,
+      .035
+    );
+}
+
+.dashboard-loading-spinner {
+  width:
+    36px;
+
+  height:
+    36px;
+
+  margin-bottom:
+    12px;
+
+  border:
+    3px solid #dfeee7;
+
+  border-top-color:
+    var(--primary);
+
+  border-radius:
+    50%;
+
+  animation:
+    dashboardSpin .8s linear infinite;
+}
+
+@keyframes dashboardSpin {
+
+  from {
+    transform:
+      rotate(0deg);
+  }
+
+  to {
+    transform:
+      rotate(360deg);
+  }
+
+}
+
+
+/* ================= EMPTY / ERROR ================= */
+
+.dashboard-empty,
+.dashboard-error {
+  padding:
+    30px 20px;
+
+  text-align:
+    center;
+
+  background:
+    #ffffff;
+
+  border:
+    1px solid var(--border);
+
+  border-radius:
+    14px;
+
+  color:
+    var(--muted);
+}
+
+.dashboard-error {
+  border-color:
+    #f0d0d0;
+}
+
+
+/* ================= MOBILE ================= */
+
+@media (max-width: 700px) {
+
+  .swn-dashboard-main {
+    padding:
+      18px 0 40px;
+  }
+
+  .swn-header-icons {
+    gap:
+      8px;
+  }
+
+  .swn-notification,
+  .swn-user-icon {
+    width:
+      38px;
+
+    height:
+      38px;
+  }
+
+  .swn-bell-icon {
+    font-size:
+      17px;
+  }
+
+  .dashboard-welcome {
+    padding:
+      20px;
+
+    flex-direction:
+      column;
+
+    align-items:
+      stretch;
+
+    gap:
+      17px;
+
+    border-radius:
+      14px;
+  }
+
+  .dashboard-welcome h1 {
+    font-size:
+      26px;
+  }
+
+  .dashboard-welcome p {
+    font-size:
+      13px;
+  }
+
+  .dashboard-post-work {
+    width:
+      100%;
+
+    min-height:
+      46px;
+  }
+
+  .dashboard-content {
+    gap:
+      14px;
+  }
+
+  .dashboard-section__header {
+    padding:
+      16px;
+  }
+
+}
+
+
+/* ================= SMALL MOBILE ================= */
+
+@media (max-width: 420px) {
+
+  .dashboard-welcome {
+    padding:
+      17px;
+  }
+
+  .dashboard-welcome h1 {
+    font-size:
+      23px;
+  }
+
+  .dashboard-eyebrow {
+    font-size:
+      10px;
+  }
+
+  .swn-header-icons {
+    gap:
+      6px;
+  }
+
+}
+
+
+/* ================= ACCESSIBILITY ================= */
+
+.dashboard-post-work:focus-visible,
+.swn-notification:focus-visible,
+.swn-user-icon:focus-visible {
+  outline:
+    3px solid
+    rgba(
+      7,
+      155,
+      98,
+      .25
+    );
+
+  outline-offset:
+    3px;
+}
+
+
+/* ================= REDUCED MOTION ================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .dashboard-post-work,
+  .dashboard-status-card,
+  .dashboard-job-card,
+  .dashboard-booking-card,
+  .dashboard-payment-card,
+  .swn-notification,
+  .swn-user-icon {
+    transition:
+      none;
+  }
+
+  .dashboard-loading-spinner {
+    animation:
+      none;
+  }
+
+  }
