@@ -6,7 +6,9 @@ import {
   login,
   logout,
   getCurrentUser,
-  changePassword
+  changePassword,
+  forgotPassword,
+  resetPassword
 } from "../controllers/authController.js";
 
 import {
@@ -64,6 +66,38 @@ const passwordLimiter =
     }
   });
 
+const forgotPasswordLimiter =
+  rateLimit({
+    windowMs:
+      15 * 60 * 1000,
+    limit: 5,
+    standardHeaders:
+      "draft-7",
+    legacyHeaders:
+      false,
+    message: {
+      success: false,
+      message:
+        "Too many password reset requests. Please try again later."
+    }
+  });
+
+const resetPasswordLimiter =
+  rateLimit({
+    windowMs:
+      15 * 60 * 1000,
+    limit: 5,
+    standardHeaders:
+      "draft-7",
+    legacyHeaders:
+      false,
+    message: {
+      success: false,
+      message:
+        "Too many password reset attempts. Please try again later."
+    }
+  });
+
 router.post(
   "/register",
   registerLimiter,
@@ -92,6 +126,18 @@ router.post(
   requireAuth,
   passwordLimiter,
   changePassword
+);
+
+router.post(
+  "/forgot-password",
+  forgotPasswordLimiter,
+  forgotPassword
+);
+
+router.post(
+  "/reset-password",
+  resetPasswordLimiter,
+  resetPassword
 );
 
 router.get(
