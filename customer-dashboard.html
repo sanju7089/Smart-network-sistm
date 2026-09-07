@@ -1,15 +1,17 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="utf-8">
 
   <meta
     name="viewport"
-    content="width=device-width,initial-scale=1"
+    content="width=device-width, initial-scale=1"
   >
 
-  <title>Customer Dashboard | Smart Work Network</title>
+  <title>
+    Customer Dashboard | Smart Work Network
+  </title>
 
   <link
     rel="stylesheet"
@@ -17,34 +19,115 @@
   >
 </head>
 
-<body>
+<body class="swn-dashboard-page">
 
-  <header class="header">
+  <!-- HEADER -->
 
-    <div class="container nav">
+  <header class="swn-header">
 
-      <a
-        class="brand"
-        href="index.html"
-      >
-        Smart Work Network
-      </a>
+    <div class="container">
 
-      <nav class="navlinks">
+      <div class="swn-header-top">
 
-        <a href="services.html">
-          Services
+        <a
+          class="swn-brand"
+          href="index.html"
+        >
+
+          <span class="swn-logo">
+            ✓
+          </span>
+
+          <span class="swn-brand-text">
+
+            <strong>
+              Smart Work Network
+            </strong>
+
+            <small>
+              Work • Connect • Grow
+            </small>
+
+          </span>
+
         </a>
+
+
+        <div class="swn-header-icons">
+
+          <button
+            class="swn-notification"
+            type="button"
+            aria-label="Notifications"
+          >
+            ♧
+
+            <span>
+              3
+            </span>
+          </button>
+
+
+          <a
+            class="swn-user-icon"
+            href="profile.html"
+            aria-label="Profile"
+          >
+            ●
+          </a>
+
+        </div>
+
+      </div>
+
+
+      <div class="swn-header-user">
+
+        <span>
+          Hi,
+          <strong id="dashboardUserName">
+            User
+          </strong>
+        </span>
+
+        <button
+          id="dashboardLogout"
+          class="swn-logout"
+          type="button"
+        >
+          ↪ Logout
+        </button>
+
+      </div>
+
+
+      <nav class="swn-nav">
+
+        <a href="index.html">
+          <span class="nav-icon">⌂</span>
+          <span>Home</span>
+        </a>
+
 
         <a href="find-help.html">
-          Find Help
+          <span class="nav-icon">⌕</span>
+          <span>Find Help</span>
         </a>
+
 
         <a href="workers.html">
-          Workers
+          <span class="nav-icon">♟</span>
+          <span>Workers</span>
         </a>
 
-        <span data-auth></span>
+
+        <a
+          class="active"
+          href="customer-dashboard.html"
+        >
+          <span class="nav-icon">▦</span>
+          <span>Dashboard</span>
+        </a>
 
       </nav>
 
@@ -53,27 +136,78 @@
   </header>
 
 
-  <main>
+  <!-- MAIN DASHBOARD -->
 
-    <section class="section">
+  <main class="swn-dashboard-main">
+
+    <div class="container">
+
+      <section class="dashboard-welcome">
+
+        <div>
+
+          <span class="dashboard-eyebrow">
+            CUSTOMER DASHBOARD
+          </span>
+
+          <h1>
+            Welcome back,
+            <span id="dashboardWelcomeName">
+              Customer
+            </span>
+          </h1>
+
+          <p>
+            Manage your work, bookings and payments
+            from one place.
+          </p>
+
+        </div>
+
+
+        <a
+          class="dashboard-post-work"
+          href="post-work.html"
+        >
+          ＋ Post New Work
+        </a>
+
+      </section>
+
+
+      <!-- Existing dashboard.js renders everything here -->
 
       <div
-        class="container"
         id="dashboardContent"
-      ></div>
+        class="dashboard-content"
+      >
 
-    </section>
+        <div class="dashboard-loading">
+
+          <div class="dashboard-loading-spinner"></div>
+
+          <p>
+            Loading your dashboard...
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
 
   </main>
 
 
-  <footer class="footer">
+  <!-- FOOTER -->
+
+  <footer class="footer swn-footer">
 
     <div class="container">
 
-      <b>
+      <strong>
         Smart Work Network
-      </b>
+      </strong>
 
       <p>
         Services • Workers • Work opportunities
@@ -101,16 +235,163 @@
 
 
   <!-- AUTH -->
+
   <script src="js/auth.js"></script>
 
   <!-- CENTRAL API -->
+
   <script src="js/app.js"></script>
 
-  <!-- MAIN DASHBOARD -->
+  <!-- DASHBOARD ENGINE -->
+
   <script src="js/dashboard.js"></script>
 
   <!-- NOTIFICATIONS -->
+
   <script src="js/notifications.js"></script>
+
+
+  <script>
+
+    "use strict";
+
+    document.addEventListener(
+      "DOMContentLoaded",
+      function () {
+
+        let user = null;
+
+
+        try {
+
+          if (
+            window.SWN &&
+            typeof window.SWN.user ===
+            "function"
+          ) {
+
+            user =
+              window.SWN.user();
+
+          }
+
+        } catch (error) {
+
+          console.warn(
+            "Unable to read current user.",
+            error
+          );
+
+        }
+
+
+        if (!user) {
+
+          try {
+
+            if (
+              typeof window.getCurrentUser ===
+              "function"
+            ) {
+
+              user =
+                window.getCurrentUser();
+
+            }
+
+          } catch (error) {
+
+            console.warn(
+              "Unable to read stored user.",
+              error
+            );
+
+          }
+
+        }
+
+
+        if (!user) {
+          return;
+        }
+
+
+        const name =
+          user.name ||
+          "Customer";
+
+
+        const headerName =
+          document.getElementById(
+            "dashboardUserName"
+          );
+
+
+        const welcomeName =
+          document.getElementById(
+            "dashboardWelcomeName"
+          );
+
+
+        if (headerName) {
+
+          headerName.textContent =
+            name;
+
+        }
+
+
+        if (welcomeName) {
+
+          welcomeName.textContent =
+            name;
+
+        }
+
+
+        const logout =
+          document.getElementById(
+            "dashboardLogout"
+          );
+
+
+        if (logout) {
+
+          logout.addEventListener(
+            "click",
+            function () {
+
+              if (
+                typeof window.logout ===
+                "function"
+              ) {
+
+                window.logout();
+
+                return;
+
+              }
+
+
+              if (
+                window.SWN &&
+                typeof window.SWN.logout ===
+                "function"
+              ) {
+
+                window.SWN.logout();
+
+              }
+
+            }
+          );
+
+        }
+
+      }
+    );
+
+  </script>
 
 </body>
 
