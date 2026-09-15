@@ -125,7 +125,9 @@
 
   <div class="container">
 
-    <b>Smart Work Network</b>
+    <b>
+      Smart Work Network
+    </b>
 
     <p>
       Services • Workers • Work opportunities
@@ -198,14 +200,42 @@ const description =
     "otpDescription"
   );
 
+let pendingKey =
+  "swn_pending_signup_email";
+
+if (
+  mode === "login"
+) {
+  pendingKey =
+    "swn_pending_login_email";
+}
+
+if (
+  mode === "reset"
+) {
+  pendingKey =
+    "swn_pending_reset_email";
+}
+
+const pendingEmail =
+  sessionStorage.getItem(
+    pendingKey
+  ) || "";
+
 emailInput.value =
   emailFromUrl ||
-  sessionStorage.getItem(
-    mode === "signup"
-      ? "swn_pending_signup_email"
-      : "swn_pending_reset_email"
-  ) ||
+  pendingEmail ||
   "";
+
+if (
+  mode === "login"
+) {
+  title.textContent =
+    "Verify Login OTP";
+
+  description.textContent =
+    "Enter the 6-digit OTP sent to your registered email to complete login.";
+}
 
 if (
   mode === "reset"
@@ -274,10 +304,23 @@ form.addEventListener(
       "Verifying...";
 
     try {
-      const endpoint =
+
+      let endpoint =
+        "/auth/verify-signup-otp";
+
+      if (
+        mode === "login"
+      ) {
+        endpoint =
+          "/auth/verify-login-otp";
+      }
+
+      if (
         mode === "reset"
-          ? "/auth/verify-reset-otp"
-          : "/auth/verify-signup-otp";
+      ) {
+        endpoint =
+          "/auth/verify-reset-otp";
+      }
 
       const result =
         await SWN.request(
@@ -305,6 +348,64 @@ form.addEventListener(
         return;
       }
 
+      /* =========================
+         LOGIN
+      ========================= */
+
+      if (
+        mode === "login"
+      ) {
+        sessionStorage.removeItem(
+          "swn_pending_login_email"
+        );
+
+        if (
+          result.user
+        ) {
+          localStorage.setItem(
+            "swn_user",
+            JSON.stringify(
+              result.user
+            )
+          );
+
+          if (
+            result.user.role ===
+            "admin"
+          ) {
+            window.location.href =
+              "admin.html";
+
+            return;
+          }
+
+          if (
+            result.user.role ===
+            "worker"
+          ) {
+            window.location.href =
+              "worker-dashboard.html";
+
+            return;
+          }
+
+          window.location.href =
+            "customer-dashboard.html";
+
+          return;
+        }
+
+        showMessage(
+          "Login completed, but user information was not received."
+        );
+
+        return;
+      }
+
+      /* =========================
+         SIGNUP
+      ========================= */
+
       if (
         mode === "signup"
       ) {
@@ -321,20 +422,30 @@ form.addEventListener(
               result.user
             )
           );
+
+          if (
+            result.user.role ===
+            "worker"
+          ) {
+            window.location.href =
+              "worker-dashboard.html";
+          } else {
+            window.location.href =
+              "customer-dashboard.html";
+          }
+
+          return;
         }
 
         window.location.href =
-          result.user
-            ? (
-                result.user.role ===
-                "worker"
-                  ? "worker-dashboard.html"
-                  : "customer-dashboard.html"
-              )
-            : "login.html";
+          "login.html";
 
         return;
       }
+
+      /* =========================
+         PASSWORD RESET
+      ========================= */
 
       if (
         result.resetToken
@@ -357,7 +468,9 @@ form.addEventListener(
       showMessage(
         "OTP verified, but reset authorization was not received."
       );
+
     } catch (error) {
+
       console.error(
         "VERIFY OTP ERROR:",
         error
@@ -367,7 +480,9 @@ form.addEventListener(
         error.message ||
           "Unable to verify OTP."
       );
+
     } finally {
+
       verifyButton.disabled =
         false;
 
@@ -407,10 +522,23 @@ resendButton.addEventListener(
       "Sending...";
 
     try {
-      const endpoint =
+
+      let endpoint =
+        "/auth/resend-signup-otp";
+
+      if (
+        mode === "login"
+      ) {
+        endpoint =
+          "/auth/resend-login-otp";
+      }
+
+      if (
         mode === "reset"
-          ? "/auth/resend-reset-otp"
-          : "/auth/resend-signup-otp";
+      ) {
+        endpoint =
+          "/auth/resend-reset-otp";
+      }
 
       const result =
         await SWN.request(
@@ -429,7 +557,9 @@ resendButton.addEventListener(
         result?.message ||
           "A new OTP has been requested."
       );
+
     } catch (error) {
+
       console.error(
         "RESEND OTP ERROR:",
         error
@@ -439,14 +569,18 @@ resendButton.addEventListener(
         error.message ||
           "Unable to resend OTP."
       );
+
     } finally {
+
       setTimeout(
         function() {
+
           resendButton.disabled =
             false;
 
           resendButton.textContent =
             "Resend OTP";
+
         },
         1000
       );
