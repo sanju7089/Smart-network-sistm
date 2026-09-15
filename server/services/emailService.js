@@ -18,26 +18,11 @@ function getEmailConfiguration() {
 
 function escapeHtml(value) {
   return String(value)
-    .replaceAll(
-      "&",
-      "&amp;"
-    )
-    .replaceAll(
-      "<",
-      "&lt;"
-    )
-    .replaceAll(
-      ">",
-      "&gt;"
-    )
-    .replaceAll(
-      '"',
-      "&quot;"
-    )
-    .replaceAll(
-      "'",
-      "&#039;"
-    );
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 export async function sendOtpEmail({
@@ -61,8 +46,7 @@ export async function sendOtpEmail({
         "OTP email service is not configured."
       );
 
-    error.statusCode =
-      503;
+    error.statusCode = 503;
 
     throw error;
   }
@@ -74,8 +58,9 @@ export async function sendOtpEmail({
     "User";
 
   const safeOtp =
-    String(otp || "")
-      .trim();
+    String(
+      otp || ""
+    ).trim();
 
   const safeExpires =
     Number(
@@ -89,20 +74,49 @@ export async function sendOtpEmail({
   const isSignup =
     purpose === "signup";
 
-  const subject =
-    isSignup
-      ? "Verify your Smart Work Network account"
-      : "Your Smart Work Network password reset OTP";
+  const isLogin =
+    purpose === "login";
 
-  const heading =
-    isSignup
-      ? "Verify your email address"
-      : "Password reset OTP";
+  const isReset =
+    purpose === "reset";
 
-  const description =
-    isSignup
-      ? "Use the OTP below to verify your email and activate your Smart Work Network account."
-      : "Use the OTP below to verify your identity and reset your Smart Work Network password.";
+  let subject =
+    "Your Smart Work Network OTP";
+
+  let heading =
+    "Verification OTP";
+
+  let description =
+    "Use the OTP below to continue.";
+
+  if (isSignup) {
+    subject =
+      "Verify your Smart Work Network account";
+
+    heading =
+      "Verify your email address";
+
+    description =
+      "Use the OTP below to verify your email and activate your Smart Work Network account.";
+  } else if (isLogin) {
+    subject =
+      "Your Smart Work Network login OTP";
+
+    heading =
+      "Login verification OTP";
+
+    description =
+      "Use the OTP below to complete your Smart Work Network login.";
+  } else if (isReset) {
+    subject =
+      "Your Smart Work Network password reset OTP";
+
+    heading =
+      "Password reset OTP";
+
+    description =
+      "Use the OTP below to verify your identity and reset your Smart Work Network password.";
+  }
 
   const response =
     await fetch(
@@ -118,121 +132,123 @@ export async function sendOtpEmail({
             "application/json"
         },
 
-        body: JSON.stringify({
-          from,
+        body:
+          JSON.stringify({
+            from,
 
-          to: [to],
+            /*
+             * IMPORTANT:
+             * 'to' is the registered
+             * user's email.
+             */
+            to: [to],
 
-          subject,
+            subject,
 
-          html: `
-            <!doctype html>
+            html: `
+              <!doctype html>
 
-            <html>
-              <body
-                style="
-                  margin:0;
-                  padding:0;
-                  background:#f5f7fb;
-                  font-family:Arial,sans-serif;
-                "
-              >
-
-                <div
+              <html>
+                <body
                   style="
-                    max-width:600px;
-                    margin:30px auto;
-                    background:#ffffff;
-                    border-radius:12px;
-                    padding:32px;
+                    margin:0;
+                    padding:0;
+                    background:#f5f7fb;
+                    font-family:Arial,sans-serif;
                   "
                 >
 
-                  <h2
-                    style="
-                      margin-top:0;
-                    "
-                  >
-                    Smart Work Network
-                  </h2>
-
-                  <p>
-                    Hello
-                    ${escapeHtml(
-                      safeName
-                    )},
-                  </p>
-
-                  <h3>
-                    ${escapeHtml(
-                      heading
-                    )}
-                  </h3>
-
-                  <p>
-                    ${escapeHtml(
-                      description
-                    )}
-                  </p>
-
                   <div
                     style="
-                      margin:30px 0;
-                      padding:20px;
-                      background:#f3f4f6;
-                      border-radius:10px;
-                      text-align:center;
+                      max-width:600px;
+                      margin:30px auto;
+                      background:#ffffff;
+                      border-radius:12px;
+                      padding:32px;
                     "
                   >
+
+                    <h2>
+                      Smart Work Network
+                    </h2>
+
+                    <p>
+                      Hello
+                      ${escapeHtml(
+                        safeName
+                      )},
+                    </p>
+
+                    <h3>
+                      ${escapeHtml(
+                        heading
+                      )}
+                    </h3>
+
+                    <p>
+                      ${escapeHtml(
+                        description
+                      )}
+                    </p>
 
                     <div
                       style="
-                        font-size:34px;
-                        font-weight:bold;
-                        letter-spacing:8px;
+                        margin:30px 0;
+                        padding:20px;
+                        background:#f3f4f6;
+                        border-radius:10px;
+                        text-align:center;
                       "
                     >
-                      ${escapeHtml(
-                        safeOtp
-                      )}
+
+                      <div
+                        style="
+                          font-size:34px;
+                          font-weight:bold;
+                          letter-spacing:8px;
+                        "
+                      >
+                        ${escapeHtml(
+                          safeOtp
+                        )}
+                      </div>
+
                     </div>
+
+                    <p>
+                      This OTP will expire in
+                      <strong>
+                        ${safeExpires} minutes
+                      </strong>.
+                    </p>
+
+                    <p>
+                      Never share this OTP with anyone.
+                    </p>
+
+                    <hr
+                      style="
+                        border:none;
+                        border-top:1px solid #e5e7eb;
+                        margin:25px 0;
+                      "
+                    >
+
+                    <p
+                      style="
+                        font-size:12px;
+                        color:#6b7280;
+                      "
+                    >
+                      Smart Work Network security notification.
+                    </p>
 
                   </div>
 
-                  <p>
-                    This OTP will expire in
-                    <strong>
-                      ${safeExpires} minutes
-                    </strong>.
-                  </p>
-
-                  <p>
-                    Never share this OTP with anyone.
-                  </p>
-
-                  <hr
-                    style="
-                      border:none;
-                      border-top:1px solid #e5e7eb;
-                      margin:25px 0;
-                    "
-                  >
-
-                  <p
-                    style="
-                      font-size:12px;
-                      color:#6b7280;
-                    "
-                  >
-                    Smart Work Network security notification.
-                  </p>
-
-                </div>
-
-              </body>
-            </html>
-          `
-        })
+                </body>
+              </html>
+            `
+          })
       }
     );
 
@@ -245,17 +261,14 @@ export async function sendOtpEmail({
     data = null;
   }
 
-  if (
-    !response.ok
-  ) {
+  if (!response.ok) {
     const error =
       new Error(
         data?.message ||
           "Unable to send OTP email."
       );
 
-    error.statusCode =
-      502;
+    error.statusCode = 502;
 
     throw error;
   }
@@ -263,14 +276,12 @@ export async function sendOtpEmail({
   return {
     success: true,
     id:
-      data?.id ||
-      null
+      data?.id || null
   };
 }
 
 /*
- * Kept for compatibility with the
- * existing authController.js.
+ * Compatibility function.
  */
 export async function sendPasswordResetEmail({
   to,
@@ -292,8 +303,7 @@ export async function sendPasswordResetEmail({
         "Password reset email service is not configured."
       );
 
-    error.statusCode =
-      503;
+    error.statusCode = 503;
 
     throw error;
   }
@@ -327,89 +337,90 @@ export async function sendPasswordResetEmail({
             "application/json"
         },
 
-        body: JSON.stringify({
-          from,
+        body:
+          JSON.stringify({
+            from,
 
-          to: [to],
+            to: [to],
 
-          subject:
-            "Reset your Smart Work Network password",
+            subject:
+              "Reset your Smart Work Network password",
 
-          html: `
-            <!doctype html>
+            html: `
+              <!doctype html>
 
-            <html>
-              <body
-                style="
-                  margin:0;
-                  padding:0;
-                  background:#f5f7fb;
-                  font-family:Arial,sans-serif;
-                "
-              >
-
-                <div
+              <html>
+                <body
                   style="
-                    max-width:600px;
-                    margin:30px auto;
-                    background:#ffffff;
-                    border-radius:12px;
-                    padding:32px;
+                    margin:0;
+                    padding:0;
+                    background:#f5f7fb;
+                    font-family:Arial,sans-serif;
                   "
                 >
 
-                  <h2>
-                    Smart Work Network
-                  </h2>
-
-                  <p>
-                    Hello
-                    ${escapeHtml(
-                      safeName
-                    )},
-                  </p>
-
-                  <p>
-                    A password reset was requested for your account.
-                  </p>
-
-                  <p
+                  <div
                     style="
-                      margin:28px 0;
+                      max-width:600px;
+                      margin:30px auto;
+                      background:#ffffff;
+                      border-radius:12px;
+                      padding:32px;
                     "
                   >
 
-                    <a
-                      href="${escapeHtml(
-                        resetUrl
-                      )}"
+                    <h2>
+                      Smart Work Network
+                    </h2>
+
+                    <p>
+                      Hello
+                      ${escapeHtml(
+                        safeName
+                      )},
+                    </p>
+
+                    <p>
+                      A password reset was requested for your account.
+                    </p>
+
+                    <p
                       style="
-                        display:inline-block;
-                        padding:13px 22px;
-                        background:#111827;
-                        color:#ffffff;
-                        text-decoration:none;
-                        border-radius:8px;
+                        margin:28px 0;
                       "
                     >
-                      Reset Password
-                    </a>
 
-                  </p>
+                      <a
+                        href="${escapeHtml(
+                          resetUrl
+                        )}"
+                        style="
+                          display:inline-block;
+                          padding:13px 22px;
+                          background:#111827;
+                          color:#ffffff;
+                          text-decoration:none;
+                          border-radius:8px;
+                        "
+                      >
+                        Reset Password
+                      </a>
 
-                  <p>
-                    This link will expire in
-                    <strong>
-                      ${safeExpires} minutes
-                    </strong>.
-                  </p>
+                    </p>
 
-                </div>
+                    <p>
+                      This link will expire in
+                      <strong>
+                        ${safeExpires} minutes
+                      </strong>.
+                    </p>
 
-              </body>
-            </html>
-          `
-        })
+                  </div>
+
+                </body>
+              </html>
+            `
+          })
       }
     );
 
@@ -422,17 +433,14 @@ export async function sendPasswordResetEmail({
     data = null;
   }
 
-  if (
-    !response.ok
-  ) {
+  if (!response.ok) {
     const error =
       new Error(
         data?.message ||
           "Unable to send password reset email."
       );
 
-    error.statusCode =
-      502;
+    error.statusCode = 502;
 
     throw error;
   }
@@ -440,7 +448,6 @@ export async function sendPasswordResetEmail({
   return {
     success: true,
     id:
-      data?.id ||
-      null
+      data?.id || null
   };
 }
