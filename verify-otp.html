@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <title>Verify OTP | Smart Work Network</title>
+
+  <link
+    rel="stylesheet"
+    href="css/main.css"
+  >
+</head>
+
+<body>
+
+<header class="header">
+
+  <div class="container nav">
+
+    <a
+      class="brand"
+      href="index.html"
+    >
+      Smart Work Network
+    </a>
+
+  </div>
+
+</header>
+
+<main>
+
+  <section class="section">
+
+    <div
+      class="container"
+      style="max-width:560px"
+    >
+
+      <div class="card">
+
+        <h1 id="otpTitle">
+          Verify OTP
+        </h1>
+
+        <p id="otpDescription">
+          Enter the 6-digit OTP sent to your email.
+        </p>
+
+        <form
+          class="form"
+          id="otpForm"
+        >
+
+          <label>
+            Email
+
+            <input
+              id="otpEmail"
+              name="email"
+              type="email"
+              required
+              maxlength="254"
+              autocomplete="email"
+            >
+          </label>
+
+          <label>
+            6-Digit OTP
+
+            <input
+              id="otpInput"
+              name="otp"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              minlength="6"
+              pattern="[0-9]{6}"
+              required
+              placeholder="Enter 6-digit OTP"
+            >
+          </label>
+
+          <button
+            type="submit"
+            class="btn btn-primary"
+            id="verifyButton"
+          >
+            Verify OTP
+          </button>
+
+        </form>
+
+        <button
+          type="button"
+          class="btn"
+          id="resendButton"
+          style="margin-top:12px"
+        >
+          Resend OTP
+        </button>
+
+        <p
+          id="otpMessage"
+          role="status"
+          aria-live="polite"
+        ></p>
+
+      </div>
+
+    </div>
+
+  </section>
+
+</main>
+
+<footer class="footer">
+
+  <div class="container">
+
+    <b>Smart Work Network</b>
+
+    <p>
+      Services • Workers • Work opportunities
+    </p>
+
+  </div>
+
+</footer>
+
+<script src="js/app.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+"use strict";
+
+const params =
+  new URLSearchParams(
+    window.location.search
+  );
+
+const mode =
+  params.get("mode") ||
+  "signup";
+
+const emailFromUrl =
+  String(
+    params.get("email") ||
+      ""
+  )
+    .trim()
+    .toLowerCase();
+
+const emailInput =
+  document.getElementById(
+    "otpEmail"
+  );
+
+const otpInput =
+  document.getElementById(
+    "otpInput"
+  );
+
+const form =
+  document.getElementById(
+    "otpForm"
+  );
+
+const verifyButton =
+  document.getElementById(
+    "verifyButton"
+  );
+
+const resendButton =
+  document.getElementById(
+    "resendButton"
+  );
+
+const message =
+  document.getElementById(
+    "otpMessage"
+  );
+
+const title =
+  document.getElementById(
+    "otpTitle"
+  );
+
+const description =
+  document.getElementById(
+    "otpDescription"
+  );
+
+emailInput.value =
+  emailFromUrl ||
+  sessionStorage.getItem(
+    mode === "signup"
+      ? "swn_pending_signup_email"
+      : "swn_pending_reset_email"
+  ) ||
+  "";
+
+if (
+  mode === "reset"
+) {
+  title.textContent =
+    "Reset Password OTP";
+
+  description.textContent =
+    "Enter the 6-digit OTP sent to your email to continue.";
+}
+
+function showMessage(
+  text
+) {
+  message.textContent =
+    String(
+      text || ""
+    );
+}
+
+form.addEventListener(
+  "submit",
+  async function(event) {
+    event.preventDefault();
+
+    const email =
+      String(
+        emailInput.value || ""
+      )
+        .trim()
+        .toLowerCase();
+
+    const otp =
+      String(
+        otpInput.value || ""
+      ).trim();
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        email
+      )
+    ) {
+      showMessage(
+        "Please enter a valid email address."
+      );
+
+      return;
+    }
+
+    if (
+      !/^\d{6}$/.test(
+        otp
+      )
+    ) {
+      showMessage(
+        "Please enter the 6-digit OTP."
+      );
+
+      return;
+    }
+
+    verifyButton.disabled =
+      true;
+
+    verifyButton.textContent =
+      "Verifying...";
+
+    try {
+      const endpoint =
+        mode === "reset"
+          ? "/auth/verify-reset-otp"
+          : "/auth/verify-signup-otp";
+
+      const result =
+        await SWN.request(
+          endpoint,
+          {
+            method: "POST",
+
+            body:
+              JSON.stringify({
+                email,
+                otp
+              })
+          }
+        );
+
+      if (
+        !result ||
+        !result.success
+      ) {
+        showMessage(
+          result?.message ||
+            "OTP verification failed."
+        );
+
+        return;
+      }
+
+      if (
+        mode === "signup"
+      ) {
+        sessionStorage.removeItem(
+          "swn_pending_signup_email"
+        );
+
+        if (
+          result.user
+        ) {
+          localStorage.setItem(
+            "swn_user",
+            JSON.stringify(
+              result.user
+            )
+          );
+        }
+
+        window.location.href =
+          result.user
+            ? (
+                result.user.role ===
+                "worker"
+                  ? "worker-dashboard.html"
+                  : "customer-dashboard.html"
+              )
+            : "login.html";
+
+        return;
+      }
+
+      if (
+        result.resetToken
+      ) {
+        sessionStorage.setItem(
+          "swn_reset_token",
+          result.resetToken
+        );
+
+        sessionStorage.removeItem(
+          "swn_pending_reset_email"
+        );
+
+        window.location.href =
+          "reset-password.html";
+
+        return;
+      }
+
+      showMessage(
+        "OTP verified, but reset authorization was not received."
+      );
+    } catch (error) {
+      console.error(
+        "VERIFY OTP ERROR:",
+        error
+      );
+
+      showMessage(
+        error.message ||
+          "Unable to verify OTP."
+      );
+    } finally {
+      verifyButton.disabled =
+        false;
+
+      verifyButton.textContent =
+        "Verify OTP";
+    }
+  }
+);
+
+resendButton.addEventListener(
+  "click",
+  async function() {
+
+    const email =
+      String(
+        emailInput.value || ""
+      )
+        .trim()
+        .toLowerCase();
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        email
+      )
+    ) {
+      showMessage(
+        "Please enter a valid email address."
+      );
+
+      return;
+    }
+
+    resendButton.disabled =
+      true;
+
+    resendButton.textContent =
+      "Sending...";
+
+    try {
+      const endpoint =
+        mode === "reset"
+          ? "/auth/resend-reset-otp"
+          : "/auth/resend-signup-otp";
+
+      const result =
+        await SWN.request(
+          endpoint,
+          {
+            method: "POST",
+
+            body:
+              JSON.stringify({
+                email
+              })
+          }
+        );
+
+      showMessage(
+        result?.message ||
+          "A new OTP has been requested."
+      );
+    } catch (error) {
+      console.error(
+        "RESEND OTP ERROR:",
+        error
+      );
+
+      showMessage(
+        error.message ||
+          "Unable to resend OTP."
+      );
+    } finally {
+      setTimeout(
+        function() {
+          resendButton.disabled =
+            false;
+
+          resendButton.textContent =
+            "Resend OTP";
+        },
+        1000
+      );
+    }
+  }
+);
+</script>
+
+</body>
+</html>
