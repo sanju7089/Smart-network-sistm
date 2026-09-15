@@ -1,508 +1,541 @@
 "use strict";
 
 function showMessage(message) {
-if (
-window.SWN &&
-typeof SWN.flash ===
-"function"
-) {
-SWN.flash(message);
-} else {
-alert(String(message || ""));
-}
+  if (
+    window.SWN &&
+    typeof SWN.flash ===
+      "function"
+  ) {
+    SWN.flash(message);
+  } else {
+    alert(
+      String(
+        message || ""
+      )
+    );
+  }
 }
 
 function getApiUrl(path) {
-if (
-!window.SWN ||
-typeof SWN.api !==
-"function"
-) {
-throw new Error(
-"API configuration is not available."
-);
+  if (
+    !window.SWN ||
+    typeof SWN.api !==
+      "function"
+  ) {
+    throw new Error(
+      "API configuration is not available."
+    );
+  }
+
+  return SWN.api(path);
 }
-
-return SWN.api(path);
-}
-
-/*
-
-* JWT is intentionally NOT stored in localStorage.
-* 
-* Authentication is handled by the backend
-* using the HttpOnly "swn_auth" cookie.
-* 
-* Only safe user profile information is kept
-* locally for UI/dashboard routing.
-  */
 
 function saveAuth(user) {
-if (
-!user ||
-typeof user !== "object"
-) {
-return null;
-}
+  if (
+    !user ||
+    typeof user !==
+      "object"
+  ) {
+    return null;
+  }
 
-localStorage.setItem(
-"swn_user",
-JSON.stringify(user)
-);
+  localStorage.setItem(
+    "swn_user",
+    JSON.stringify(user)
+  );
 
-return user;
+  return user;
 }
 
 function clearLocalUser() {
-localStorage.removeItem(
-"swn_user"
-);
+  localStorage.removeItem(
+    "swn_user"
+  );
 }
 
 function setCurrentUser(user) {
-if (
-!user ||
-typeof user !== "object"
-) {
-clearLocalUser();
-return null;
-}
+  if (
+    !user ||
+    typeof user !==
+      "object"
+  ) {
+    clearLocalUser();
 
-return saveAuth(user);
+    return null;
+  }
+
+  return saveAuth(user);
 }
 
 function redirectByRole(user) {
-if (!user) {
-window.location.href =
-"login.html";
-return;
+  if (!user) {
+    window.location.href =
+      "login.html";
+
+    return;
+  }
+
+  if (
+    user.role ===
+    "admin"
+  ) {
+    window.location.href =
+      "admin.html";
+
+    return;
+  }
+
+  if (
+    user.role ===
+    "worker"
+  ) {
+    window.location.href =
+      "worker-dashboard.html";
+
+    return;
+  }
+
+  window.location.href =
+    "customer-dashboard.html";
 }
 
-if (user.role === "admin") {
-window.location.href =
-"admin.html";
-return;
-}
-
-if (user.role === "worker") {
-window.location.href =
-"worker-dashboard.html";
-return;
-}
-
-window.location.href =
-"customer-dashboard.html";
-}
+/* =========================================
+   SIGNUP
+========================================= */
 
 async function signup() {
-try {
-const form =
-document.querySelector(
-"#signupForm"
-);
+  try {
+    const form =
+      document.querySelector(
+        "#signupForm"
+      );
 
-if (!form) {
-  showMessage(
-    "Signup form not found."
-  );
-  return;
-}
+    if (!form) {
+      showMessage(
+        "Signup form not found."
+      );
 
-const data =
-  Object.fromEntries(
-    new FormData(form)
-  );
-
-if (
-  !data.name ||
-  !data.email ||
-  !data.password
-) {
-  showMessage(
-    "Name, email and password are required."
-  );
-  return;
-}
-
-const result =
-  await SWN.request(
-    "/auth/register",
-    {
-      method: "POST",
-      body: JSON.stringify({
-        name:
-          String(data.name)
-            .trim(),
-
-        email:
-          String(data.email)
-            .trim(),
-
-        password:
-          String(data.password),
-
-        role:
-          data.role ||
-          "customer",
-
-        phone:
-          String(
-            data.phone || ""
-          ).trim(),
-
-        location:
-          String(
-            data.location || ""
-          ).trim()
-      })
+      return;
     }
-  );
 
-if (
-  !result ||
-  !result.success
-) {
-  showMessage(
-    result?.message ||
-    "Unable to create account."
-  );
-  return;
+    const data =
+      Object.fromEntries(
+        new FormData(form)
+      );
+
+    const name =
+      String(
+        data.name || ""
+      ).trim();
+
+    const email =
+      String(
+        data.email || ""
+      )
+        .trim()
+        .toLowerCase();
+
+    const password =
+      String(
+        data.password || ""
+      );
+
+    const role =
+      String(
+        data.role ||
+          "customer"
+      )
+        .trim()
+        .toLowerCase();
+
+    const phone =
+      String(
+        data.phone || ""
+      ).trim();
+
+    const location =
+      String(
+        data.location || ""
+      ).trim();
+
+    if (
+      !name ||
+      !email ||
+      !password
+    ) {
+      showMessage(
+        "Name, email and password are required."
+      );
+
+      return;
+    }
+
+    const result =
+      await SWN.request(
+        "/auth/register",
+        {
+          method: "POST",
+
+          body:
+            JSON.stringify({
+              name,
+              email,
+              password,
+              role,
+              phone,
+              location
+            })
+        }
+      );
+
+    if (
+      !result ||
+      !result.success
+    ) {
+      showMessage(
+        result?.message ||
+          "Unable to create account."
+      );
+
+      return;
+    }
+
+    if (
+      result.otpRequired
+    ) {
+      sessionStorage.setItem(
+        "swn_pending_signup_email",
+        email
+      );
+
+      window.location.href =
+        `verify-otp.html?mode=signup&email=${encodeURIComponent(
+          email
+        )}`;
+
+      return;
+    }
+
+    showMessage(
+      result.message ||
+        "Signup started successfully."
+    );
+  } catch (error) {
+    console.error(
+      "SIGNUP ERROR:",
+      error
+    );
+
+    showMessage(
+      error.message ||
+        "Unable to connect to the server."
+    );
+  }
 }
 
-if (!result.user) {
-  showMessage(
-    "Account was created, but user information is incomplete."
-  );
-  return;
-}
-
-/*
- * Backend has already created the
- * HttpOnly authentication cookie.
- *
- * The JWT is never exposed to JavaScript.
- */
-saveAuth(
-  result.user
-);
-
-showMessage(
-  result.message ||
-  "Account created successfully."
-);
-
-redirectByRole(
-  result.user
-);
-
-} catch (error) {
-console.error(
-"SIGNUP ERROR:",
-error
-);
-
-showMessage(
-  error.message ||
-  "Unable to connect to the server."
-);
-
-}
-}
+/* =========================================
+   LOGIN
+========================================= */
 
 async function login() {
-try {
-const form =
-document.querySelector(
-"#loginForm"
-);
+  try {
+    const form =
+      document.querySelector(
+        "#loginForm"
+      );
 
-if (!form) {
-  showMessage(
-    "Login form not found."
-  );
-  return;
-}
+    if (!form) {
+      showMessage(
+        "Login form not found."
+      );
 
-const data =
-  Object.fromEntries(
-    new FormData(form)
-  );
-
-if (
-  !data.email ||
-  !data.password
-) {
-  showMessage(
-    "Email and password are required."
-  );
-  return;
-}
-
-const result =
-  await SWN.request(
-    "/auth/login",
-    {
-      method: "POST",
-      body: JSON.stringify({
-        email:
-          String(data.email)
-            .trim(),
-
-        password:
-          String(data.password)
-      })
+      return;
     }
-  );
 
-if (
-  !result ||
-  !result.success
-) {
-  showMessage(
-    result?.message ||
-    "Invalid email or password."
-  );
-  return;
+    const data =
+      Object.fromEntries(
+        new FormData(form)
+      );
+
+    const email =
+      String(
+        data.email || ""
+      )
+        .trim()
+        .toLowerCase();
+
+    const password =
+      String(
+        data.password || ""
+      );
+
+    if (
+      !email ||
+      !password
+    ) {
+      showMessage(
+        "Email and password are required."
+      );
+
+      return;
+    }
+
+    const result =
+      await SWN.request(
+        "/auth/login",
+        {
+          method: "POST",
+
+          body:
+            JSON.stringify({
+              email,
+              password
+            })
+        }
+      );
+
+    if (
+      !result ||
+      !result.success
+    ) {
+      showMessage(
+        result?.message ||
+          "Invalid email or password."
+      );
+
+      return;
+    }
+
+    if (
+      !result.user
+    ) {
+      showMessage(
+        "Login response is incomplete."
+      );
+
+      return;
+    }
+
+    saveAuth(
+      result.user
+    );
+
+    showMessage(
+      result.message ||
+        "Login successful."
+    );
+
+    redirectByRole(
+      result.user
+    );
+  } catch (error) {
+    console.error(
+      "LOGIN ERROR:",
+      error
+    );
+
+    showMessage(
+      error.message ||
+        "Unable to connect to the server."
+    );
+  }
 }
 
-if (!result.user) {
-  showMessage(
-    "Login response is incomplete."
-  );
-  return;
-}
-
-/*
- * Backend has already set the
- * HttpOnly authentication cookie.
- */
-saveAuth(
-  result.user
-);
-
-showMessage(
-  result.message ||
-  "Login successful."
-);
-
-redirectByRole(
-  result.user
-);
-
-} catch (error) {
-console.error(
-"LOGIN ERROR:",
-error
-);
-
-showMessage(
-  error.message ||
-  "Unable to connect to the server."
-);
-
-}
-}
+/* =========================================
+   LOGOUT
+========================================= */
 
 async function logout() {
-try {
-if (
-window.SWN &&
-typeof SWN.request ===
-"function"
-) {
-try {
-await SWN.request(
-"/auth/logout",
-{
-method: "POST"
-}
-);
-} catch (error) {
-/*
-* Even if the network request fails,
-* local user data must be removed.
-*/
-console.error(
-"LOGOUT REQUEST ERROR:",
-error
-);
-}
-}
-} finally {
-clearLocalUser();
+  try {
+    if (
+      window.SWN &&
+      typeof SWN.request ===
+        "function"
+    ) {
+      try {
+        await SWN.request(
+          "/auth/logout",
+          {
+            method: "POST"
+          }
+        );
+      } catch (error) {
+        console.error(
+          "LOGOUT REQUEST ERROR:",
+          error
+        );
+      }
+    }
+  } finally {
+    clearLocalUser();
 
-window.location.href =
-  "login.html";
-
-}
-}
-
-/*
-
-* JWT is HttpOnly.
-* 
-* JavaScript must never read it.
-* Returning null here keeps compatibility
-* with older pages without exposing the token.
-  */
-  function getAuthToken() {
-  return null;
+    window.location.href =
+      "login.html";
   }
+}
+
+/* =========================================
+   JWT NEVER EXPOSED
+========================================= */
+
+function getAuthToken() {
+  return null;
+}
+
+/* =========================================
+   LOCAL USER
+========================================= */
 
 function getCurrentUser() {
-try {
-const user =
-localStorage.getItem(
-"swn_user"
-);
+  try {
+    const user =
+      localStorage.getItem(
+        "swn_user"
+      );
 
-return user
-  ? JSON.parse(user)
-  : null;
+    return user
+      ? JSON.parse(user)
+      : null;
+  } catch {
+    return null;
+  }
+}
 
-} catch {
-return null;
-}
-}
+/* =========================================
+   REFRESH CURRENT USER
+========================================= */
 
 async function refreshCurrentUser() {
-try {
-const result =
-await SWN.request(
-"/auth/me",
-{
-method: "GET"
+  try {
+    const result =
+      await SWN.request(
+        "/auth/me",
+        {
+          method: "GET"
+        }
+      );
+
+    if (
+      !result ||
+      !result.success ||
+      !result.user
+    ) {
+      clearLocalUser();
+
+      return null;
+    }
+
+    saveAuth(
+      result.user
+    );
+
+    return result.user;
+  } catch (error) {
+    console.error(
+      "AUTH REFRESH ERROR:",
+      error
+    );
+
+    if (
+      error.status === 401 ||
+      error.status === 403
+    ) {
+      clearLocalUser();
+
+      return null;
+    }
+
+    throw error;
+  }
 }
-);
 
-if (
-  !result ||
-  !result.success ||
-  !result.user
-) {
-  clearLocalUser();
-  return null;
-}
+/* =========================================
+   RAW API HELPER
+========================================= */
 
-saveAuth(
-  result.user
-);
-
-return result.user;
-
-} catch (error) {
-console.error(
-"AUTH REFRESH ERROR:",
-error
-);
-
-if (
-  error.status === 401 ||
-  error.status === 403
-) {
-  clearLocalUser();
-  return null;
-}
-
-throw error;
-
-}
-}
-
-/*
-
-* Raw Response API helper.
-* 
-* Existing pages such as:
-* profile.html
-* checkout.html
-* earnings.js
-* 
-* use response.ok and response.json(),
-* so this function intentionally returns
-* the native fetch Response.
-  */
-  async function apiFetch(
+async function apiFetch(
   path,
   options = {}
-  ) {
+) {
   if (
-  window.SWN &&
-  typeof SWN.raw ===
-  "function"
+    window.SWN &&
+    typeof SWN.raw ===
+      "function"
   ) {
-  return SWN.raw(
-  path,
-  options
-  );
+    return SWN.raw(
+      path,
+      options
+    );
   }
 
-const headers =
-new Headers(
-options.headers || {}
-);
+  const headers =
+    new Headers(
+      options.headers || {}
+    );
 
-const hasBody =
-options.body !== undefined &&
-options.body !== null;
+  const hasBody =
+    options.body !==
+      undefined &&
+    options.body !== null;
 
-if (
-hasBody &&
-!headers.has(
-"Content-Type"
-)
-) {
-headers.set(
-"Content-Type",
-"application/json"
-);
-}
+  if (
+    hasBody &&
+    !headers.has(
+      "Content-Type"
+    )
+  ) {
+    headers.set(
+      "Content-Type",
+      "application/json"
+    );
+  }
 
-headers.set(
-"Accept",
-"application/json"
-);
+  headers.set(
+    "Accept",
+    "application/json"
+  );
 
-const response =
-await fetch(
-getApiUrl(path),
-{
-...options,
-credentials: "include",
-headers
-}
-);
+  const response =
+    await fetch(
+      getApiUrl(path),
+      {
+        ...options,
+        credentials:
+          "include",
+        headers
+      }
+    );
 
-if (
-response.status === 401 ||
-response.status === 403
-) {
-clearLocalUser();
-}
+  if (
+    response.status === 401 ||
+    response.status === 403
+  ) {
+    clearLocalUser();
+  }
 
-return response;
+  return response;
 }
 
 window.signup =
-signup;
+  signup;
 
 window.login =
-login;
+  login;
 
 window.logout =
-logout;
+  logout;
 
 window.getAuthToken =
-getAuthToken;
+  getAuthToken;
 
 window.getCurrentUser =
-getCurrentUser;
+  getCurrentUser;
 
 window.setCurrentUser =
-setCurrentUser;
+  setCurrentUser;
 
 window.refreshCurrentUser =
-refreshCurrentUser;
+  refreshCurrentUser;
 
 window.apiFetch =
-apiFetch;
+  apiFetch;
