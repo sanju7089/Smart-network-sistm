@@ -50,29 +50,86 @@ const userSchema = new mongoose.Schema(
 
     isActive: {
       type: Boolean,
-      default: true,
+      default: false,
       index: true
     },
 
-    /*
-     * Every time the password is changed/reset,
-     * this number is increased.
-     *
-     * Existing JWTs contain the old version and
-     * therefore become invalid automatically.
-     */
+    emailVerified: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+
     tokenVersion: {
       type: Number,
       default: 0,
       min: 0
     },
 
-    /*
-     * Password reset security.
-     *
-     * The raw reset token is NEVER stored.
-     * Only its SHA-256 hash is stored.
-     */
+    /* ================================
+       SIGNUP EMAIL OTP
+    ================================= */
+
+    emailVerificationOtpHash: {
+      type: String,
+      default: null,
+      select: false
+    },
+
+    emailVerificationOtpExpiresAt: {
+      type: Date,
+      default: null,
+      select: false
+    },
+
+    emailVerificationOtpAttempts: {
+      type: Number,
+      default: 0,
+      min: 0,
+      select: false
+    },
+
+    emailVerificationOtpLastSentAt: {
+      type: Date,
+      default: null,
+      select: false
+    },
+
+    /* ================================
+       PASSWORD RESET OTP
+    ================================= */
+
+    passwordResetOtpHash: {
+      type: String,
+      default: null,
+      select: false
+    },
+
+    passwordResetOtpExpiresAt: {
+      type: Date,
+      default: null,
+      select: false
+    },
+
+    passwordResetOtpAttempts: {
+      type: Number,
+      default: 0,
+      min: 0,
+      select: false
+    },
+
+    passwordResetOtpLastSentAt: {
+      type: Date,
+      default: null,
+      select: false
+    },
+
+    /* ================================
+       PASSWORD RESET AUTHORIZATION TOKEN
+
+       Raw token is never stored.
+    ================================= */
+
     passwordResetTokenHash: {
       type: String,
       default: null,
@@ -99,6 +156,24 @@ userSchema.index({
 userSchema.index(
   {
     passwordResetTokenHash: 1
+  },
+  {
+    sparse: true
+  }
+);
+
+userSchema.index(
+  {
+    emailVerificationOtpExpiresAt: 1
+  },
+  {
+    sparse: true
+  }
+);
+
+userSchema.index(
+  {
+    passwordResetOtpExpiresAt: 1
   },
   {
     sparse: true
