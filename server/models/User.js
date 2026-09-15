@@ -17,7 +17,8 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
       maxlength: 254,
-      match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      match:
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     },
 
     password: {
@@ -29,7 +30,11 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["customer", "worker", "admin"],
+      enum: [
+        "customer",
+        "worker",
+        "admin"
+      ],
       default: "customer",
       index: true
     },
@@ -96,6 +101,35 @@ const userSchema = new mongoose.Schema(
     },
 
     /* ================================
+       LOGIN EMAIL OTP
+    ================================= */
+
+    loginOtpHash: {
+      type: String,
+      default: null,
+      select: false
+    },
+
+    loginOtpExpiresAt: {
+      type: Date,
+      default: null,
+      select: false
+    },
+
+    loginOtpAttempts: {
+      type: Number,
+      default: 0,
+      min: 0,
+      select: false
+    },
+
+    loginOtpLastSentAt: {
+      type: Date,
+      default: null,
+      select: false
+    },
+
+    /* ================================
        PASSWORD RESET OTP
     ================================= */
 
@@ -125,9 +159,7 @@ const userSchema = new mongoose.Schema(
     },
 
     /* ================================
-       PASSWORD RESET AUTHORIZATION TOKEN
-
-       Raw token is never stored.
+       PASSWORD RESET AUTH TOKEN
     ================================= */
 
     passwordResetTokenHash: {
@@ -173,6 +205,15 @@ userSchema.index(
 
 userSchema.index(
   {
+    loginOtpExpiresAt: 1
+  },
+  {
+    sparse: true
+  }
+);
+
+userSchema.index(
+  {
     passwordResetOtpExpiresAt: 1
   },
   {
@@ -180,6 +221,10 @@ userSchema.index(
   }
 );
 
-const User = mongoose.model("User", userSchema);
+const User =
+  mongoose.model(
+    "User",
+    userSchema
+  );
 
 export default User;
