@@ -1,27 +1,28 @@
 "use strict";
 
 /*
- * Smart Work Network
- * Worker Listing + Worker Detail
- *
- * Central API:
- * window.SWN.request()
- *
- * Supported:
- * - Search
- * - Service filter
- * - Location filter
- * - Availability filter
- * - Verification filter
- * - Pagination
- * - Worker detail
- * - Skills
- * - Availability
- * - Booking link
- */
+==================================================
+SMART WORK NETWORK
+WORKERS SYSTEM — FINAL FRONTEND
+==================================================
+
+Supports:
+- Worker listing
+- Search
+- Service filter
+- Location filter
+- Availability filter
+- Verification filter
+- Pagination
+- Worker profile
+- Booking navigation
+- API error handling
+- Central API client
+- URL-safe worker IDs
+==================================================
+*/
 
 (function () {
-
   const state = {
     page: 1,
     limit: 12,
@@ -30,17 +31,16 @@
     loading: false
   };
 
+  function $(id) {
+    return document.getElementById(id);
+  }
 
-  function escapeWorkerHtml(value = "") {
-
-    if (
-      typeof window.escapeHtml ===
-      "function"
-    ) {
+  function escapeHtml(value) {
+    if (typeof window.escapeHtml === "function") {
       return window.escapeHtml(value);
     }
 
-    return String(value)
+    return String(value ?? "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
@@ -48,186 +48,89 @@
       .replace(/'/g, "&#039;");
   }
 
-
-  function getQueryParams() {
-
-    return new URLSearchParams(
-      window.location.search
-    );
+  function getParams() {
+    return new URLSearchParams(window.location.search);
   }
-
-
-  function getJobId() {
-
-    return String(
-      getQueryParams().get("jobId") || ""
-    ).trim();
-  }
-
 
   function getWorkerId() {
-
-    return String(
-      getQueryParams().get("id") || ""
-    ).trim();
+    return String(getParams().get("id") || "").trim();
   }
 
+  function getJobId() {
+    return String(getParams().get("jobId") || "").trim();
+  }
 
-  function apiRequest(
-    endpoint,
-    options = {}
-  ) {
-
+  async function apiRequest(endpoint, options = {}) {
     if (
       window.SWN &&
-      typeof window.SWN.request ===
-      "function"
+      typeof window.SWN.request === "function"
     ) {
-      return window.SWN.request(
-        endpoint,
-        options
-      );
+      return window.SWN.request(endpoint, options);
     }
 
-    if (
-      typeof window.apiFetch ===
-      "function"
-    ) {
-      return window.apiFetch(
-        endpoint,
-        options
-      );
+    if (typeof window.apiFetch === "function") {
+      return window.apiFetch(endpoint, options);
     }
 
-    throw new Error(
-      "Central API client is not available."
-    );
+    throw new Error("API client is not available.");
   }
 
-
-  function getElement(id) {
-
-    return document.getElementById(id);
+  function value(id) {
+    const element = $(id);
+    return element
+      ? String(element.value || "").trim()
+      : "";
   }
 
-
-  function getFilterValue(id) {
-
-    const element = getElement(id);
-
-    if (!element) {
-      return "";
-    }
-
-    return String(
-      element.value || ""
-    ).trim();
-  }
-
-
-  function readFilters() {
-
+  function getFilters() {
     return {
-      search:
-        getFilterValue(
-          "workerSearch"
-        ),
-
-      service:
-        getFilterValue(
-          "workerService"
-        ),
-
-      location:
-        getFilterValue(
-          "workerLocation"
-        ),
-
-      available:
-        getFilterValue(
-          "workerAvailability"
-        ),
-
-      verified:
-        getFilterValue(
-          "workerVerified"
-        )
+      search: value("workerSearch"),
+      service: value("workerService"),
+      location: value("workerLocation"),
+      available: value("workerAvailability"),
+      verified: value("workerVerified")
     };
   }
 
-
-  function buildWorkersEndpoint() {
-
-    const filters =
-      readFilters();
-
-    const params =
-      new URLSearchParams();
+  function buildEndpoint() {
+    const filters = getFilters();
+    const params = new URLSearchParams();
 
     if (filters.search) {
-      params.set(
-        "search",
-        filters.search
-      );
+      params.set("search", filters.search);
     }
 
     if (filters.service) {
-      params.set(
-        "service",
-        filters.service
-      );
+      params.set("service", filters.service);
     }
 
     if (filters.location) {
-      params.set(
-        "location",
-        filters.location
-      );
+      params.set("location", filters.location);
     }
 
     if (filters.available) {
-      params.set(
-        "available",
-        filters.available
-      );
+      params.set("available", filters.available);
     }
 
     if (filters.verified) {
-      params.set(
-        "verified",
-        filters.verified
-      );
+      params.set("verified", filters.verified);
     }
 
-    params.set(
-      "page",
-      String(state.page)
-    );
-
-    params.set(
-      "limit",
-      String(state.limit)
-    );
+    params.set("page", String(state.page));
+    params.set("limit", String(state.limit));
 
     return `/workers?${params.toString()}`;
   }
 
-
-  function extractWorkers(result) {
-
-    if (
-      result &&
-      Array.isArray(result.data)
-    ) {
+  function getWorkersFromResponse(result) {
+    if (result && Array.isArray(result.data)) {
       return result.data;
     }
 
     if (
       result &&
       result.data &&
-      Array.isArray(
-        result.data.workers
-      )
+      Array.isArray(result.data.workers)
     ) {
       return result.data.workers;
     }
@@ -242,113 +145,80 @@
     return [];
   }
 
+  function getPagination(result, count) {
+    const pagination =
+      result && result.pagination
+        ? result.pagination
+        : null;
 
-  function extractPagination(
-    result,
-    workerCount
-  ) {
-
-    if (
-      result &&
-      result.pagination
-    ) {
+    if (pagination) {
       return {
         page:
-          Number(
-            result.pagination.page
-          ) || 1,
+          Number(pagination.page) || 1,
 
         limit:
-          Number(
-            result.pagination.limit
-          ) || state.limit,
+          Number(pagination.limit) || state.limit,
 
         total:
-          Number(
-            result.pagination.total
-          ) || 0,
+          Number(pagination.total) || 0,
 
         totalPages:
           Math.max(
             1,
-            Number(
-              result.pagination.totalPages
-            ) || 1
+            Number(pagination.totalPages) || 1
           ),
 
         hasNextPage:
-          result.pagination.hasNextPage === true,
+          pagination.hasNextPage === true,
 
         hasPreviousPage:
-          result.pagination.hasPreviousPage === true
+          pagination.hasPreviousPage === true
       };
     }
-
-    const total =
-      workerCount || 0;
 
     return {
       page: state.page,
       limit: state.limit,
-      total,
+      total: count,
       totalPages:
         Math.max(
           1,
-          Math.ceil(
-            total / state.limit
-          )
+          Math.ceil(count / state.limit)
         ),
       hasNextPage: false,
-      hasPreviousPage:
-        state.page > 1
+      hasPreviousPage: state.page > 1
     };
   }
 
-
-  function normalizeSkills(
-    skills
-  ) {
-
+  function normalizeSkills(skills) {
     if (!Array.isArray(skills)) {
       return [];
     }
 
-    const seen =
-      new Set();
+    const seen = new Set();
 
     return skills
-      .map(
-        skill =>
-          String(
-            skill ?? ""
-          ).trim()
+      .map(skill =>
+        String(skill ?? "").trim()
       )
       .filter(Boolean)
       .filter(skill => {
-
-        const key =
-          skill.toLowerCase();
+        const key = skill.toLowerCase();
 
         if (seen.has(key)) {
           return false;
         }
 
         seen.add(key);
-
         return true;
       })
-      .slice(0, 50);
+      .slice(0, 30);
   }
 
+  function renderSkills(skills) {
+    const list = normalizeSkills(skills);
 
-  function renderSkills(
-    skills
-  ) {
-
-    const normalized =
-      normalizeSkills(skills);
-
-    if (!normalized.length) {
+    if (!list.length) {
       return `
         <span class="worker-skill">
           Skills not specified
@@ -358,118 +228,78 @@
 
     return `
       <div class="worker-skills">
-        ${normalized
-          .map(
-            skill => `
-              <span class="worker-skill">
-                ${escapeWorkerHtml(
-                  skill
-                )}
-              </span>
-            `
-          )
-          .join("")}
+        ${list.map(skill => `
+          <span class="worker-skill">
+            ${escapeHtml(skill)}
+          </span>
+        `).join("")}
       </div>
     `;
   }
 
-
-  function renderVerifiedBadge(
-    verified
-  ) {
-
-    if (verified === true) {
-      return `
+  function verifiedBadge(verified) {
+    return verified === true
+      ? `
         <span class="worker-badge verified">
           Verified
         </span>
+      `
+      : `
+        <span class="worker-badge">
+          Verification Pending
+        </span>
       `;
-    }
-
-    return `
-      <span class="worker-badge">
-        Verification Pending
-      </span>
-    `;
   }
 
-
-  function renderAvailabilityBadge(
-    available
-  ) {
-
-    if (available === true) {
-      return `
+  function availabilityBadge(available) {
+    return available === true
+      ? `
         <span class="worker-badge available">
           Available
         </span>
+      `
+      : `
+        <span class="worker-badge unavailable">
+          Currently Unavailable
+        </span>
       `;
-    }
-
-    return `
-      <span class="worker-badge unavailable">
-        Currently Unavailable
-      </span>
-    `;
   }
 
-
-  function makeProfileUrl(
-    workerId
-  ) {
-
-    const params =
-      new URLSearchParams();
+  function profileUrl(workerId) {
+    const params = new URLSearchParams();
 
     params.set(
       "id",
       String(workerId)
     );
 
-    const jobId =
-      getJobId();
+    const jobId = getJobId();
 
     if (jobId) {
-      params.set(
-        "jobId",
-        jobId
-      );
+      params.set("jobId", jobId);
     }
 
     return `worker-profile.html?${params.toString()}`;
   }
 
-
-  function makeCheckoutUrl(
-    workerId
-  ) {
-
-    const params =
-      new URLSearchParams();
+  function bookingUrl(workerId) {
+    const params = new URLSearchParams();
 
     params.set(
       "workerId",
       String(workerId)
     );
 
-    const jobId =
-      getJobId();
+    const jobId = getJobId();
 
     if (jobId) {
-      params.set(
-        "jobId",
-        jobId
-      );
+      params.set("jobId", jobId);
     }
 
     return `checkout.html?${params.toString()}`;
   }
 
-
-  function renderBookingButton(
-    worker
-  ) {
-
+  function bookingButton(worker) {
     const workerId =
       worker?._id ||
       worker?.id;
@@ -478,9 +308,7 @@
       return "";
     }
 
-    if (
-      worker.isAvailable !== true
-    ) {
+    if (worker.isAvailable !== true) {
       return `
         <button
           type="button"
@@ -493,17 +321,14 @@
       `;
     }
 
-    const jobId =
-      getJobId();
+    const jobId = getJobId();
 
     if (!jobId) {
       return `
         <a
           class="btn btn-primary"
-          href="${escapeWorkerHtml(
-            makeProfileUrl(
-              workerId
-            )
+          href="${escapeHtml(
+            profileUrl(workerId)
           )}"
         >
           View Profile
@@ -514,10 +339,8 @@
     return `
       <a
         class="btn btn-primary"
-        href="${escapeWorkerHtml(
-          makeCheckoutUrl(
-            workerId
-          )
+        href="${escapeHtml(
+          bookingUrl(workerId)
         )}"
       >
         Book Worker
@@ -525,11 +348,7 @@
     `;
   }
 
-
-  function renderWorkerCard(
-    worker
-  ) {
-
+  function workerCard(worker) {
     if (!worker) {
       return "";
     }
@@ -562,62 +381,39 @@
       <article class="card worker-card">
 
         <div class="worker-card-badges">
-
-          ${renderVerifiedBadge(
-            worker.verified
-          )}
-
-          ${renderAvailabilityBadge(
-            worker.isAvailable
-          )}
-
+          ${verifiedBadge(worker.verified)}
+          ${availabilityBadge(worker.isAvailable)}
         </div>
 
         <h3>
-          ${escapeWorkerHtml(
-            name
-          )}
+          ${escapeHtml(name)}
         </h3>
 
         <p class="muted">
-          ${escapeWorkerHtml(
-            service
-          )}
+          ${escapeHtml(service)}
           •
-          ${escapeWorkerHtml(
-            location
-          )}
+          ${escapeHtml(location)}
         </p>
 
         <p>
-          <strong>
-            Experience:
-          </strong>
-          ${escapeWorkerHtml(
-            experience
-          )}
+          <strong>Experience:</strong>
+          ${escapeHtml(experience)}
         </p>
 
-        ${renderSkills(
-          worker.skills
-        )}
+        ${renderSkills(worker.skills)}
 
         <div class="worker-actions">
 
           <a
             class="btn"
-            href="${escapeWorkerHtml(
-              makeProfileUrl(
-                workerId
-              )
+            href="${escapeHtml(
+              profileUrl(workerId)
             )}"
           >
             View Profile
           </a>
 
-          ${renderBookingButton(
-            worker
-          )}
+          ${bookingButton(worker)}
 
         </div>
 
@@ -625,53 +421,35 @@
     `;
   }
 
-
-  function renderList(
-    workers
-  ) {
-
-    const list =
-      getElement(
-        "workersList"
-      );
+  function renderWorkers(workers) {
+    const list = $("workersList");
 
     if (!list) {
       return;
     }
 
     if (!workers.length) {
-
       list.innerHTML = `
         <div class="notice">
           No workers found matching
           your search and filters.
         </div>
       `;
-
       return;
     }
 
-    list.innerHTML =
-      workers
-        .map(
-          renderWorkerCard
-        )
-        .filter(Boolean)
-        .join("");
+    list.innerHTML = workers
+      .map(workerCard)
+      .filter(Boolean)
+      .join("");
   }
 
-
   function renderSummary() {
-
     const title =
-      getElement(
-        "workersResultsTitle"
-      );
+      $("workersResultsTitle");
 
     const summary =
-      getElement(
-        "workersResultsSummary"
-      );
+      $("workersResultsSummary");
 
     if (title) {
       title.textContent =
@@ -691,15 +469,11 @@
     }
 
     const start =
-      (
-        (state.page - 1) *
-        state.limit
-      ) + 1;
+      ((state.page - 1) * state.limit) + 1;
 
     const end =
       Math.min(
-        state.page *
-          state.limit,
+        state.page * state.limit,
         state.total
       );
 
@@ -707,28 +481,18 @@
       `Showing ${start}-${end} of ${state.total}`;
   }
 
-
   function renderPagination() {
-
     const pagination =
-      getElement(
-        "workerPagination"
-      );
+      $("workerPagination");
 
     const previous =
-      getElement(
-        "workerPrevious"
-      );
+      $("workerPrevious");
 
     const next =
-      getElement(
-        "workerNext"
-      );
+      $("workerNext");
 
     const pageInfo =
-      getElement(
-        "workerPageInfo"
-      );
+      $("workerPageInfo");
 
     if (
       !pagination ||
@@ -740,7 +504,7 @@
     }
 
     pagination.hidden =
-      state.total <= state.limit;
+      state.totalPages <= 1;
 
     pageInfo.textContent =
       `Page ${state.page} of ${state.totalPages}`;
@@ -749,17 +513,11 @@
       state.page <= 1;
 
     next.disabled =
-      state.page >=
-      state.totalPages;
+      state.page >= state.totalPages;
   }
 
-
   async function loadWorkers() {
-
-    const list =
-      getElement(
-        "workersList"
-      );
+    const list = $("workersList");
 
     if (!list || state.loading) {
       return;
@@ -774,17 +532,16 @@
     `;
 
     try {
-
       const result =
         await apiRequest(
-          buildWorkersEndpoint()
+          buildEndpoint()
         );
 
       const workers =
-        extractWorkers(result);
+        getWorkersFromResponse(result);
 
       const pagination =
-        extractPagination(
+        getPagination(
           result,
           workers.length
         );
@@ -801,24 +558,19 @@
       state.totalPages =
         pagination.totalPages;
 
-      renderList(
-        workers
-      );
-
+      renderWorkers(workers);
       renderSummary();
-
       renderPagination();
 
     } catch (error) {
-
       console.error(
-        "LOAD WORKERS ERROR:",
+        "WORKERS LOAD ERROR:",
         error
       );
 
       list.innerHTML = `
         <div class="notice">
-          ${escapeWorkerHtml(
+          ${escapeHtml(
             error?.message ||
             "Unable to load workers."
           )}
@@ -826,9 +578,7 @@
       `;
 
       const summary =
-        getElement(
-          "workersResultsSummary"
-        );
+        $("workersResultsSummary");
 
       if (summary) {
         summary.textContent =
@@ -836,46 +586,35 @@
       }
 
     } finally {
-
       state.loading = false;
     }
   }
 
+  function searchWorkers(event) {
+    if (event) {
+      event.preventDefault();
+    }
 
-  function resetFilters() {
+    state.page = 1;
+    loadWorkers();
+  }
 
+  function resetWorkers() {
     const form =
-      getElement(
-        "workerSearchForm"
-      );
+      $("workerSearchForm");
 
     if (form) {
       form.reset();
     }
 
     state.page = 1;
-
     loadWorkers();
   }
-
-
-  function submitSearch(
-    event
-  ) {
-
-    event.preventDefault();
-
-    state.page = 1;
-
-    loadWorkers();
-  }
-
 
   function previousPage() {
-
     if (
-      state.page <= 1 ||
-      state.loading
+      state.loading ||
+      state.page <= 1
     ) {
       return;
     }
@@ -890,13 +629,10 @@
     });
   }
 
-
   function nextPage() {
-
     if (
-      state.page >=
-      state.totalPages ||
-      state.loading
+      state.loading ||
+      state.page >= state.totalPages
     ) {
       return;
     }
@@ -911,11 +647,7 @@
     });
   }
 
-
-  function extractWorker(
-    result
-  ) {
-
+  function getWorkerFromResponse(result) {
     if (
       result &&
       result.data &&
@@ -939,25 +671,12 @@
       return result.worker;
     }
 
-    if (
-      result &&
-      result.profile
-    ) {
-      return result.profile;
-    }
-
     return null;
   }
 
-
-  function renderWorkerDetail(
-    worker
-  ) {
-
+  function renderWorkerDetail(worker) {
     const detail =
-      getElement(
-        "workerDetail"
-      );
+      $("workerDetail");
 
     if (!detail) {
       return;
@@ -969,7 +688,6 @@
           Worker not found.
         </div>
       `;
-
       return;
     }
 
@@ -983,7 +701,6 @@
           Invalid worker profile.
         </div>
       `;
-
       return;
     }
 
@@ -1015,85 +732,45 @@
       <div class="card">
 
         <div class="worker-card-badges">
-
-          ${renderVerifiedBadge(
-            worker.verified
-          )}
-
-          ${renderAvailabilityBadge(
-            worker.isAvailable
-          )}
-
+          ${verifiedBadge(worker.verified)}
+          ${availabilityBadge(worker.isAvailable)}
         </div>
 
         <h1>
-          ${escapeWorkerHtml(
-            name
-          )}
+          ${escapeHtml(name)}
         </h1>
 
         <p class="lead">
-          ${escapeWorkerHtml(
-            service
-          )}
+          ${escapeHtml(service)}
         </p>
 
         <p>
-          <strong>
-            Location:
-          </strong>
-          ${escapeWorkerHtml(
-            location
-          )}
+          <strong>Location:</strong>
+          ${escapeHtml(location)}
         </p>
 
         <p>
-          <strong>
-            Experience:
-          </strong>
-          ${escapeWorkerHtml(
-            experience
-          )}
+          <strong>Experience:</strong>
+          ${escapeHtml(experience)}
         </p>
 
         <section>
-
-          <h3>
-            Skills
-          </h3>
-
-          ${renderSkills(
-            worker.skills
-          )}
-
+          <h3>Skills</h3>
+          ${renderSkills(worker.skills)}
         </section>
 
         <section>
-
-          <h3>
-            About
-          </h3>
-
+          <h3>About</h3>
           <p>
-            ${escapeWorkerHtml(
-              bio
-            )}
+            ${escapeHtml(bio)}
           </p>
-
         </section>
 
         <section>
-
-          <h3>
-            Contact
-          </h3>
-
+          <h3>Contact</h3>
           <p>
-            ${escapeWorkerHtml(
-              phone
-            )}
+            ${escapeHtml(phone)}
           </p>
-
         </section>
 
         <div class="worker-actions">
@@ -1105,9 +782,7 @@
             Back to Workers
           </a>
 
-          ${renderBookingButton(
-            worker
-          )}
+          ${bookingButton(worker)}
 
         </div>
 
@@ -1115,13 +790,9 @@
     `;
   }
 
-
   async function loadWorkerDetail() {
-
     const detail =
-      getElement(
-        "workerDetail"
-      );
+      $("workerDetail");
 
     if (!detail) {
       return;
@@ -1131,13 +802,11 @@
       getWorkerId();
 
     if (!workerId) {
-
       detail.innerHTML = `
         <div class="notice">
           Worker ID is missing.
         </div>
       `;
-
       return;
     }
 
@@ -1148,31 +817,25 @@
     `;
 
     try {
-
       const result =
         await apiRequest(
-          `/workers/${encodeURIComponent(
-            workerId
-          )}`
+          `/workers/${encodeURIComponent(workerId)}`
         );
 
       const worker =
-        extractWorker(result);
+        getWorkerFromResponse(result);
 
-      renderWorkerDetail(
-        worker
-      );
+      renderWorkerDetail(worker);
 
     } catch (error) {
-
       console.error(
-        "LOAD WORKER DETAIL ERROR:",
+        "WORKER DETAIL ERROR:",
         error
       );
 
       detail.innerHTML = `
         <div class="notice">
-          ${escapeWorkerHtml(
+          ${escapeHtml(
             error?.message ||
             "Unable to load worker profile."
           )}
@@ -1181,52 +844,37 @@
     }
   }
 
-
-  function initializeWorkers() {
-
+  function initialize() {
     const list =
-      getElement(
-        "workersList"
-      );
+      $("workersList");
 
     const detail =
-      getElement(
-        "workerDetail"
-      );
+      $("workerDetail");
 
     if (list) {
-
       const form =
-        getElement(
-          "workerSearchForm"
-        );
+        $("workerSearchForm");
 
       const reset =
-        getElement(
-          "resetWorkerFilters"
-        );
+        $("resetWorkerFilters");
 
       const previous =
-        getElement(
-          "workerPrevious"
-        );
+        $("workerPrevious");
 
       const next =
-        getElement(
-          "workerNext"
-        );
+        $("workerNext");
 
       if (form) {
         form.addEventListener(
           "submit",
-          submitSearch
+          searchWorkers
         );
       }
 
       if (reset) {
         reset.addEventListener(
           "click",
-          resetFilters
+          resetWorkers
         );
       }
 
@@ -1252,22 +900,17 @@
     }
   }
 
-
   if (
     document.readyState ===
     "loading"
   ) {
-
     document.addEventListener(
       "DOMContentLoaded",
-      initializeWorkers
+      initialize
     );
-
   } else {
-
-    initializeWorkers();
+    initialize();
   }
-
 
   window.loadWorkers =
     loadWorkers;
@@ -1275,4 +918,4 @@
   window.loadWorkerDetail =
     loadWorkerDetail;
 
-})();11
+})();
