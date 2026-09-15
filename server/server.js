@@ -7,10 +7,7 @@ import cookieParser from "cookie-parser";
 import { fileURLToPath } from "url";
 import path from "path";
 
-import {
-  loadEnvironment
-} from "./config/environment.js";
-
+import { loadEnvironment } from "./config/environment.js";
 import {
   connectDatabase,
   getDatabaseStatus,
@@ -24,9 +21,7 @@ import {
   errorHandler
 } from "./middleware/securityMiddleware.js";
 
-import {
-  razorpayWebhook
-} from "./controllers/paymentController.js";
+import { razorpayWebhook } from "./controllers/paymentController.js";
 
 import authRoutes from "./routes/auth.js";
 import adminRoutes from "./routes/admin.js";
@@ -40,12 +35,6 @@ import earningsRoutes from "./routes/earnings.js";
 import notificationRoutes from "./routes/notifications.js";
 import liveLocationRoutes from "./routes/liveLocation.js";
 
-/*
-========================================
-ENVIRONMENT
-========================================
-*/
-
 dotenv.config();
 
 const ENV = loadEnvironment();
@@ -57,29 +46,27 @@ const {
   allowedOrigins
 } = ENV;
 
-/*
-========================================
-APP
-========================================
-*/
-
 const app = express();
 
-/*
-========================================
-TRUST PROXY
-========================================
-*/
+/* ================================
+   PATHS
+================================ */
+
+const CURRENT_FILE = fileURLToPath(import.meta.url);
+const SERVER_DIR = path.dirname(CURRENT_FILE);
+const PROJECT_ROOT = path.resolve(SERVER_DIR, "..");
+
+/* ================================
+   TRUST PROXY
+================================ */
 
 if (isProduction) {
   app.set("trust proxy", 1);
 }
 
-/*
-========================================
-SECURITY
-========================================
-*/
+/* ================================
+   SECURITY
+================================ */
 
 app.disable("x-powered-by");
 
@@ -91,29 +78,17 @@ app.use(
 
 app.use(securityHeaders);
 
-/*
-========================================
-CORS
-========================================
-*/
+/* ================================
+   CORS
+================================ */
 
 app.use(
   cors({
     origin(origin, callback) {
-      /*
-      Requests such as server-to-server calls,
-      health checks and same-origin requests
-      may not contain an Origin header.
-      */
       if (!origin) {
         return callback(null, true);
       }
 
-      /*
-      Development:
-      If ALLOWED_ORIGINS is intentionally empty,
-      allow local development requests.
-      */
       if (
         !isProduction &&
         allowedOrigins.length === 0
@@ -121,10 +96,6 @@ app.use(
         return callback(null, true);
       }
 
-      /*
-      Production / configured development:
-      Only explicitly allowed origins are accepted.
-      */
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
@@ -158,11 +129,9 @@ app.use(
   })
 );
 
-/*
-========================================
-GLOBAL API RATE LIMIT
-========================================
-*/
+/* ================================
+   API RATE LIMIT
+================================ */
 
 const globalApiLimiter =
   rateLimit({
@@ -190,12 +159,10 @@ app.use(
   globalApiLimiter
 );
 
-/*
-========================================
-RAZORPAY WEBHOOK
-RAW BODY MUST COME BEFORE JSON PARSER
-========================================
-*/
+/* ================================
+   RAZORPAY WEBHOOK
+   RAW BODY BEFORE JSON
+================================ */
 
 app.post(
   "/api/payments/razorpay/webhook",
@@ -208,11 +175,9 @@ app.post(
   razorpayWebhook
 );
 
-/*
-========================================
-BODY PARSERS
-========================================
-*/
+/* ================================
+   BODY PARSERS
+================================ */
 
 app.use(
   express.json({
@@ -231,14 +196,90 @@ app.use(cookieParser());
 
 app.use(requestLogger);
 
+/* ================================
+   FRONTEND SECURITY
+================================ */
+
 /*
-========================================
-API ROOT
-========================================
+Render currently uses:
+
+Root Directory = server
+
+Therefore PROJECT_ROOT points to
+the actual repository root.
+
+Frontend files such as:
+
+index.html
+css/
+js/
+*.html
+
+are served from PROJECT_ROOT.
+
+Backend source under /server
+is never served publicly.
 */
+
+app.use(
+  (req, res, next) => {
+    const requestPath =
+      req.path.toLowerCase();
+
+    if (
+      requestPath === "/server" ||
+      requestPath.startsWith("/server/") ||
+
+      requestPath === "/.git" ||
+      requestPath.startsWith("/.git/") ||
+
+      requestPath === "/package.json" ||
+      requestPath === "/package-lock.json"
+    ) {
+      return res.status(404).end();
+    }
+
+    next();
+  }
+);
+
+/* ================================
+   STATIC FRONTEND
+================================ */
+
+app.use(
+  express.static(
+    PROJECT_ROOT,
+    {
+      index: false,
+      dotfiles: "ignore",
+      redirect: false
+    }
+  )
+);
+
+/* ================================
+   WEBSITE HOME
+================================ */
 
 app.get(
   "/",
+  (req, res) => {
+    return res.sendFile(
+      path.join(
+        PROJECT_ROOT,
+        "index.html"
+      )
+    );
+  }
+);
+
+/* ================================
+   API ROOT
+================================ */
+
+app.get(
+  "/api",
   (req, res) => {
     return res.status(200).json({
       success: true,
@@ -256,11 +297,9 @@ app.get(
   }
 );
 
-/*
-========================================
-HEALTH CHECK
-========================================
-*/
+/* ================================
+   HEALTH CHECK
+================================ */
 
 app.get(
   "/api/health",
@@ -269,7 +308,8 @@ app.get(
       getDatabaseStatus();
 
     const healthy =
-      database.status === "connected";
+      database.status ===
+      "connected";
 
     return res
       .status(
@@ -304,142 +344,116 @@ app.get(
   }
 );
 
-/*
-========================================
-AUTH
-========================================
-*/
+/* ================================
+   AUTH
+================================ */
 
 app.use(
   "/api/auth",
   authRoutes
 );
 
-/*
-========================================
-ADMIN
-========================================
-*/
+/* ================================
+   ADMIN
+================================ */
 
 app.use(
   "/api/admin",
   adminRoutes
 );
 
-/*
-========================================
-BOOKINGS
-========================================
-*/
+/* ================================
+   BOOKINGS
+================================ */
 
 app.use(
   "/api/bookings",
   bookingRoutes
 );
 
-/*
-========================================
-JOBS
-========================================
-*/
+/* ================================
+   JOBS
+================================ */
 
 app.use(
   "/api/jobs",
   jobRoutes
 );
 
-/*
-========================================
-PAYMENTS
-========================================
-*/
+/* ================================
+   PAYMENTS
+================================ */
 
 app.use(
   "/api/payments",
   paymentRoutes
 );
 
-/*
-========================================
-USERS
-========================================
-*/
+/* ================================
+   USERS
+================================ */
 
 app.use(
   "/api/users",
   userRoutes
 );
 
-/*
-========================================
-WORKERS
-========================================
-*/
+/* ================================
+   WORKERS
+================================ */
 
 app.use(
   "/api/workers",
   workerRoutes
 );
 
-/*
-========================================
-SUPPORT
-========================================
-*/
+/* ================================
+   SUPPORT
+================================ */
 
 app.use(
   "/api/support",
   supportRoutes
 );
 
-/*
-========================================
-EARNINGS
-========================================
-*/
+/* ================================
+   EARNINGS
+================================ */
 
 app.use(
   "/api/earnings",
   earningsRoutes
 );
 
-/*
-========================================
-NOTIFICATIONS
-========================================
-*/
+/* ================================
+   NOTIFICATIONS
+================================ */
 
 app.use(
   "/api/notifications",
   notificationRoutes
 );
 
-/*
-========================================
-LIVE LOCATION
-========================================
-*/
+/* ================================
+   LIVE LOCATION
+================================ */
 
 app.use(
   "/api/live-location",
   liveLocationRoutes
 );
 
-/*
-========================================
-404 + ERROR HANDLER
-========================================
-*/
+/* ================================
+   404 + ERROR
+================================ */
 
 app.use(notFound);
 
 app.use(errorHandler);
 
-/*
-========================================
-SERVER
-========================================
-*/
+/* ================================
+   SERVER
+================================ */
 
 let server = null;
 
@@ -454,7 +468,7 @@ async function startServer() {
         PORT,
         () => {
           console.log(
-            `Smart Work Network API running on port ${PORT}`
+            `Smart Work Network running on port ${PORT}`
           );
 
           console.log(
@@ -462,12 +476,17 @@ async function startServer() {
           );
 
           console.log(
-            `Health: /api/health`
+            "Frontend: /"
+          );
+
+          console.log(
+            "Health: /api/health"
           );
         }
       );
 
     return server;
+
   } catch (error) {
     console.error(
       "Failed to start server:",
@@ -480,11 +499,9 @@ async function startServer() {
   }
 }
 
-/*
-========================================
-GRACEFUL SHUTDOWN
-========================================
-*/
+/* ================================
+   GRACEFUL SHUTDOWN
+================================ */
 
 async function shutdown(signal) {
   if (shuttingDown) {
@@ -521,6 +538,7 @@ async function shutdown(signal) {
     );
 
     process.exit(0);
+
   } catch (error) {
     console.error(
       "Graceful shutdown failed:",
@@ -533,11 +551,9 @@ async function shutdown(signal) {
   }
 }
 
-/*
-========================================
-PROCESS SIGNALS
-========================================
-*/
+/* ================================
+   PROCESS SIGNALS
+================================ */
 
 process.on(
   "SIGTERM",
@@ -583,32 +599,25 @@ process.on(
   }
 );
 
-/*
-========================================
-START ONLY WHEN EXECUTED DIRECTLY
-========================================
-*/
-
-const currentFile =
-  fileURLToPath(import.meta.url);
-
-const executedFile =
-  process.argv[1]
-    ? path.resolve(process.argv[1])
-    : "";
+/* ================================
+   START
+================================ */
 
 if (
-  executedFile ===
-  path.resolve(currentFile)
+  process.argv[1] &&
+  path.resolve(
+    process.argv[1]
+  ) ===
+    path.resolve(
+      CURRENT_FILE
+    )
 ) {
   startServer();
 }
 
-/*
-========================================
-EXPORTS
-========================================
-*/
+/* ================================
+   EXPORTS
+================================ */
 
 export {
   app,
