@@ -235,6 +235,7 @@ async function signup() {
 
 /* =========================================
    LOGIN
+   EMAIL + PASSWORD -> OTP
 ========================================= */
 
 async function login() {
@@ -306,11 +307,36 @@ async function login() {
       return;
     }
 
+    /*
+     * Login is NOT complete yet.
+     */
+    if (
+      result.otpRequired
+    ) {
+      sessionStorage.setItem(
+        "swn_pending_login_email",
+        result.email ||
+          email
+      );
+
+      window.location.href =
+        `verify-otp.html?mode=login&email=${encodeURIComponent(
+          result.email || email
+        )}`;
+
+      return;
+    }
+
+    /*
+     * Safety fallback:
+     * never accept an incomplete
+     * login response.
+     */
     if (
       !result.user
     ) {
       showMessage(
-        "Login response is incomplete."
+        "Login requires OTP verification."
       );
 
       return;
@@ -318,11 +344,6 @@ async function login() {
 
     saveAuth(
       result.user
-    );
-
-    showMessage(
-      result.message ||
-        "Login successful."
     );
 
     redirectByRole(
