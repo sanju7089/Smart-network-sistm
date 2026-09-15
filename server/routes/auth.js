@@ -2,14 +2,21 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 
 import {
-  signup,
   login,
   logout,
   getCurrentUser,
-  changePassword,
-  forgotPassword,
-  resetPassword
+  changePassword
 } from "../controllers/authController.js";
+
+import {
+  signupWithOtp,
+  verifySignupOtp,
+  resendSignupOtp,
+  forgotPasswordWithOtp,
+  verifyResetOtp,
+  resendResetOtp,
+  resetPasswordWithOtp
+} from "../controllers/otpAuthController.js";
 
 import {
   requireAuth
@@ -22,11 +29,15 @@ const registerLimiter =
   rateLimit({
     windowMs:
       15 * 60 * 1000,
+
     limit: 10,
+
     standardHeaders:
       "draft-7",
+
     legacyHeaders:
       false,
+
     message: {
       success: false,
       message:
@@ -38,11 +49,15 @@ const loginLimiter =
   rateLimit({
     windowMs:
       15 * 60 * 1000,
+
     limit: 10,
+
     standardHeaders:
       "draft-7",
+
     legacyHeaders:
       false,
+
     message: {
       success: false,
       message:
@@ -54,11 +69,15 @@ const passwordLimiter =
   rateLimit({
     windowMs:
       15 * 60 * 1000,
+
     limit: 5,
+
     standardHeaders:
       "draft-7",
+
     legacyHeaders:
       false,
+
     message: {
       success: false,
       message:
@@ -66,31 +85,39 @@ const passwordLimiter =
     }
   });
 
-const forgotPasswordLimiter =
+const otpLimiter =
   rateLimit({
     windowMs:
       15 * 60 * 1000,
-    limit: 5,
+
+    limit: 10,
+
     standardHeaders:
       "draft-7",
+
     legacyHeaders:
       false,
+
     message: {
       success: false,
       message:
-        "Too many password reset requests. Please try again later."
+        "Too many OTP requests. Please try again later."
     }
   });
 
-const resetPasswordLimiter =
+const passwordResetLimiter =
   rateLimit({
     windowMs:
       15 * 60 * 1000,
-    limit: 5,
+
+    limit: 10,
+
     standardHeaders:
       "draft-7",
+
     legacyHeaders:
       false,
+
     message: {
       success: false,
       message:
@@ -98,11 +125,35 @@ const resetPasswordLimiter =
     }
   });
 
+/* =========================================
+   SIGNUP
+========================================= */
+
 router.post(
   "/register",
   registerLimiter,
-  signup
+  signupWithOtp
 );
+
+/* =========================================
+   SIGNUP OTP
+========================================= */
+
+router.post(
+  "/verify-signup-otp",
+  otpLimiter,
+  verifySignupOtp
+);
+
+router.post(
+  "/resend-signup-otp",
+  otpLimiter,
+  resendSignupOtp
+);
+
+/* =========================================
+   LOGIN
+========================================= */
 
 router.post(
   "/login",
@@ -110,16 +161,28 @@ router.post(
   login
 );
 
+/* =========================================
+   LOGOUT
+========================================= */
+
 router.post(
   "/logout",
   logout
 );
+
+/* =========================================
+   CURRENT USER
+========================================= */
 
 router.get(
   "/me",
   requireAuth,
   getCurrentUser
 );
+
+/* =========================================
+   CHANGE PASSWORD
+========================================= */
 
 router.post(
   "/change-password",
@@ -128,17 +191,41 @@ router.post(
   changePassword
 );
 
+/* =========================================
+   FORGOT PASSWORD OTP
+========================================= */
+
 router.post(
   "/forgot-password",
-  forgotPasswordLimiter,
-  forgotPassword
+  passwordResetLimiter,
+  forgotPasswordWithOtp
 );
 
 router.post(
-  "/reset-password",
-  resetPasswordLimiter,
-  resetPassword
+  "/verify-reset-otp",
+  passwordResetLimiter,
+  verifyResetOtp
 );
+
+router.post(
+  "/resend-reset-otp",
+  passwordResetLimiter,
+  resendResetOtp
+);
+
+/* =========================================
+   RESET PASSWORD
+========================================= */
+
+router.post(
+  "/reset-password",
+  passwordResetLimiter,
+  resetPasswordWithOtp
+);
+
+/* =========================================
+   STATUS
+========================================= */
 
 router.get(
   "/status",
