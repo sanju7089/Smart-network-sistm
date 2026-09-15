@@ -2,7 +2,6 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 
 import {
-  login,
   logout,
   getCurrentUser,
   changePassword
@@ -19,6 +18,12 @@ import {
 } from "../controllers/otpAuthController.js";
 
 import {
+  loginWithOtp,
+  verifyLoginOtp,
+  resendLoginOtp
+} from "../controllers/loginOtpController.js";
+
+import {
   requireAuth
 } from "../middleware/authMiddleware.js";
 
@@ -29,15 +34,10 @@ const registerLimiter =
   rateLimit({
     windowMs:
       15 * 60 * 1000,
-
     limit: 10,
-
     standardHeaders:
       "draft-7",
-
-    legacyHeaders:
-      false,
-
+    legacyHeaders: false,
     message: {
       success: false,
       message:
@@ -49,15 +49,10 @@ const loginLimiter =
   rateLimit({
     windowMs:
       15 * 60 * 1000,
-
     limit: 10,
-
     standardHeaders:
       "draft-7",
-
-    legacyHeaders:
-      false,
-
+    legacyHeaders: false,
     message: {
       success: false,
       message:
@@ -65,39 +60,14 @@ const loginLimiter =
     }
   });
 
-const passwordLimiter =
-  rateLimit({
-    windowMs:
-      15 * 60 * 1000,
-
-    limit: 5,
-
-    standardHeaders:
-      "draft-7",
-
-    legacyHeaders:
-      false,
-
-    message: {
-      success: false,
-      message:
-        "Too many password change attempts. Please try again later."
-    }
-  });
-
 const otpLimiter =
   rateLimit({
     windowMs:
       15 * 60 * 1000,
-
     limit: 10,
-
     standardHeaders:
       "draft-7",
-
-    legacyHeaders:
-      false,
-
+    legacyHeaders: false,
     message: {
       success: false,
       message:
@@ -105,19 +75,29 @@ const otpLimiter =
     }
   });
 
+const passwordLimiter =
+  rateLimit({
+    windowMs:
+      15 * 60 * 1000,
+    limit: 5,
+    standardHeaders:
+      "draft-7",
+    legacyHeaders: false,
+    message: {
+      success: false,
+      message:
+        "Too many password change attempts. Please try again later."
+    }
+  });
+
 const passwordResetLimiter =
   rateLimit({
     windowMs:
       15 * 60 * 1000,
-
     limit: 10,
-
     standardHeaders:
       "draft-7",
-
-    legacyHeaders:
-      false,
-
+    legacyHeaders: false,
     message: {
       success: false,
       message:
@@ -158,7 +138,23 @@ router.post(
 router.post(
   "/login",
   loginLimiter,
-  login
+  loginWithOtp
+);
+
+/* =========================================
+   LOGIN OTP
+========================================= */
+
+router.post(
+  "/verify-login-otp",
+  otpLimiter,
+  verifyLoginOtp
+);
+
+router.post(
+  "/resend-login-otp",
+  otpLimiter,
+  resendLoginOtp
 );
 
 /* =========================================
@@ -192,7 +188,7 @@ router.post(
 );
 
 /* =========================================
-   FORGOT PASSWORD OTP
+   FORGOT PASSWORD
 ========================================= */
 
 router.post(
