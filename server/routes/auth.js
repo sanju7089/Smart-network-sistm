@@ -24,6 +24,11 @@ import {
 } from "../controllers/loginOtpController.js";
 
 import {
+  getGoogleConfig,
+  googleLogin
+} from "../controllers/googleAuthController.js";
+
+import {
   requireAuth
 } from "../middleware/authMiddleware.js";
 
@@ -57,6 +62,21 @@ const loginLimiter =
       success: false,
       message:
         "Too many login attempts. Please try again later."
+    }
+  });
+
+const googleLoginLimiter =
+  rateLimit({
+    windowMs:
+      15 * 60 * 1000,
+    limit: 20,
+    standardHeaders:
+      "draft-7",
+    legacyHeaders: false,
+    message: {
+      success: false,
+      message:
+        "Too many Google Login attempts. Please try again later."
     }
   });
 
@@ -139,6 +159,21 @@ router.post(
   "/login",
   loginLimiter,
   loginWithOtp
+);
+
+/* =========================================
+   GOOGLE LOGIN
+========================================= */
+
+router.get(
+  "/google-config",
+  getGoogleConfig
+);
+
+router.post(
+  "/google",
+  googleLoginLimiter,
+  googleLogin
 );
 
 /* =========================================
