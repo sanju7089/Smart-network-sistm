@@ -28,6 +28,24 @@ const userSchema = new mongoose.Schema(
       select: false
     },
 
+    googleId: {
+      type: String,
+      default: null,
+      sparse: true,
+      unique: true,
+      index: true
+    },
+
+    authProvider: {
+      type: String,
+      enum: [
+        "local",
+        "google"
+      ],
+      default: "local",
+      index: true
+    },
+
     role: {
       type: String,
       enum: [
@@ -71,10 +89,6 @@ const userSchema = new mongoose.Schema(
       min: 0
     },
 
-    /* ================================
-       SIGNUP EMAIL OTP
-    ================================= */
-
     emailVerificationOtpHash: {
       type: String,
       default: null,
@@ -99,10 +113,6 @@ const userSchema = new mongoose.Schema(
       default: null,
       select: false
     },
-
-    /* ================================
-       LOGIN EMAIL OTP
-    ================================= */
 
     loginOtpHash: {
       type: String,
@@ -129,10 +139,6 @@ const userSchema = new mongoose.Schema(
       select: false
     },
 
-    /* ================================
-       PASSWORD RESET OTP
-    ================================= */
-
     passwordResetOtpHash: {
       type: String,
       default: null,
@@ -157,10 +163,6 @@ const userSchema = new mongoose.Schema(
       default: null,
       select: false
     },
-
-    /* ================================
-       PASSWORD RESET AUTH TOKEN
-    ================================= */
 
     passwordResetTokenHash: {
       type: String,
